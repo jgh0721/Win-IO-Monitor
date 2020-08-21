@@ -17,4 +17,7 @@
     #define EXTERN_C_END }
 #endif
 
+#define IF_FALSE_BREAK( var, expr ) if( ( (var) = (expr) ) == false ) break;
+#define IF_FALSE_LEAVE( var, expr ) if( ( (var) = (expr) ) == false ) __leave;
+
 #endif //WINIOMONITOR_FLTBASE_HPP

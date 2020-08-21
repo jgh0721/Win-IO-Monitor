@@ -1,6 +1,11 @@
 #ifndef WIN_IO_MONITOR_STDAFX_HPP
 #define WIN_IO_MONITOR_STDAFX_HPP
 
+#define _WIN32_WINNT 0x0501
+#define WINVER 0x0501
+#define WIN32_LEAN_AND_MEAN
+#define NTDDI_VERSION 0x05010200
+
 #pragma warning(push)
 #pragma warning(disable: 4510)
 #pragma warning(disable: 4512)

@@ -13,10 +13,28 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav</Extensions>
     </Filter>
+    <Filter Include="common files">
+      <UniqueIdentifier>{ca7c2ae6-1ec9-4a07-a655-79919ffc0e32}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="utilities">
+      <UniqueIdentifier>{6dc17a4e-b983-4bbb-9e8b-8b5077836f62}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="callbacks">
+      <UniqueIdentifier>{8f40c4dc-6972-42ac-9fef-4c78a07cf5a1}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="WinIOMonitor.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\cmn\WinIOMonitor_W32API.cpp">
+      <Filter>common files</Filter>
+    </ClCompile>
+    <ClCompile Include="utilities\osInfoMgr.cpp">
+      <Filter>utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="utilities\contextMgr.cpp">
+      <Filter>utilities</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -28,6 +46,24 @@
     </ClInclude>
     <ClInclude Include="fltBase.hpp">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cmn\WinIOMonitor_IOCTL.hpp">
+      <Filter>common files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cmn\WinIOMonitor_W32API.hpp">
+      <Filter>common files</Filter>
+    </ClInclude>
+    <ClInclude Include="utilities\osInfoMgr.hpp">
+      <Filter>utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="utilities\contextMgr.hpp">
+      <Filter>utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="utilities\contextMgr_Defs.hpp">
+      <Filter>utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="callbacks\callbacks.hpp">
+      <Filter>callbacks</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

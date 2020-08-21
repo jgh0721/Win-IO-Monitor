@@ -7,6 +7,11 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WinIOMonitor", "sys\WinIOMo
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WinIOMonitorAPI", "api\WinIOMonitorAPI.vcxproj", "{1CC76C26-E43F-4801-8488-635E801C2508}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "documentation", "documentation", "{F41645C6-5F27-4CAC-89AE-367303768414}"
+	ProjectSection(SolutionItems) = preProject
+		..\README.md = ..\README.md
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -36,7 +41,7 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		        SolutionGuid = {0FD2E202-E7ED-40F7-A874-60849329379D}
 		SolutionGuid = {54FB1274-30D8-4FBE-99CB-AE040C26E40A}
+		        SolutionGuid = {0FD2E202-E7ED-40F7-A874-60849329379D}
 	EndGlobalSection
 EndGlobal
