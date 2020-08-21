@@ -1,5 +1,7 @@
 .idea/
 .vs/
+_build/
+_object/
 
 # Prerequisites
 *.d
