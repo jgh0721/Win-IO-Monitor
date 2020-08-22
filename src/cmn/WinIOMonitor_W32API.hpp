@@ -301,8 +301,28 @@ namespace nsW32API
                                                       __in PFLT_CONTEXT NewContext,
                                                       __out PFLT_CONTEXT* OldContext );
 
+        typedef NTSTATUS( NTAPI* FltGetTransactionContext )( __in PFLT_INSTANCE Instance,
+                                                             __in PKTRANSACTION Transaction,
+                                                             __out PFLT_CONTEXT* Context );
+
+        // The FltSetTransactionContext routine sets a context on a transaction.
+        typedef NTSTATUS( NTAPI* FltSetTransactionContext )( __in PFLT_INSTANCE             Instance,
+                                                             __in PKTRANSACTION             Transaction,
+                                                             __in FLT_SET_CONTEXT_OPERATION Operation,
+                                                             __in PFLT_CONTEXT              NewContext,
+                                                             __out_opt PFLT_CONTEXT* OldContext );
+
+        // The FltEnlistInTransaction routine enlists a minifilter driver in a given transaction.
+        typedef NTSTATUS( NTAPI* FltEnlistInTransaction )( __in  PFLT_INSTANCE Instance,
+                                                           __in  PKTRANSACTION Transaction,
+                                                           __in  PFLT_CONTEXT TransactionContext,
+                                                           __in  NOTIFICATION_MASK NotificationMask );
+
         FltGetFileContext                   pfnFltGetFileContext;
         FltSetFileContext                   pfnFltSetFileContext;
+        FltGetTransactionContext            pfnFltGetTransactionContext;
+        FltSetTransactionContext            pfnFltSetTransactionContext;
+        FltEnlistInTransaction              pfnFltEnlistInTransaction;
 
     } FltMgrAPI;
 

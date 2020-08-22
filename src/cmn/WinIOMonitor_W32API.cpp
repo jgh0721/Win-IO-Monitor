@@ -38,6 +38,9 @@ void nsW32API::InitializeFltMgrAPI( FltMgrAPI* fltMgrAPI )
 {
     ASSERT( fltMgrAPI != NULLPTR );
 
-    fltMgrAPI->pfnFltGetFileContext = ( FltMgrAPI::FltGetFileContext ) FltGetRoutineAddress( "FltGetFileContext" );
-    fltMgrAPI->pfnFltSetFileContext = ( FltMgrAPI::FltSetFileContext ) FltGetRoutineAddress( "FltSetFileContext" );
+    fltMgrAPI->pfnFltGetFileContext         = ( FltMgrAPI::FltGetFileContext ) FltGetRoutineAddress( "FltGetFileContext" );
+    fltMgrAPI->pfnFltSetFileContext         = ( FltMgrAPI::FltSetFileContext ) FltGetRoutineAddress( "FltSetFileContext" );
+    fltMgrAPI->pfnFltGetTransactionContext  = ( FltMgrAPI::FltGetTransactionContext ) FltGetRoutineAddress( "FltGetTransactionContext" );
+    fltMgrAPI->pfnFltSetTransactionContext  = ( FltMgrAPI::FltSetTransactionContext ) FltGetRoutineAddress( "FltSetTransactionContext" );
+    fltMgrAPI->pfnFltEnlistInTransaction    = ( FltMgrAPI::FltEnlistInTransaction ) FltGetRoutineAddress( "FltEnlistInTransaction" );
 }
