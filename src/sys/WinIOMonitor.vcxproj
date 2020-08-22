@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\cmn\WinIOMonitor_W32API.cpp" />
+    <ClCompile Include="callbacks\callbacks.cpp" />
     <ClCompile Include="deviceMgmt.cpp" />
     <ClCompile Include="utilities\contextMgr.cpp" />
     <ClCompile Include="utilities\osInfoMgr.cpp" />

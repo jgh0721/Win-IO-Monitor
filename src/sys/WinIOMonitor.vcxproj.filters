@@ -42,6 +42,9 @@
     <ClCompile Include="WinIOMonitor_Filter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="callbacks\callbacks.cpp">
+      <Filter>callbacks</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="WinIOMonitor.hpp">
