@@ -83,5 +83,11 @@
     <ClInclude Include="WinIOMonitor_Filter.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\cmn\WinIOMonitor_Event.hpp">
+      <Filter>common files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cmn\WinIOMonitor_API.hpp">
+      <Filter>common files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

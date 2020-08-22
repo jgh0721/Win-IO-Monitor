@@ -28,6 +28,8 @@
     <ClCompile Include="WinIOMonitor_Filter.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\cmn\WinIOMonitor_API.hpp" />
+    <ClInclude Include="..\cmn\WinIOMonitor_Event.hpp" />
     <ClInclude Include="..\cmn\WinIOMonitor_IOCTL.hpp" />
     <ClInclude Include="..\cmn\WinIOMonitor_Names.hpp" />
     <ClInclude Include="..\cmn\WinIOMonitor_W32API.hpp" />
