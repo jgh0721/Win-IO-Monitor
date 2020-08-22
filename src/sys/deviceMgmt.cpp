@@ -69,3 +69,42 @@ NTSTATUS RemoveControlDevice( CTX_GLOBAL_DATA& GlobalContext )
 
     return Status;
 }
+
+///////////////////////////////////////////////////////////////////////////////
+
+NTSTATUS DeviceCreate( IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp )
+{
+    NTSTATUS Status = STATUS_INVALID_DEVICE_REQUEST;
+
+    UNREFERENCED_PARAMETER( DeviceObject );
+
+    Status = STATUS_SUCCESS;
+    Irp->IoStatus.Information = FILE_OPENED;
+    Irp->IoStatus.Status = Status;
+    IoCompleteRequest( Irp, IO_NO_INCREMENT );
+
+    return Status;
+}
+
+NTSTATUS DeviceCleanup( IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp )
+{
+    NTSTATUS Status = STATUS_SUCCESS;
+
+    UNREFERENCED_PARAMETER( DeviceObject );
+
+    Irp->IoStatus.Status = Status;
+    IoCompleteRequest( Irp, IO_NO_INCREMENT );
+    return Status;
+}
+
+NTSTATUS DeviceClose( IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp )
+{
+    NTSTATUS Status = STATUS_SUCCESS;
+
+    UNREFERENCED_PARAMETER( DeviceObject );
+
+    Irp->IoStatus.Status = Status;
+    IoCompleteRequest( Irp, IO_NO_INCREMENT );
+    return Status;
+}
+

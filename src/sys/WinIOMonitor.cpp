@@ -28,6 +28,10 @@ NTSTATUS FLTAPI DriverEntry( PDRIVER_OBJECT DriverObject, PUNICODE_STRING Regist
         IF_FALSE_BREAK( Status, InitializeGlobalContext( DriverObject ) );
         IF_FALSE_BREAK( Status, InitializeMiniFilter( &GlobalContext ) );
 
+        DriverObject->MajorFunction[ IRP_MJ_CREATE ]    = DeviceCreate;
+        DriverObject->MajorFunction[ IRP_MJ_CLEANUP ]   = DeviceCleanup;
+        DriverObject->MajorFunction[ IRP_MJ_CLOSE ]     = DeviceClose;
+
         DriverObject->DriverUnload = DriverUnload;
 
     } while( false );
