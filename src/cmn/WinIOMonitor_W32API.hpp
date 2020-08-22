@@ -272,12 +272,20 @@ namespace nsW32API
          */
         typedef NTSTATUS( NTAPI* SeLocateProcessImageName )( __in PEPROCESS Process, __deref_out PUNICODE_STRING* pImageFileName );
 
+        typedef NTSTATUS( NTAPI* ZwQueryInformationProcess ) ( __in HANDLE ProcessHandle,
+                                                               __in PROCESSINFOCLASS ProcessInformationClass,
+                                                               __out_bcount( ProcessInformationLength ) PVOID ProcessInformation,
+                                                               __in ULONG ProcessInformationLength,
+                                                               __out_opt PULONG ReturnLength );
+
         PsSetLoadImageNotifyRoutine             pfnPsSetLoadImageNotifyRoutine;
         PsSetCreateProcessNotifyRoutine         pfnPsSetCreateProcessNotifyRoutine;
         PsSetCreateProcessNotifyRoutineEx       pfnPsSetCreateProcessNotifyRoutineEx;
-        SeLocateProcessImageName                pfnSeLocateProcessImageName;
 
         IoGetTransactionParameterBlock          pfnIoGetTransactionParameterBlock;
+
+        SeLocateProcessImageName                pfnSeLocateProcessImageName;
+        ZwQueryInformationProcess               pfnZwQueryInformationProcess;
 
     } NtOsKrnlAPI;
 

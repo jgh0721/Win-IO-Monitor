@@ -24,11 +24,14 @@ void nsW32API::InitializeNtOsKrnlAPI( NtOsKrnlAPI* ntOsKrnlAPI )
     RtlInitUnicodeString( &routineName, L"PsSetCreateProcessNotifyRoutineEx" );
     ntOsKrnlAPI->pfnPsSetCreateProcessNotifyRoutineEx = ( NtOsKrnlAPI::PsSetCreateProcessNotifyRoutineEx )MmGetSystemRoutineAddress( &routineName );
 
+    RtlInitUnicodeString( &routineName, L"IoGetTransactionParameterBlock" );
+    ntOsKrnlAPI->pfnIoGetTransactionParameterBlock = ( NtOsKrnlAPI::IoGetTransactionParameterBlock )MmGetSystemRoutineAddress( &routineName );
+
     RtlInitUnicodeString( &routineName, L"SeLocateProcessImageName" );
     ntOsKrnlAPI->pfnSeLocateProcessImageName = ( NtOsKrnlAPI::SeLocateProcessImageName )MmGetSystemRoutineAddress( &routineName );
 
-    RtlInitUnicodeString( &routineName, L"IoGetTransactionParameterBlock" );
-    ntOsKrnlAPI->pfnIoGetTransactionParameterBlock = ( NtOsKrnlAPI::IoGetTransactionParameterBlock )MmGetSystemRoutineAddress( &routineName );
+    RtlInitUnicodeString( &routineName, L"ZwQueryInformationProcess" );
+    ntOsKrnlAPI->pfnZwQueryInformationProcess = ( NtOsKrnlAPI::ZwQueryInformationProcess )MmGetSystemRoutineAddress( &routineName );
 }
 
 void nsW32API::InitializeFltMgrAPI( FltMgrAPI* fltMgrAPI )

@@ -78,10 +78,10 @@ template< typename T >
 void DeallocateBuffer( TyGenericBuffer<T>* tyGenericBuffer )
 {
     ASSERT( tyGenericBuffer != nullptr );
-    if( tyGenericBuffer == NULL || tyGenericBuffer->buffer == NULL )
+    if( tyGenericBuffer == NULL || tyGenericBuffer->Buffer == NULL )
         return;
 
-    switch( tyGenericBuffer->eBufferType )
+    switch( tyGenericBuffer->BufferType )
     {
         case BUFFER_FILENAME: {
             DeallocateGenericBuffer( ( TyGenericBuffer<VOID>* )tyGenericBuffer, &GlobalContext.FileNameLookasideList );

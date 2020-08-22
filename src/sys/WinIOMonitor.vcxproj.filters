@@ -54,6 +54,9 @@
     <ClCompile Include="utilities\procNameMgr.cpp">
       <Filter>utilities</Filter>
     </ClCompile>
+    <ClCompile Include="utilities\fltUtilities.cpp">
+      <Filter>utilities</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="WinIOMonitor.hpp">
@@ -105,6 +108,9 @@
       <Filter>utilities</Filter>
     </ClInclude>
     <ClInclude Include="utilities\procNameMgr.hpp">
+      <Filter>utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="utilities\fltUtilities.hpp">
       <Filter>utilities</Filter>
     </ClInclude>
   </ItemGroup>

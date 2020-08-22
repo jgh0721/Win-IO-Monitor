@@ -6,6 +6,7 @@
 
 #include "utilities/osInfoMgr.hpp"
 #include "utilities/contextMgr.hpp"
+#include "utilities/procNameMgr.hpp"
 
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
@@ -28,6 +29,7 @@ NTSTATUS FLTAPI DriverEntry( PDRIVER_OBJECT DriverObject, PUNICODE_STRING Regist
         nsW32API::InitializeNtOsKrnlAPI( &nsW32API::NtOsKrnlAPIMgr );
 
         IF_FALSE_BREAK( Status, InitializeGlobalContext( DriverObject ) );
+        IF_FALSE_BREAK( Status, InitializeFeatures( &GlobalContext ) );
         IF_FALSE_BREAK( Status, InitializeMiniFilter( &GlobalContext ) );
 
         DriverObject->MajorFunction[ IRP_MJ_CREATE ]    = DeviceCreate;
@@ -45,6 +47,8 @@ void DriverUnload( PDRIVER_OBJECT DriverObject )
 {
     KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_TRACE_LEVEL, "[WinIOMon] %s DriverObject=%p\n",
                  __FUNCTION__, DriverObject ) );
+
+    StopProcessNotify();
 
     RemoveControlDevice( GlobalContext );
 
@@ -83,6 +87,19 @@ NTSTATUS InitializeGlobalContext( PDRIVER_OBJECT DriverObject )
 
         AllocateBuffer<WCHAR>( BUFFER_FILENAME );
 
+    } while( false );
+
+    return Status;
+}
+
+NTSTATUS InitializeFeatures( CTX_GLOBAL_DATA* GlobalContext )
+{
+    NTSTATUS Status = STATUS_UNSUCCESSFUL;
+
+    do
+    {
+        IF_FALSE_BREAK( Status, StartProcessNotify() );
+        
     } while( false );
 
     return Status;
