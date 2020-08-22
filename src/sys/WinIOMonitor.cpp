@@ -2,6 +2,7 @@
 
 #include "deviceMgmt.hpp"
 #include "WinIOMonitor_Filter.hpp"
+#include "utilities/bufferMgr.hpp"
 
 #include "utilities/osInfoMgr.hpp"
 #include "utilities/contextMgr.hpp"
@@ -24,6 +25,7 @@ NTSTATUS FLTAPI DriverEntry( PDRIVER_OBJECT DriverObject, PUNICODE_STRING Regist
     do
     {
         nsUtils::InitializeOSInfo();
+        nsW32API::InitializeNtOsKrnlAPI( &nsW32API::NtOsKrnlAPIMgr );
 
         IF_FALSE_BREAK( Status, InitializeGlobalContext( DriverObject ) );
         IF_FALSE_BREAK( Status, InitializeMiniFilter( &GlobalContext ) );
@@ -46,6 +48,10 @@ void DriverUnload( PDRIVER_OBJECT DriverObject )
 
     RemoveControlDevice( GlobalContext );
 
+    ExDeleteNPagedLookasideList( &GlobalContext.FileNameLookasideList );
+    ExDeleteNPagedLookasideList( &GlobalContext.ProcNameLookasideList );
+    ExDeleteNPagedLookasideList( &GlobalContext.SendPacketLookasideList );
+    ExDeleteNPagedLookasideList( &GlobalContext.ReplyPacketLookasideList );
 }
 
 NTSTATUS InitializeGlobalContext( PDRIVER_OBJECT DriverObject )
@@ -58,7 +64,25 @@ NTSTATUS InitializeGlobalContext( PDRIVER_OBJECT DriverObject )
         GlobalContext.DriverObject = DriverObject;
 
         IF_FALSE_BREAK( Status, CreateControlDevice( GlobalContext ) );
-        
+
+        ExInitializeNPagedLookasideList( &GlobalContext.FileNameLookasideList,
+                                         NULL, NULL, 0,
+                                         POOL_FILENAME_SIZE, POOL_FILENAME_TAG, 0 );
+
+        ExInitializeNPagedLookasideList( &GlobalContext.ProcNameLookasideList,
+                                         NULL, NULL, 0,
+                                         POOL_PROCNAME_SIZE, POOL_PROCNAME_TAG, 0 );
+
+        ExInitializeNPagedLookasideList( &GlobalContext.SendPacketLookasideList,
+                                         NULL, NULL, 0,
+                                         POOL_MSG_SEND_SIZE, POOL_MSG_SEND_TAG, 0 );
+
+        ExInitializeNPagedLookasideList( &GlobalContext.ReplyPacketLookasideList,
+                                         NULL, NULL, 0,
+                                         POOL_MSG_REPLY_SIZE, POOL_MSG_REPLY_TAG, 0 );
+
+        AllocateBuffer<WCHAR>( BUFFER_FILENAME );
+
     } while( false );
 
     return Status;

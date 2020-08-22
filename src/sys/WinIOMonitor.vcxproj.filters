@@ -45,6 +45,15 @@
     <ClCompile Include="callbacks\callbacks.cpp">
       <Filter>callbacks</Filter>
     </ClCompile>
+    <ClCompile Include="callbacks\fltCreateFile.cpp">
+      <Filter>callbacks</Filter>
+    </ClCompile>
+    <ClCompile Include="utilities\bufferMgr.cpp">
+      <Filter>utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="utilities\procNameMgr.cpp">
+      <Filter>utilities</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="WinIOMonitor.hpp">
@@ -88,6 +97,15 @@
     </ClInclude>
     <ClInclude Include="..\cmn\WinIOMonitor_API.hpp">
       <Filter>common files</Filter>
+    </ClInclude>
+    <ClInclude Include="callbacks\fltCreateFile.hpp">
+      <Filter>callbacks</Filter>
+    </ClInclude>
+    <ClInclude Include="utilities\bufferMgr.hpp">
+      <Filter>utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="utilities\procNameMgr.hpp">
+      <Filter>utilities</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

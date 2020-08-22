@@ -19,9 +19,54 @@
 #   pragma execution_character_set( "utf-8" )
 #endif
 
+typedef enum _MSG_CATEGORY
+{
+    MSG_CATE_FILESYSTEM,
+    MSG_CATE_PROCESS
+} MSG_CATEGORY;
+
+typedef enum _MSG_TYPE
+{
+    FS_PRE_CREATE = 0x1,
+    FS_POST_CREATE = 0x2,
+
+    FS_PRE_CLEANUP,
+    FS_POST_CLEANUP,
+
+    FS_PRE_CLOSE,
+    FS_POST_CLOSE, 
+};
+
 typedef struct _MSG_SEND_PACKET
 {
+    ULONG                           MessageSize;
     ULONG                           MessageCategory;
+    BOOLEAN                         IsNotified;
+    LARGE_INTEGER                   EventTime;
+
+    ULONG                           ProcessId;
+
+    union
+    {
+        struct
+        {
+            ACCESS_MASK DesiredAccess;
+            ULONG FileAttributes;
+            ULONG ShareAccess;
+            ULONG CreateDisposition;
+            ULONG CreateOptions;
+        } Create;
+        
+    } Parameters;
+
+    ULONG LengthOfSrcFileFullPath;                      // BYTE
+    ULONG OffsetOfSrcFileFullPath;                      // BYTE
+    ULONG LengthOfDstFileFullPath;                      // BYTE
+    ULONG OffsetOfDstFileFullPath;                      // BYTE
+    ULONG LengthOfProcessFullPath;                      // BYTE    
+    ULONG OffsetOfProcessFullPath;                      // BYTE
+    ULONG LengthOfContents;                             // BYTE
+    ULONG OffsetOfContents;                             // BYTE
 
 } MSG_SEND_PACKET, *PMSG_SEND_PACKET;
 

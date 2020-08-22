@@ -12,12 +12,11 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
-
 CONST FLT_OPERATION_REGISTRATION FilterCallbacks[] = {
     { IRP_MJ_CREATE,
       0,
-      FilterPreOperationPassThrough,
-      FilterPostOperationPassThrough
+      WinIOPreCreate,
+      WinIOPostCreate
     },
 
     { IRP_MJ_CREATE_NAMED_PIPE,

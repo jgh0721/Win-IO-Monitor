@@ -252,10 +252,32 @@ namespace nsW32API
 
     typedef struct _NtOsKrnlAPI
     {
+        // The PsSetLoadImageNotifyRoutine routine registers a driver-supplied callback that is subsequently notified whenever an image is loaded (or mapped into memory).
+        typedef NTSTATUS( NTAPI* PsSetLoadImageNotifyRoutine )( IN PLOAD_IMAGE_NOTIFY_ROUTINE NotifyRoutine );
+
+        // The PsSetCreateProcessNotifyRoutine routine adds a driver-supplied callback routine to, or removes it from, a list of routines to be called whenever a process is created or deleted.
+        typedef NTSTATUS( NTAPI* PsSetCreateProcessNotifyRoutine )( IN PCREATE_PROCESS_NOTIFY_ROUTINE NotifyRoutine, IN BOOLEAN Remove );
+
+        // The PsSetCreateProcessNotifyRoutineEx routine registers or removes a callback routine that notifies the caller when a process is created or exits.
+        typedef NTSTATUS( NTAPI* PsSetCreateProcessNotifyRoutineEx )( IN PCREATE_PROCESS_NOTIFY_ROUTINE_EX NotifyRoutine, IN BOOLEAN Remove );
+
         // The IoGetTransactionParameterBlock routine returns the transaction parameter block for a transacted file operation.
         typedef PTXN_PARAMETER_BLOCK( NTAPI* IoGetTransactionParameterBlock )( __in  PFILE_OBJECT FileObject );
 
-        IoGetTransactionParameterBlock pfnIoGetTransactionParameterBlock;
+        /*!
+         *   This routine returns the ImageFileName information from the process, if available.  This is a "lazy evaluation" wrapper 
+             around SeInitializeProcessAuditName.  If the image file name information has already been computed, then this call simply
+             allocates and returns a UNICODE_STRING with this information.  Otherwise, the function determines the name, stores the name in the 
+             EPROCESS structure, and then allocates and returns a UNICODE_STRING.  Caller must free the memory returned in pImageFileName.
+         */
+        typedef NTSTATUS( NTAPI* SeLocateProcessImageName )( __in PEPROCESS Process, __deref_out PUNICODE_STRING* pImageFileName );
+
+        PsSetLoadImageNotifyRoutine             pfnPsSetLoadImageNotifyRoutine;
+        PsSetCreateProcessNotifyRoutine         pfnPsSetCreateProcessNotifyRoutine;
+        PsSetCreateProcessNotifyRoutineEx       pfnPsSetCreateProcessNotifyRoutineEx;
+        SeLocateProcessImageName                pfnSeLocateProcessImageName;
+
+        IoGetTransactionParameterBlock          pfnIoGetTransactionParameterBlock;
 
     } NtOsKrnlAPI;
 
@@ -276,6 +298,7 @@ namespace nsW32API
 
     } FltMgrAPI;
 
+    void InitializeNtOsKrnlAPI( __in NtOsKrnlAPI* ntOsKrnlAPI );
     void InitializeFltMgrAPI( __in FltMgrAPI* fltMgrAPI );
 
     extern nsW32API::NtOsKrnlAPI NtOsKrnlAPIMgr;

@@ -18,6 +18,11 @@ typedef struct _CTX_GLOBAL_DATA
 
     ULONG                           DebugLevel;
 
+    NPAGED_LOOKASIDE_LIST           FileNameLookasideList;
+    NPAGED_LOOKASIDE_LIST           ProcNameLookasideList;
+    NPAGED_LOOKASIDE_LIST           SendPacketLookasideList;
+    NPAGED_LOOKASIDE_LIST           ReplyPacketLookasideList;
+
 } CTX_GLOBAL_DATA, * PCTX_GLOBAL_DATA;
 
 extern CTX_GLOBAL_DATA GlobalContext;
