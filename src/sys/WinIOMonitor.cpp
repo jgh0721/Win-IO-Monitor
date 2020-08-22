@@ -1,16 +1,16 @@
 ﻿#include "WinIOMonitor.hpp"
 
+#include "deviceMgmt.hpp"
+#include "WinIOMonitor_Filter.hpp"
+
 #include "utilities/osInfoMgr.hpp"
+#include "utilities/contextMgr.hpp"
 
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
 #endif
 
 ///////////////////////////////////////////////////////////////////////////////
-
-CONST FLT_OPERATION_REGISTRATION FilterCallbacks[] = {
-    { IRP_MJ_OPERATION_END }
-};
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -24,7 +24,9 @@ NTSTATUS FLTAPI DriverEntry( PDRIVER_OBJECT DriverObject, PUNICODE_STRING Regist
     do
     {
         nsUtils::InitializeOSInfo();
+
         IF_FALSE_BREAK( Status, InitializeGlobalContext( DriverObject ) );
+        IF_FALSE_BREAK( Status, InitializeMiniFilter( &GlobalContext ) );
 
         DriverObject->DriverUnload = DriverUnload;
 
@@ -35,7 +37,11 @@ NTSTATUS FLTAPI DriverEntry( PDRIVER_OBJECT DriverObject, PUNICODE_STRING Regist
 
 void DriverUnload( PDRIVER_OBJECT DriverObject )
 {
-    
+    KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_TRACE_LEVEL, "[WinIOMon] %s DriverObject=%p\n",
+                 __FUNCTION__, DriverObject ) );
+
+    RemoveControlDevice( GlobalContext );
+
 }
 
 NTSTATUS InitializeGlobalContext( PDRIVER_OBJECT DriverObject )
@@ -44,7 +50,10 @@ NTSTATUS InitializeGlobalContext( PDRIVER_OBJECT DriverObject )
 
     do
     {
+        RtlZeroMemory( &GlobalContext, sizeof( CTX_GLOBAL_DATA ) );
+        GlobalContext.DriverObject = DriverObject;
 
+        IF_FALSE_BREAK( Status, CreateControlDevice( GlobalContext ) );
         
     } while( false );
 

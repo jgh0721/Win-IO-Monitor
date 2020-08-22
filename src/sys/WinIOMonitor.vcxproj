@@ -20,20 +20,25 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\cmn\WinIOMonitor_W32API.cpp" />
+    <ClCompile Include="deviceMgmt.cpp" />
     <ClCompile Include="utilities\contextMgr.cpp" />
     <ClCompile Include="utilities\osInfoMgr.cpp" />
     <ClCompile Include="WinIOMonitor.cpp" />
+    <ClCompile Include="WinIOMonitor_Filter.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\cmn\WinIOMonitor_IOCTL.hpp" />
+    <ClInclude Include="..\cmn\WinIOMonitor_Names.hpp" />
     <ClInclude Include="..\cmn\WinIOMonitor_W32API.hpp" />
     <ClInclude Include="callbacks\callbacks.hpp" />
+    <ClInclude Include="deviceMgmt.hpp" />
     <ClInclude Include="fltBase.hpp" />
     <ClInclude Include="stdafx.hpp" />
     <ClInclude Include="utilities\contextMgr.hpp" />
     <ClInclude Include="utilities\contextMgr_Defs.hpp" />
     <ClInclude Include="utilities\osInfoMgr.hpp" />
     <ClInclude Include="WinIOMonitor.hpp" />
+    <ClInclude Include="WinIOMonitor_Filter.hpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{A57CDD26-A620-4B55-9A2D-0D50FA762BA8}</ProjectGuid>

@@ -38,7 +38,6 @@ namespace nsUtils
         함수가 작동하는 시스템이 5.2, 조건으로 6.1 <= 를 지정했다면 true 가 반환된다.
 
         ※ iMinorVersion 이 -1일 경우 메이저 버전만 비교
-        ※ 항상 NTDLL 을 동적 로딩하여 비교함
 
         @return true = 함수가 작동하는 시스템이 지정한 조건에 부합함
         @retrun false = 함수가 작동하는 시스템이 지정한 조건에 부합하지 않거나 함수 작동 실패

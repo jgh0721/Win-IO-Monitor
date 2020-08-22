@@ -36,6 +36,12 @@
     <ClCompile Include="utilities\contextMgr.cpp">
       <Filter>utilities</Filter>
     </ClCompile>
+    <ClCompile Include="deviceMgmt.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="WinIOMonitor_Filter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="WinIOMonitor.hpp">
@@ -64,6 +70,15 @@
     </ClInclude>
     <ClInclude Include="callbacks\callbacks.hpp">
       <Filter>callbacks</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cmn\WinIOMonitor_Names.hpp">
+      <Filter>common files</Filter>
+    </ClInclude>
+    <ClInclude Include="deviceMgmt.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="WinIOMonitor_Filter.hpp">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
