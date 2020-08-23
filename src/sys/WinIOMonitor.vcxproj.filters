@@ -57,6 +57,9 @@
     <ClCompile Include="utilities\fltUtilities.cpp">
       <Filter>utilities</Filter>
     </ClCompile>
+    <ClCompile Include="callbacks\fltInstance.cpp">
+      <Filter>callbacks</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="WinIOMonitor.hpp">
@@ -98,9 +101,6 @@
     <ClInclude Include="..\cmn\WinIOMonitor_Event.hpp">
       <Filter>common files</Filter>
     </ClInclude>
-    <ClInclude Include="..\cmn\WinIOMonitor_API.hpp">
-      <Filter>common files</Filter>
-    </ClInclude>
     <ClInclude Include="callbacks\fltCreateFile.hpp">
       <Filter>callbacks</Filter>
     </ClInclude>
@@ -112,6 +112,9 @@
     </ClInclude>
     <ClInclude Include="utilities\fltUtilities.hpp">
       <Filter>utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="callbacks\fltInstance.hpp">
+      <Filter>callbacks</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

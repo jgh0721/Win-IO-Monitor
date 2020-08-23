@@ -269,7 +269,12 @@ const nsW32API::FLT_REGISTRATION_XP FilterRegistrationXP = {
     FilterContextXP,
     FilterCallbacks,
 
-    MiniFilterUnload
+    MiniFilterUnload,
+
+    InstanceSetup,
+    InstanceQueryTeardown,
+    InstanceTeardownStart,
+    InstanceTeardownComplete
 };
 
 const nsW32API::FLT_REGISTRATION_VISTA FilterRegistrationVista = {
@@ -280,7 +285,12 @@ const nsW32API::FLT_REGISTRATION_VISTA FilterRegistrationVista = {
     FilterContextVista,
     FilterCallbacks,
 
-    MiniFilterUnload
+    MiniFilterUnload,
+
+    InstanceSetup,
+    InstanceQueryTeardown,
+    InstanceTeardownStart,
+    InstanceTeardownComplete
 };
 
 NTSTATUS InitializeMiniFilter( CTX_GLOBAL_DATA* GlobalContext )

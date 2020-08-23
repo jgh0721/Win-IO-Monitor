@@ -22,6 +22,7 @@
     <ClCompile Include="..\cmn\WinIOMonitor_W32API.cpp" />
     <ClCompile Include="callbacks\callbacks.cpp" />
     <ClCompile Include="callbacks\fltCreateFile.cpp" />
+    <ClCompile Include="callbacks\fltInstance.cpp" />
     <ClCompile Include="deviceMgmt.cpp" />
     <ClCompile Include="utilities\bufferMgr.cpp" />
     <ClCompile Include="utilities\contextMgr.cpp" />
@@ -32,13 +33,13 @@
     <ClCompile Include="WinIOMonitor_Filter.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\cmn\WinIOMonitor_API.hpp" />
     <ClInclude Include="..\cmn\WinIOMonitor_Event.hpp" />
     <ClInclude Include="..\cmn\WinIOMonitor_IOCTL.hpp" />
     <ClInclude Include="..\cmn\WinIOMonitor_Names.hpp" />
     <ClInclude Include="..\cmn\WinIOMonitor_W32API.hpp" />
     <ClInclude Include="callbacks\callbacks.hpp" />
     <ClInclude Include="callbacks\fltCreateFile.hpp" />
+    <ClInclude Include="callbacks\fltInstance.hpp" />
     <ClInclude Include="deviceMgmt.hpp" />
     <ClInclude Include="fltBase.hpp" />
     <ClInclude Include="stdafx.hpp" />
