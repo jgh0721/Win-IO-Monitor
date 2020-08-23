@@ -23,13 +23,25 @@ typedef struct _CTX_GLOBAL_DATA
     NPAGED_LOOKASIDE_LIST           SendPacketLookasideList;
     NPAGED_LOOKASIDE_LIST           ReplyPacketLookasideList;
 
+    PVOID                           ProcessFilter;
+
 } CTX_GLOBAL_DATA, * PCTX_GLOBAL_DATA;
 
 extern CTX_GLOBAL_DATA GlobalContext;
 
 typedef struct _CTX_INSTANCE_CONTEXT
 {
-    
+    PFLT_FILTER                     Filter;
+    PFLT_INSTANCE                   Instance;
+    PFLT_VOLUME                     Volume;
+
+    UNICODE_STRING                  DeviceName;
+    WCHAR                           DeviceNameBuffer[ 128 ];
+
+    UNICODE_STRING                  VolumeGUIDName;
+    WCHAR                           VolumeGUIDNameBuffer[ 64 ];
+    FLT_FILESYSTEM_TYPE             VolumeFileSystemType;
+
 } CTX_INSTANCE_CONTEXT, *PCTX_INSTANCE_CONTEXT;
 
 #define CTX_INSTANCE_CONTEXT_SIZE sizeof( CTX_INSTANCE_CONTEXT )

@@ -21,6 +21,20 @@ namespace nsUtils
 
     WCHAR* ReverseFindW( __in_z WCHAR* wszString, WCHAR ch );
     WCHAR* ForwardFindW( __in_z WCHAR* wszString, WCHAR ch );
+    WCHAR* UpperWString( __inout_z WCHAR* wszString );
+
+    /**
+     * @brief 지정한 문자열에서 와일드카드(*,?) 를 이용하여 일치하는지 검사
+     * @param pszString
+     * @param pszMatch
+     * @param isCaseSensitive
+     * @return
+
+        IRQL <= APC_LEVEL
+        http://www.codeproject.com/Articles/188256/A-Simple-Wildcard-Matching-Function
+    */
+    bool                                    WildcardMatch_straight( const char* pszString, const char* pszMatch, bool isCaseSensitive = false );
+    bool                                    WildcardMatch_straight( const wchar_t* pszString, const wchar_t* pszMatch, bool isCaseSensitive = false );
 
 } // nsUtils
 

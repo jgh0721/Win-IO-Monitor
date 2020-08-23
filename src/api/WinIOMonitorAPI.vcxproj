@@ -18,6 +18,15 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\cmn\WinIOMonitor_API.hpp" />
+    <ClInclude Include="..\cmn\WinIOMonitor_Event.hpp" />
+    <ClInclude Include="..\cmn\WinIOMonitor_IOCTL.hpp" />
+    <ClInclude Include="..\cmn\WinIOMonitor_Names.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="WinIOMonitor_API.cpp" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{1CC76C26-E43F-4801-8488-635E801C2508}</ProjectGuid>
     <RootNamespace>WinIOMonitor</RootNamespace>
@@ -113,7 +122,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)crypt;$(SolutionDir)uniqueLibs;C:\WinDDK\7600.16385.1\inc\ddk</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\WinDDK\7600.16385.1\inc\api;C:\WinDDK\7600.16385.1\inc\ddk;C:\WinDDK\7600.16385.1\inc\crt;$(ProjectDir);$(SolutionDir)cmn</AdditionalIncludeDirectories>
       <ProgramDataBaseFileName>$(TargetDir)$(TargetName).pdb</ProgramDataBaseFileName>
     </ClCompile>
     <Link>
@@ -148,7 +157,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)crypt;$(SolutionDir)uniqueLibs;C:\WinDDK\7600.16385.1\inc\ddk</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\WinDDK\7600.16385.1\inc\api;C:\WinDDK\7600.16385.1\inc\ddk;C:\WinDDK\7600.16385.1\inc\crt;$(ProjectDir);$(SolutionDir)cmn</AdditionalIncludeDirectories>
       <ProgramDataBaseFileName>$(TargetDir)$(TargetName).pdb</ProgramDataBaseFileName>
     </ClCompile>
     <Link>
@@ -182,7 +191,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)crypt;$(SolutionDir)uniqueLibs;C:\WinDDK\7600.16385.1\inc\ddk</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\WinDDK\7600.16385.1\inc\api;C:\WinDDK\7600.16385.1\inc\ddk;C:\WinDDK\7600.16385.1\inc\crt;$(ProjectDir);$(SolutionDir)cmn</AdditionalIncludeDirectories>
       <ProgramDataBaseFileName>$(TargetDir)$(TargetName).pdb</ProgramDataBaseFileName>
     </ClCompile>
     <Link>
@@ -222,7 +231,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)crypt;$(SolutionDir)uniqueLibs;C:\WinDDK\7600.16385.1\inc\ddk</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\WinDDK\7600.16385.1\inc\api;C:\WinDDK\7600.16385.1\inc\ddk;C:\WinDDK\7600.16385.1\inc\crt;$(ProjectDir);$(SolutionDir)cmn</AdditionalIncludeDirectories>
       <ProgramDataBaseFileName>$(TargetDir)$(TargetName).pdb</ProgramDataBaseFileName>
     </ClCompile>
     <Link>

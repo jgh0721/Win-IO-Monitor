@@ -41,6 +41,7 @@ typedef struct _MSG_SEND_PACKET
 {
     ULONG                           MessageSize;
     ULONG                           MessageCategory;
+    ULONG                           MessageType;
     BOOLEAN                         IsNotified;
     LARGE_INTEGER                   EventTime;
 

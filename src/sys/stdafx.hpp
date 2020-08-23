@@ -22,10 +22,13 @@ extern "C" {
 #include <wdm.h>
 #include <fltkernel.h>
 #include <sal.h>
+#include <WinDef.h>
 
 #ifdef __cplusplus
 }
 #endif
+
+#include <stdlib.h>
 
 #pragma warning(pop)
 

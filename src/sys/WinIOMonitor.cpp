@@ -1,7 +1,9 @@
 ﻿#include "WinIOMonitor.hpp"
 
+#include "deviceCntl.hpp"
 #include "deviceMgmt.hpp"
 #include "WinIOMonitor_Filter.hpp"
+#include "policies/processFilter.hpp"
 #include "utilities/bufferMgr.hpp"
 
 #include "utilities/osInfoMgr.hpp"
@@ -28,6 +30,14 @@ NTSTATUS FLTAPI DriverEntry( PDRIVER_OBJECT DriverObject, PUNICODE_STRING Regist
         nsUtils::InitializeOSInfo();
         nsW32API::InitializeNtOsKrnlAPI( &nsW32API::NtOsKrnlAPIMgr );
 
+        PFAST_IO_DISPATCH FastIODispatch = ( PFAST_IO_DISPATCH )ExAllocatePoolWithTag( NonPagedPool, sizeof( FAST_IO_DISPATCH ), 'abcd' );
+        if( FastIODispatch == NULLPTR )
+        {
+            KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_ERROR_LEVEL, "[WinIOMon] %s %s\n", __FUNCTION__, "ExAllocatePoolWithTag FAILED" ) );
+            Status = STATUS_INSUFFICIENT_RESOURCES;
+            break;
+        }
+
         IF_FALSE_BREAK( Status, InitializeGlobalContext( DriverObject ) );
         IF_FALSE_BREAK( Status, InitializeFeatures( &GlobalContext ) );
         IF_FALSE_BREAK( Status, InitializeMiniFilter( &GlobalContext ) );
@@ -36,7 +46,12 @@ NTSTATUS FLTAPI DriverEntry( PDRIVER_OBJECT DriverObject, PUNICODE_STRING Regist
         DriverObject->MajorFunction[ IRP_MJ_CLEANUP ]   = DeviceCleanup;
         DriverObject->MajorFunction[ IRP_MJ_CLOSE ]     = DeviceClose;
 
-        DriverObject->DriverUnload = DriverUnload;
+        DriverObject->DriverUnload                      = DriverUnload;
+
+        RtlZeroMemory( FastIODispatch, sizeof( FAST_IO_DISPATCH ) );
+        FastIODispatch->SizeOfFastIoDispatch = sizeof( FAST_IO_DISPATCH );
+        FastIODispatch->FastIoDeviceControl = FastIoDeviceControl;
+        DriverObject->FastIoDispatch = FastIODispatch;
 
     } while( false );
 
@@ -49,6 +64,7 @@ void DriverUnload( PDRIVER_OBJECT DriverObject )
                  __FUNCTION__, DriverObject ) );
 
     StopProcessNotify();
+    CloseProcessFilter();
 
     RemoveControlDevice( GlobalContext );
 
@@ -56,6 +72,9 @@ void DriverUnload( PDRIVER_OBJECT DriverObject )
     ExDeleteNPagedLookasideList( &GlobalContext.ProcNameLookasideList );
     ExDeleteNPagedLookasideList( &GlobalContext.SendPacketLookasideList );
     ExDeleteNPagedLookasideList( &GlobalContext.ReplyPacketLookasideList );
+
+    if( DriverObject->FastIoDispatch != NULLPTR )
+        ExFreePool( DriverObject->FastIoDispatch );
 }
 
 NTSTATUS InitializeGlobalContext( PDRIVER_OBJECT DriverObject )
@@ -98,6 +117,7 @@ NTSTATUS InitializeFeatures( CTX_GLOBAL_DATA* GlobalContext )
 
     do
     {
+        IF_FALSE_BREAK( Status, InitializeProcessFilter() );
         IF_FALSE_BREAK( Status, StartProcessNotify() );
         
     } while( false );

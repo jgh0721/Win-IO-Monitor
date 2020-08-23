@@ -115,5 +115,11 @@ VOID FLTAPI InstanceTeardownComplete( __in PCFLT_RELATED_OBJECTS FltObjects,
 
 EXTERN_C_END;
 
+NTSTATUS CreateInstanceContext( PCFLT_RELATED_OBJECTS FltObjects,
+                               FLT_INSTANCE_SETUP_FLAGS Flags,
+                               DEVICE_TYPE VolumeDeviceType,
+                               FLT_FILESYSTEM_TYPE VolumeFilesystemType );
+
+NTSTATUS CloseInstanceContext();
 
 #endif // HDR_WINIOMONITOR_INSTANCE

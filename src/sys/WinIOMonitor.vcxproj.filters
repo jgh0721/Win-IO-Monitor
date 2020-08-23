@@ -22,6 +22,9 @@
     <Filter Include="callbacks">
       <UniqueIdentifier>{8f40c4dc-6972-42ac-9fef-4c78a07cf5a1}</UniqueIdentifier>
     </Filter>
+    <Filter Include="policies">
+      <UniqueIdentifier>{061994ee-4c7b-4260-a87a-646af49eebe6}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="WinIOMonitor.cpp">
@@ -59,6 +62,12 @@
     </ClCompile>
     <ClCompile Include="callbacks\fltInstance.cpp">
       <Filter>callbacks</Filter>
+    </ClCompile>
+    <ClCompile Include="deviceCntl.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="policies\processFilter.cpp">
+      <Filter>policies</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -115,6 +124,15 @@
     </ClInclude>
     <ClInclude Include="callbacks\fltInstance.hpp">
       <Filter>callbacks</Filter>
+    </ClInclude>
+    <ClInclude Include="deviceCntl.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="policies\processFilter.hpp">
+      <Filter>policies</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cmn\WinIOMonitor_API.hpp">
+      <Filter>common files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

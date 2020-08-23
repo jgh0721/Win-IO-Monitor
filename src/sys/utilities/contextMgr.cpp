@@ -277,6 +277,9 @@ NTSTATUS CtxGetOrSetContext( PCFLT_RELATED_OBJECTS FltObjects, PVOID Target, PFL
 
 NTSTATUS CtxReleaseContext( PFLT_CONTEXT Context )
 {
+    if( Context == NULLPTR )
+        return STATUS_SUCCESS;
+
     FltReleaseContext( Context );
     return STATUS_SUCCESS;
 }

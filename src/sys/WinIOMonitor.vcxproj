@@ -23,7 +23,9 @@
     <ClCompile Include="callbacks\callbacks.cpp" />
     <ClCompile Include="callbacks\fltCreateFile.cpp" />
     <ClCompile Include="callbacks\fltInstance.cpp" />
+    <ClCompile Include="deviceCntl.cpp" />
     <ClCompile Include="deviceMgmt.cpp" />
+    <ClCompile Include="policies\processFilter.cpp" />
     <ClCompile Include="utilities\bufferMgr.cpp" />
     <ClCompile Include="utilities\contextMgr.cpp" />
     <ClCompile Include="utilities\fltUtilities.cpp" />
@@ -33,6 +35,7 @@
     <ClCompile Include="WinIOMonitor_Filter.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\cmn\WinIOMonitor_API.hpp" />
     <ClInclude Include="..\cmn\WinIOMonitor_Event.hpp" />
     <ClInclude Include="..\cmn\WinIOMonitor_IOCTL.hpp" />
     <ClInclude Include="..\cmn\WinIOMonitor_Names.hpp" />
@@ -40,8 +43,10 @@
     <ClInclude Include="callbacks\callbacks.hpp" />
     <ClInclude Include="callbacks\fltCreateFile.hpp" />
     <ClInclude Include="callbacks\fltInstance.hpp" />
+    <ClInclude Include="deviceCntl.hpp" />
     <ClInclude Include="deviceMgmt.hpp" />
     <ClInclude Include="fltBase.hpp" />
+    <ClInclude Include="policies\processFilter.hpp" />
     <ClInclude Include="stdafx.hpp" />
     <ClInclude Include="utilities\bufferMgr.hpp" />
     <ClInclude Include="utilities\contextMgr.hpp" />
