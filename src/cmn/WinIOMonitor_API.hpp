@@ -70,9 +70,10 @@ typedef struct _PROCESS_FILTER
 
 } PROCESS_FILTER, *PPROCESS_FILTER;
 
-DWORD AddProcessFileFilterMask( __in PROCESS_FILTER* ProcessFilter );
+DWORD AddProcessFileFilterMask( __in const PROCESS_FILTER* ProcessFilter );
 DWORD GetProcessFileFilterCount( __out DWORD* FilterCount );
 DWORD RemoveProcessFileFilterMask( __in const wchar_t* wszFilterMask );
 DWORD RemoveProcessFileFilterMask( __in DWORD ProcessId );
+DWORD ResetProcessFileFilterMask();
 
 #endif // HDR_WINIOMONITOR_API
