@@ -22,4 +22,7 @@ FLTAPI WinIOPostSetInformation( __inout PFLT_CALLBACK_DATA Data,
 
 EXTERN_C_END
 
+///////////////////////////////////////////////////////////////////////////////
+
+
 #endif // HDR_MINIFILTER_SET_INFORMATION

@@ -38,6 +38,6 @@ typedef struct _IRP_CONTEXT
 PIRP_CONTEXT CreateIrpContext( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_OBJECTS FltObjects );
 void CloseIrpContext( __in PIRP_CONTEXT& IrpContext );
 
-void PrintIrpContext( __in PIRP_CONTEXT IrpContext );
+void PrintIrpContext( __in const PIRP_CONTEXT IrpContext );
 
 #endif // HDR_WINIOMONITOR_IRP_CONTEXT

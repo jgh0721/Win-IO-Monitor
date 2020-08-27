@@ -399,6 +399,11 @@ namespace nsW32API
     #define FILE_RENAME_FORCE_RESIZE_SOURCE_SR                  0x00000100 	// If FILE_RENAME_SUPPRESS_STORAGE_RESERVE_INHERITANCE is not also specified, when renaming a file to a new directory that is part of a different storage reserve area, always shrink the source directory's storage reserve area by the full size of the file being renamed. Requires manage volume access.
     #define FILE_RENAME_FORCE_RESIZE_SR                         0x00000180  // 
 
+    typedef struct _FILE_DISPOSITION_INFORMATION
+    {
+        BOOLEAN DeleteFile;
+    } FILE_DISPOSITION_INFORMATION, * PFILE_DISPOSITION_INFORMATION;
+
     typedef struct _FILE_DISPOSITION_INFORMATION_EX
     {
         ULONG Flags;
@@ -410,6 +415,45 @@ namespace nsW32API
     #define FILE_DISPOSITION_FORCE_IMAGE_SECTION_CHECK  0x00000004      // Specifies the system should force an image section check.
     #define FILE_DISPOSITION_ON_CLOSE                   0x00000008      // Specifies if the system sets or clears the on-close state.
     #define FILE_DISPOSITION_IGNORE_READONLY_ATTRIBUTE  0x00000010      // Allows read-only files to be deleted. See more info in Remarks.
+
+    typedef struct _FILE_END_OF_FILE_INFORMATION
+    {
+        LARGE_INTEGER EndOfFile;
+    } FILE_END_OF_FILE_INFORMATION, * PFILE_END_OF_FILE_INFORMATION;
+
+    typedef struct _FILE_LINK_INFORMATION
+    {
+        BOOLEAN ReplaceIfExists;
+
+        HANDLE RootDirectory;
+        ULONG FileNameLength;
+        WCHAR FileName[ 1 ];
+    } FILE_LINK_INFORMATION, * PFILE_LINK_INFORMATION;
+
+    // #if (_WIN32_WINNT >= _WIN32_WINNT_WIN10_RS5)
+    typedef struct _FILE_LINK_INFORMATION_EX
+    {
+        union
+        {
+            BOOLEAN ReplaceIfExists;  // FileLinkInformation
+            ULONG Flags;              // FileLinkInformationEx
+        } DUMMYUNIONNAME;
+
+        HANDLE RootDirectory;
+        ULONG FileNameLength;
+        WCHAR FileName[ 1 ];
+    } FILE_LINK_INFORMATION_EX, * PFILE_LINK_INFORMATION_EX;
+
+    #define FILE_LINK_REPLACE_IF_EXISTS                     0x00000001  // If a file with the given name already exists, it should be replaced with the new link. Equivalent to the ReplaceIfExists field used with the FileLinkInformation information class.
+    #define FILE_LINK_POSIX_SEMANTICS                       0x00000002  // If FILE_LINK_REPLACE_IF_EXISTS is also specified, allow replacing a file even if there are existing handles to it. Existing handles to the replaced file continue to be valid for operations such as read and write. Any subsequent opens of the target name will open the new link, not the replaced file.
+    #define FILE_LINK_SUPPRESS_STORAGE_RESERVE_INHERITANCE  0x00000008  // When creating a link in a new directory, suppress any inheritance rules related to the storage reserve ID property of the file.
+    #define FILE_LINK_NO_INCREASE_AVAILABLE_SPACE           0x00000010  // If FILE_LINK_SUPPRESS_STORAGE_RESERVE_INHERITANCE is not also specified, when creating a link in a new directory, automatically resize affected storage reserve areas as needed to prevent the user visible free space on the volume from increasing. Requires manage volume access.
+    #define FILE_LINK_NO_DECREASE_AVAILABLE_SPACE           0x00000020  // If FILE_LINK_SUPPRESS_STORAGE_RESERVE_INHERITANCE is not also specified, when creating a link in a new directory, automatically resize affected storage reserve areas as needed to prevent the user visible free space on the volume from decreasing. Requires manage volume access.
+    #define FILE_LINK_PRESERVE_AVAILABLE_SPACE              0x00000030  // Equivalent to specifying both FILE_LINK_NO_INCREASE_AVAILABLE_SPACE and FILE_LINK_NO_DECREASE_AVAILABLE_SPACE.
+    #define FILE_LINK_IGNORE_READONLY_ATTRIBUTE             0x00000040  // If FILE_LINK_REPLACE_IF_EXISTS is also specified, allow replacing a file even if it is read-only. Requires WRITE_ATTRIBUTES access to the replaced file.
+    #define FILE_LINK_FORCE_RESIZE_TARGET_SR                0x00000080  // If FILE_LINK_SUPPRESS_STORAGE_RESERVE_INHERITANCE is not also specified, when creating a link in a new directory that is part of a different storage reserve area, always grow the target directory's storage reserve area by the full size of the file being linked. Requires manage volume access.
+    #define FILE_LINK_FORCE_RESIZE_SOURCE_SR                0x00000100  // If FILE_LINK_SUPPRESS_STORAGE_RESERVE_INHERITANCE is not also specified, when creating a link in a new directory that is part of a different storage reserve area, always shrink the source directory's storage reserve area by the full size of the file being linked. Requires manage volume access.
+    #define FILE_LINK_FORCE_RESIZE_SR                       0x00000180  // Equivalent to specifying both FILE_LINK_FORCE_RESIZE_TARGET_SR and FILE_LINK_FORCE_RESIZE_SOURCE_SR.
 
     ///////////////////////////////////////////////////////////////////////////
 
@@ -505,5 +549,11 @@ namespace nsW32API
     extern nsW32API::FltMgrAPI FltMgrAPIMgr;
 
 } // nsW32API
+
+#define IsClassContainDst( FileInformationClass ) \
+    ( ( FileInformationClass == nsW32API::FileRenameInformation ) || \
+      ( FileInformationClass == nsW32API::FileRenameInformationEx ) || \
+      ( FileInformationClass == nsW32API::FileLinkInformation ) || \
+      ( FileInformationClass == nsW32API::FileLinkInformationEx ) )
 
 #endif // HDR_WINIOMONITOR_W32API
