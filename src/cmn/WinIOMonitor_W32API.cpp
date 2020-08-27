@@ -9,6 +9,188 @@ nsW32API::FltMgrAPI nsW32API::FltMgrAPIMgr;
 
 ///////////////////////////////////////////////////////////////////////////////
 
+const char* nsW32API::ConvertFileInformationClassTo( const FILE_INFORMATION_CLASS FileInformationClass )
+{
+    switch( FileInformationClass )
+    {
+        case FileDirectoryInformation: { return "FileDirectoryInformation"; } break;
+        case FileFullDirectoryInformation: { return "FileFullDirectoryInformation"; } break;
+        case FileBothDirectoryInformation: { return "FileBothDirectoryInformation"; } break;
+        case FileBasicInformation: { return "FileBasicInformation"; } break;
+        case FileStandardInformation: { return "FileStandardInformation"; } break;
+        case FileInternalInformation: { return "FileInternalInformation"; } break;
+        case FileEaInformation: { return "FileEaInformation"; } break;
+        case FileAccessInformation: { return "FileAccessInformation"; } break;
+        case FileNameInformation: { return "FileNameInformation"; } break;
+        case FileRenameInformation: { return "FileRenameInformation"; } break;
+        case FileLinkInformation: { return "FileLinkInformation"; } break;
+        case FileNamesInformation: { return "FileNamesInformation"; } break;
+        case FileDispositionInformation: { return "FileDispositionInformation"; } break;
+        case FilePositionInformation: { return "FilePositionInformation"; } break;
+        case FileFullEaInformation: { return "FileFullEaInformation"; } break;
+        case FileModeInformation: { return "FileModeInformation"; } break;
+        case FileAlignmentInformation: { return "FileAlignmentInformation"; } break;
+        case FileAllInformation: { return "FileAllInformation"; } break;
+        case FileAllocationInformation: { return "FileAllocationInformation"; } break;
+        case FileEndOfFileInformation: { return "FileEndOfFileInformation"; } break;
+        case FileAlternateNameInformation: { return "FileAlternateNameInformation"; } break;
+        case FileStreamInformation: { return "FileStreamInformation"; } break;
+        case FilePipeInformation: { return "FilePipeInformation"; } break;
+        case FilePipeLocalInformation: { return "FilePipeLocalInformation"; } break;
+        case FilePipeRemoteInformation: { return "FilePipeRemoteInformation"; } break;
+        case FileMailslotQueryInformation: { return "FileMailslotQueryInformation"; } break;
+        case FileMailslotSetInformation: { return "FileMailslotSetInformation"; } break;
+        case FileCompressionInformation: { return "FileCompressionInformation"; } break;
+        case FileObjectIdInformation: { return "FileObjectIdInformation"; } break;
+        case FileCompletionInformation: { return "FileCompletionInformation"; } break;
+        case FileMoveClusterInformation: { return "FileMoveClusterInformation"; } break;
+        case FileQuotaInformation: { return "FileQuotaInformation"; } break;
+        case FileReparsePointInformation: { return "FileReparsePointInformation"; } break;
+        case FileNetworkOpenInformation: { return "FileNetworkOpenInformation"; } break;
+        case FileAttributeTagInformation: { return "FileAttributeTagInformation"; } break;
+        case FileTrackingInformation: { return "FileTrackingInformation"; } break;
+        case FileIdBothDirectoryInformation: { return "FileIdBothDirectoryInformation"; } break;
+        case FileIdFullDirectoryInformation: { return "FileIdFullDirectoryInformation"; } break;
+        case FileValidDataLengthInformation: { return "FileValidDataLengthInformation"; } break;
+        case FileShortNameInformation: { return "FileShortNameInformation"; } break;
+        case FileIoCompletionNotificationInformation: { return "FileIoCompletionNotificationInformation"; } break;
+        case FileIoStatusBlockRangeInformation: { return "FileIoStatusBlockRangeInformation"; } break;
+        case FileIoPriorityHintInformation: { return "FileIoPriorityHintInformation"; } break;
+        case FileSfioReserveInformation: { return "FileSfioReserveInformation"; } break;
+        case FileSfioVolumeInformation: { return "FileSfioVolumeInformation"; } break;
+        case FileHardLinkInformation: { return "FileHardLinkInformation"; } break;
+        case FileProcessIdsUsingFileInformation: { return "FileProcessIdsUsingFileInformation"; } break;
+        case FileNormalizedNameInformation: { return "FileNormalizedNameInformation"; } break;
+        case FileNetworkPhysicalNameInformation: { return "FileNetworkPhysicalNameInformation"; } break;
+        case FileIdGlobalTxDirectoryInformation: { return "FileIdGlobalTxDirectoryInformation"; } break;
+        case FileIsRemoteDeviceInformation: { return "FileIsRemoteDeviceInformation"; } break;
+        case FileAttributeCacheInformation: { return "FileAttributeCacheInformation"; } break;
+        case FileNumaNodeInformation: { return "FileNumaNodeInformation"; } break;
+        case FileStandardLinkInformation: { return "FileStandardLinkInformation"; } break;
+        case FileRemoteProtocolInformation: { return "FileRemoteProtocolInformation"; } break;
+        
+        case FileRenameInformationBypassAccessCheck: { return "FileRenameInformationBypassAccessCheck"; } break;
+        case FileLinkInformationBypassAccessCheck: { return "FileLinkInformationBypassAccessCheck"; } break;
+        case FileVolumeNameInformation: { return "FileVolumeNameInformation"; } break;
+        case FileIdInformation: { return "FileIdInformation"; } break;
+        case FileidExtdDirectoryInformation: { return "FileidExtdDirectoryInformation"; } break;
+        case FileReplaceCompletionInformation: { return "FileReplaceCompletionInformation"; } break;
+        case FileHardLinkFullIdInformation: { return "FileHardLinkFullIdInformation"; } break;
+        case FileIdExtdBothDirectoryInformation: { return "FileIdExtdBothDirectoryInformation"; } break;
+        case FileDispositionInformationEx: { return "FileDispositionInformationEx"; } break;
+        case FileRenameInformationEx: { return "FileRenameInformationEx"; } break;
+        case FileRenameInformationExBypassAccessCheck: { return "FileRenameInformationExBypassAccessCheck"; } break;
+        case FileDesiredStorageClassInformation: { return "FileDesiredStorageClassInformation"; } break;
+        case FileStatInformation: { return "FileStatInformation"; } break;
+        case FileMemoryPartitionInformation: { return "FileMemoryPartitionInformation"; } break;
+        case FileStatLxInformation: { return "FileStatLxInformation"; } break;
+        case FileCaseSensitiveInformation: { return "FileCaseSensitiveInformation"; } break;
+        case FileLinkInformationEx: { return "FileLinkInformationEx"; } break;
+        case FileLinkInformationExBypassAccessCheck: { return "FileLinkInformationExBypassAccessCheck"; } break;
+        case FileStorageReserveIdInformation: { return "FileStorageReserveIdInformation"; } break;
+        case FileCaseSensitiveInformationForceAccessCheck: { return "FileCaseSensitiveInformationForceAccessCheck"; } break;
+    }
+
+    return "Unknown FileInformationClass";
+}
+
+const char* nsW32API::ConvertIRPMajorFunction( UCHAR MajorFunction )
+{
+    switch( MajorFunction )
+    {
+        case IRP_MJ_CREATE: { return "CREATE"; } break;
+        case IRP_MJ_CREATE_NAMED_PIPE: { return "CREATE_PIPE"; } break;
+        case IRP_MJ_CLOSE: { return "CLOSE"; } break;
+        case IRP_MJ_READ: { return "READ"; } break;
+        case IRP_MJ_WRITE: { return "WRITE"; } break;
+        case IRP_MJ_QUERY_INFORMATION: { return "QUERY_INFO"; } break;
+        case IRP_MJ_SET_INFORMATION: { return "SET_INFO"; } break;
+        case IRP_MJ_QUERY_EA: { return "QUERY_EA"; } break;
+        case IRP_MJ_SET_EA: { return "SET_EA"; } break;
+        case IRP_MJ_FLUSH_BUFFERS: { return "FLUSH"; } break;
+        case IRP_MJ_QUERY_VOLUME_INFORMATION: { return "QUERY_VOL"; } break;
+        case IRP_MJ_SET_VOLUME_INFORMATION: { return "SET_VOL"; } break;
+        case IRP_MJ_DIRECTORY_CONTROL: { return "DIR_CONTROL"; } break;
+        case IRP_MJ_FILE_SYSTEM_CONTROL: { return "FS_CONTROL"; } break;
+        case IRP_MJ_DEVICE_CONTROL: { return "DEV_CONTROL"; } break;
+        case IRP_MJ_INTERNAL_DEVICE_CONTROL: { return "INTL_DEV_CONTROL"; } break;
+        case IRP_MJ_SHUTDOWN: { return "SHUTDOWN"; } break;
+        case IRP_MJ_LOCK_CONTROL: { return "LCK_CNTL"; } break;
+        case IRP_MJ_CLEANUP: { return "CLEANUP"; } break;
+        case IRP_MJ_CREATE_MAILSLOT: { return "CREATE_MAIL"; } break;
+        case IRP_MJ_QUERY_SECURITY: { return "QUERY_SEC"; } break;
+        case IRP_MJ_SET_SECURITY: { return "SET_SEC"; } break;
+        case IRP_MJ_POWER: { return "POWER"; } break;
+        case IRP_MJ_SYSTEM_CONTROL: { return "SYS_CONTROL"; } break;
+        case IRP_MJ_DEVICE_CHANGE: { return "DEV_CHANGE"; } break;
+        case IRP_MJ_QUERY_QUOTA: { return "QUERY_QUOTA"; } break;
+        case IRP_MJ_SET_QUOTA: { return "SET_QUOTA"; } break;
+        case IRP_MJ_PNP: { return "PNP"; } break;
+    }
+
+    return "Unk";
+}
+
+const char* nsW32API::ConvertCreateShareAccess( ULONG ShareAccess )
+{
+    if( ShareAccess & ( FILE_SHARE_READ ) )
+    {
+        return "FILE_SHARE_READ";
+    }
+    else if( ShareAccess & ( FILE_SHARE_WRITE ) )
+    {
+        return "FILE_SHARE_WRITE";
+    }
+    else if( ShareAccess & ( FILE_SHARE_DELETE ) )
+    {
+        return "FILE_SHARE_DELETE";
+    }
+    else if( ShareAccess & ( FILE_SHARE_READ & FILE_SHARE_WRITE ) )
+    {
+        return "FILE_SHARE_READ|FILE_SHARE_WRITE";
+    }
+    else if( ShareAccess & ( FILE_SHARE_READ & FILE_SHARE_WRITE & FILE_SHARE_DELETE ) )
+    {
+        return "FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE";
+    }
+    else if( ShareAccess & ( FILE_SHARE_WRITE & FILE_SHARE_DELETE ) )
+    {
+        return "FILE_SHARE_WRITE|FILE_SHARE_DELETE";
+    }
+    else if( ShareAccess & ( FILE_SHARE_READ & FILE_SHARE_DELETE ) )
+    {
+        return "FILE_SHARE_READ|FILE_SHARE_DELETE";
+    }
+
+    if( ShareAccess == 0 )
+        return "None";
+
+    return "Unk";
+}
+
+const char* nsW32API::ConvertCreateDisposition( __in ULONG CreateDisposition )
+{
+    switch( CreateDisposition )
+    {
+        case FILE_SUPERSEDE:
+            return "FILE_SUPERSEDE";
+        case FILE_CREATE:
+            return "FILE_CREATE";
+        case FILE_OPEN:
+            return "FILE_OPEN";
+        case FILE_OPEN_IF:
+            return "FILE_OPEN_IF";
+        case FILE_OVERWRITE:
+            return "FILE_OVERWRITE";
+        case FILE_OVERWRITE_IF:
+            return "FILE_OVERWRITE_IF";
+    }
+
+    return "Unk";
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 void nsW32API::InitializeNtOsKrnlAPI( NtOsKrnlAPI* ntOsKrnlAPI )
 {
     ASSERT( ntOsKrnlAPI != NULLPTR );

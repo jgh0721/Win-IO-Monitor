@@ -34,7 +34,7 @@ namespace nsUtils
 
         do
         {
-            if( strCondition == "=" || strCondition == "==" )
+            if( (strcmp( strCondition, "=" ) == 0) || (strcmp( strCondition, "==" ) == 0) )
             {
                 // dwMajorVersion 이 같음( iMinorVersion < 0 )
                 // dwMajorVersion 과 iMinorVersion 이 같음
@@ -50,7 +50,7 @@ namespace nsUtils
                         nRet = false;
                 }
             }
-            else if( strCondition == ">=" )
+            else if( strcmp( strCondition, ">=" ) == 0 )
             {
                 // 현 시스템의 MajorVersion 이 조건보다 크거나 같은지 비교
                 if( nsDetail::GlobalOSInfo.MajorVersion >= dwMajorVersion )
@@ -66,7 +66,7 @@ namespace nsUtils
                         nRet = false;
                 }
             }
-            else if( strCondition == ">" )
+            else if( strcmp( strCondition, ">" ) == 0 )
             {
                 // 현 시스템의 MajorVersion이 조건보다 크다면 바로 조건에 부합
                 if( nsDetail::GlobalOSInfo.MajorVersion > dwMajorVersion )
@@ -83,7 +83,7 @@ namespace nsUtils
                         nRet = true;
                 }
             }
-            else if( strCondition == "<=" )
+            else if( strcmp( strCondition, "<=" ) == 0 )
             {
                 // 현 시스템의 MajorVersion 이 조건보다 크거나 같은지 비교
                 if( nsDetail::GlobalOSInfo.MajorVersion <= dwMajorVersion )
@@ -99,7 +99,7 @@ namespace nsUtils
                         nRet = false;
                 }
             }
-            else if( strCondition == "<" )
+            else if( strcmp( strCondition, "<" ) == 0 )
             {
                 // 현 시스템의 MajorVersion이 조건보다 작다면 바로 조건에 부합
                 if( nsDetail::GlobalOSInfo.MajorVersion < dwMajorVersion )

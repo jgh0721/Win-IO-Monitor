@@ -23,6 +23,7 @@
     <ClCompile Include="callbacks\callbacks.cpp" />
     <ClCompile Include="callbacks\fltCreateFile.cpp" />
     <ClCompile Include="callbacks\fltInstance.cpp" />
+    <ClCompile Include="callbacks\fltSetInformation.cpp" />
     <ClCompile Include="deviceCntl.cpp" />
     <ClCompile Include="deviceMgmt.cpp" />
     <ClCompile Include="irpContext.cpp" />
@@ -44,6 +45,7 @@
     <ClInclude Include="callbacks\callbacks.hpp" />
     <ClInclude Include="callbacks\fltCreateFile.hpp" />
     <ClInclude Include="callbacks\fltInstance.hpp" />
+    <ClInclude Include="callbacks\fltSetInformation.hpp" />
     <ClInclude Include="deviceCntl.hpp" />
     <ClInclude Include="deviceMgmt.hpp" />
     <ClInclude Include="fltBase.hpp" />
@@ -51,6 +53,7 @@
     <ClInclude Include="policies\processFilter.hpp" />
     <ClInclude Include="stdafx.hpp" />
     <ClInclude Include="utilities\bufferMgr.hpp" />
+    <ClInclude Include="utilities\bufferMgr_Defs.hpp" />
     <ClInclude Include="utilities\contextMgr.hpp" />
     <ClInclude Include="utilities\contextMgr_Defs.hpp" />
     <ClInclude Include="utilities\fltUtilities.hpp" />

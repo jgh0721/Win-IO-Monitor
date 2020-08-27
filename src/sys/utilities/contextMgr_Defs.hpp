@@ -3,6 +3,8 @@
 
 #include "fltBase.hpp"
 
+#include "bufferMgr_Defs.hpp"
+
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
 #endif
@@ -42,6 +44,8 @@ typedef struct _CTX_INSTANCE_CONTEXT
     WCHAR                           VolumeGUIDNameBuffer[ 64 ];
     FLT_FILESYSTEM_TYPE             VolumeFileSystemType;
 
+    WCHAR                           DriveLetter;
+
 } CTX_INSTANCE_CONTEXT, *PCTX_INSTANCE_CONTEXT;
 
 #define CTX_INSTANCE_CONTEXT_SIZE sizeof( CTX_INSTANCE_CONTEXT )
@@ -62,10 +66,14 @@ typedef struct _CTX_FILE_CONTEXT
 
 typedef struct _CTX_STREAM_CONTEXT
 {
+    TyGenericBuffer<WCHAR>          FileFullPath;
+
 
 } CTX_STREAM_CONTEXT, * PCTX_STREAM_CONTEXT;
 
 #define CTX_STREAM_CONTEXT_SIZE sizeof( CTX_STREAM_CONTEXT )
+
+#define OPEN_BY_FILE_ID
 
 typedef struct _CTX_STREAMHANDLE_CONTEXT
 {

@@ -72,6 +72,9 @@
     <ClCompile Include="irpContext.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="callbacks\fltSetInformation.cpp">
+      <Filter>callbacks</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="WinIOMonitor.hpp">
@@ -139,6 +142,12 @@
     </ClInclude>
     <ClInclude Include="irpContext.hpp">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="callbacks\fltSetInformation.hpp">
+      <Filter>callbacks</Filter>
+    </ClInclude>
+    <ClInclude Include="utilities\bufferMgr_Defs.hpp">
+      <Filter>utilities</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

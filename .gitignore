@@ -2,6 +2,7 @@
 .vs/
 _build/
 _object/
+_ReSharper.Caches/
 
 # Prerequisites
 *.d

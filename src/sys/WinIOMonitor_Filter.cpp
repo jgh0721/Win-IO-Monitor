@@ -1,14 +1,24 @@
 ﻿#include "WinIOMonitor_Filter.hpp"
 
-#include "WinIOMonitor_Names.hpp"
 #include "utilities/osInfoMgr.hpp"
 #include "callbacks/callbacks.hpp"
+#include "utilities/contextMgr.hpp"
 
 #include "WinIOMonitor_W32API.hpp"
+#include "WinIOMonitor_Names.hpp"
 
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
 #endif
+
+#define CTX_STRING_TAG                          'tSxC'
+#define CTX_RESOURCE_TAG                        'cRxC'
+#define CTX_INSTANCE_CONTEXT_TAG                'cIxC'
+#define CTX_VOLUME_CONTEXT_TAG                  'cVxc'
+#define CTX_FILE_CONTEXT_TAG                    'cFxC'
+#define CTX_STREAM_CONTEXT_TAG                  'cSxC'
+#define CTX_STREAMHANDLE_CONTEXT_TAG            'cHxC'
+#define CTX_TRANSACTION_CONTEXT_TAG             'cTxc'
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -51,8 +61,8 @@ CONST FLT_OPERATION_REGISTRATION FilterCallbacks[] = {
 
     { IRP_MJ_SET_INFORMATION,
       0,
-      FilterPreOperationPassThrough,
-      FilterPostOperationPassThrough
+      WinIOPreSetInformation,
+      WinIOPostSetInformation
     },
 
     { IRP_MJ_QUERY_EA,
@@ -251,11 +261,43 @@ CONST FLT_OPERATION_REGISTRATION FilterCallbacks[] = {
 
 CONST FLT_CONTEXT_REGISTRATION FilterContextXP[] = {
     {
+        FLT_INSTANCE_CONTEXT,
+        0,
+        (PFLT_CONTEXT_CLEANUP_CALLBACK ) CtxInstanceContextCleanupCallback,
+        CTX_INSTANCE_CONTEXT_SIZE,
+        CTX_INSTANCE_CONTEXT_TAG
+    },
+
+    {
+        FLT_STREAM_CONTEXT,
+        0,
+        ( PFLT_CONTEXT_CLEANUP_CALLBACK )CtxStreamContextCleanupCallback,
+        CTX_STREAM_CONTEXT_SIZE,
+        CTX_STREAM_CONTEXT_TAG
+    },
+
+    {
         FLT_CONTEXT_END
     }
 };
 
 CONST FLT_CONTEXT_REGISTRATION FilterContextVista[] = {
+    {
+        FLT_INSTANCE_CONTEXT,
+        0,
+        ( PFLT_CONTEXT_CLEANUP_CALLBACK )CtxInstanceContextCleanupCallback,
+        CTX_INSTANCE_CONTEXT_SIZE,
+        CTX_INSTANCE_CONTEXT_TAG
+    },
+
+    {
+        FLT_STREAM_CONTEXT,
+        0,
+        ( PFLT_CONTEXT_CLEANUP_CALLBACK )CtxStreamContextCleanupCallback,
+        CTX_STREAM_CONTEXT_SIZE,
+        CTX_STREAM_CONTEXT_TAG
+    },
+
     {
         FLT_CONTEXT_END
     }
@@ -345,6 +387,7 @@ NTSTATUS InitializeMiniFilter( CTX_GLOBAL_DATA* GlobalContext )
         }
     }
 
+    KdPrint( ( "[WinIOMon] %s Line=%d Status=0x%08x\n", __FUNCTION__, __LINE__, Status ) );
     return Status;
 }
 
@@ -393,13 +436,16 @@ NTSTATUS InitializeMiniFilterPort( CTX_GLOBAL_DATA* GlobalContext )
     return Status;
 }
 
-NTSTATUS MiniFilterUnload( FLT_FILTER_UNLOAD_FLAGS Flags )
+NTSTATUS FLTAPI MiniFilterUnload( FLT_FILTER_UNLOAD_FLAGS Flags )
 {
     KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_TRACE_LEVEL, "[WinIOMon] %s Flags=%d", __FUNCTION__, Flags ) );
 
     if( GlobalContext.ServerPort != NULLPTR )
         FltCloseCommunicationPort( GlobalContext.ServerPort );
     GlobalContext.ServerPort = NULLPTR;
+
+    FltUnregisterFilter( GlobalContext.Filter );
+    GlobalContext.Filter = NULLPTR;
 
     return STATUS_SUCCESS;
 }
@@ -416,6 +462,7 @@ void ClientDisconnectNotify( PVOID ConnectionCookie )
     KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_TRACE_LEVEL, "[WinIOMon] %s ConnectionCookie=%d", __FUNCTION__, ConnectionCookie ) );
 
     FltCloseClientPort( GlobalContext.Filter, &GlobalContext.ClientPort );
+    GlobalContext.ClientPort = NULLPTR;
 }
 
 NTSTATUS ClientMessageNotify( PVOID PortCookie, PVOID InputBuffer, ULONG InputBufferLength, PVOID OutputBuffer,

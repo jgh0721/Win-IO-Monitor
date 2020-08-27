@@ -1,5 +1,7 @@
 ﻿#include "contextMgr.hpp"
 
+
+#include "bufferMgr.hpp"
 #include "WinIOMonitor_W32API.hpp"
 
 #if defined(_MSC_VER)
@@ -308,6 +310,8 @@ void CtxStreamContextCleanupCallback( PCTX_STREAM_CONTEXT StreamContext, FLT_CON
 {
     KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_TRACE_LEVEL, "[WinIOMon] %s ContextType=%d Context=%p\n",
                  __FUNCTION__, ContextType, StreamContext ) );
+
+    DeallocateBuffer( &StreamContext->FileFullPath );
 }
 
 void CtxStreamHandleContextCleanupCallback( PCTX_STREAMHANDLE_CONTEXT StreamHandleContext, FLT_CONTEXT_TYPE ContextType )

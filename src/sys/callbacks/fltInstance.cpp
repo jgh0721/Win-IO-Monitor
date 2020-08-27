@@ -3,6 +3,7 @@
 
 #include "utilities/contextMgr.hpp"
 #include "utilities/contextMgr_Defs.hpp"
+#include "utilities/fltUtilities.hpp"
 #include "utilities/osInfoMgr.hpp"
 
 #if defined(_MSC_VER)
@@ -84,6 +85,8 @@ NTSTATUS CreateInstanceContext( PCFLT_RELATED_OBJECTS FltObjects, FLT_INSTANCE_S
             break;
         }
 
+        nsUtils::FindDriveLetterByDeviceName( &InstanceContext->DeviceName, &InstanceContext->DriveLetter );
+
         InstanceContext->VolumeFileSystemType = VolumeFilesystemType;
         RtlInitEmptyUnicodeString( &InstanceContext->VolumeGUIDName, InstanceContext->VolumeGUIDNameBuffer, sizeof( WCHAR ) * _countof( InstanceContext->VolumeGUIDNameBuffer ) );
 
@@ -94,6 +97,9 @@ NTSTATUS CreateInstanceContext( PCFLT_RELATED_OBJECTS FltObjects, FLT_INSTANCE_S
 
             FltGetVolumeGuidName( FltObjects->Volume, &InstanceContext->VolumeGUIDName, NULL );
         }
+
+        KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_INFO_LEVEL, "[WinIOMon] %s DeviceName=%wZ DriveLetter=%wc\n",
+                     __FUNCTION__, &InstanceContext->DeviceName, InstanceContext->DriveLetter ) );
 
     } while( false );
 

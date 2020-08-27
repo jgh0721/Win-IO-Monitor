@@ -20,10 +20,10 @@
 
 NTSTATUS FLTAPI DriverEntry( PDRIVER_OBJECT DriverObject, PUNICODE_STRING RegistryPath )
 {
-    KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_TRACE_LEVEL, "[WinIOMon] %s DriverObject=%p|RegistryPath=%wz\n",
+    KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_TRACE_LEVEL, "[WinIOMon] %s DriverObject=%p|RegistryPath=%wZ\n",
                  __FUNCTION__, DriverObject, RegistryPath ) );
 
-    NTSTATUS Status = STATUS_SUCCESS;
+    NTSTATUS Status = STATUS_UNSUCCESSFUL;
 
     do
     {
@@ -53,6 +53,8 @@ NTSTATUS FLTAPI DriverEntry( PDRIVER_OBJECT DriverObject, PUNICODE_STRING Regist
         FastIODispatch->FastIoDeviceControl = FastIoDeviceControl;
         DriverObject->FastIoDispatch = FastIODispatch;
 
+        Status = STATUS_SUCCESS;
+
     } while( false );
 
     return Status;
@@ -62,6 +64,13 @@ void DriverUnload( PDRIVER_OBJECT DriverObject )
 {
     KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_TRACE_LEVEL, "[WinIOMon] %s DriverObject=%p\n",
                  __FUNCTION__, DriverObject ) );
+
+    /*!
+        1. wehn invoke sc stop, only call DriverUnload
+        2. when invoke fltmc unload, first call FilterUnloadcallback then call DriverUnload
+    */
+    if( GlobalContext.Filter != NULLPTR )
+        MiniFilterUnload( 0 );
 
     StopProcessNotify();
     CloseProcessFilter();
@@ -106,8 +115,11 @@ NTSTATUS InitializeGlobalContext( PDRIVER_OBJECT DriverObject )
 
         AllocateBuffer<WCHAR>( BUFFER_FILENAME );
 
+        Status = STATUS_SUCCESS;
+
     } while( false );
 
+    KdPrint( ( "[WinIOMon] %s Line=%d Status=0x%08x\n", __FUNCTION__, __LINE__, Status ) );
     return Status;
 }
 
@@ -122,5 +134,6 @@ NTSTATUS InitializeFeatures( CTX_GLOBAL_DATA* GlobalContext )
         
     } while( false );
 
+    KdPrint( ( "[WinIOMon] %s Line=%d Status=0x%08x\n", __FUNCTION__, __LINE__, Status ) );
     return Status;
 }

@@ -651,6 +651,10 @@ NTSTATUS SearchProcessInfo( ULONG ProcessId, TyGenericBuffer<WCHAR>* ProcessFile
 			InsertProcessInfo( 0, ProcessId );
 			return SearchProcessInfo( ProcessId, ProcessFileFullPath, wszProcessName );
 		}
+		else
+		{
+			Status = STATUS_SUCCESS;
+		}
 
     } while( false );
 

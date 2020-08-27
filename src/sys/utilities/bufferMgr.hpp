@@ -2,22 +2,12 @@
 #define HDR_WINIOMONITOR_BUFFERMGR
 
 #include "fltBase.hpp"
-
+#include "bufferMgr_Defs.hpp"
 #include "contextMgr_Defs.hpp"
 
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
 #endif
-
-enum TyEnBufferType
-{
-    BUFFER_UNKNOWN,
-    BUFFER_FILENAME,
-    BUFFER_PROCNAME,
-
-    BUFFER_MSG_SEND,
-    BUFFER_MSG_REPLY
-};
 
 #define POOL_FILENAME_TAG   'fnTG'
 #define POOL_PROCNAME_TAG   'pnTG'
@@ -28,19 +18,6 @@ enum TyEnBufferType
 #define POOL_PROCNAME_SIZE      1024
 #define POOL_MSG_SEND_SIZE      2048
 #define POOL_MSG_REPLY_SIZE     1024
-
-struct TyBaseBuffer
-{
-    TyEnBufferType      BufferType;
-    BOOLEAN             IsAllocatedFromLookasideList;
-    ULONG               BufferSize;
-};
-
-template< typename T >
-struct TyGenericBuffer : public TyBaseBuffer
-{
-    T*                  Buffer;
-};
 
 NTSTATUS AllocateGenericBuffer( __inout TyGenericBuffer<VOID>* GenericBuffer, __in ULONG RequiredSize, __in PNPAGED_LOOKASIDE_LIST LookasideList, __in ULONG PoolSize, __in ULONG PoolTag );
 void DeallocateGenericBuffer( __inout TyGenericBuffer<VOID>* GenericBuffer, __in PNPAGED_LOOKASIDE_LIST LookasideList );
