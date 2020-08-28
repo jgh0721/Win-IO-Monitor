@@ -52,6 +52,23 @@ NTSTATUS CtxAllocateContext( PFLT_FILTER Filter, FLT_CONTEXT_TYPE ContextType, P
         if( NT_SUCCESS( Status ) )
         {
             RtlZeroMemory( *Context, ctxSize );
+
+            switch( ContextType )
+            {
+                case FLT_STREAM_CONTEXT: {
+                    ERESOURCE*& Resource = ( ( CTX_STREAM_CONTEXT* )*Context )->Resource;
+                    Resource = (PERESOURCE)ExAllocatePoolWithTag( NonPagedPool, sizeof( ERESOURCE ), 'cSxC' );
+                    if( Resource )
+                    {
+                        Status = ExInitializeResourceLite( Resource );
+                        if( !NT_SUCCESS( Status ) )
+                        {
+                            ExFreePool( Resource );
+                            Resource = NULLPTR;
+                        }
+                    }
+                } break;
+            }
         }
 
     } while( false );
@@ -308,11 +325,13 @@ void CtxFileContextCleanupCallback( PCTX_FILE_CONTEXT FileContext, FLT_CONTEXT_T
 
 void CtxStreamContextCleanupCallback( PCTX_STREAM_CONTEXT StreamContext, FLT_CONTEXT_TYPE ContextType )
 {
-    KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_TRACE_LEVEL, "[WinIOMon] %s ContextType=%d Context=%p Src=%ws\n",
+    KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_TRACE_LEVEL, "[WinIOMon] %s ContextType=%d Context=%p Create=%d Clean=%d Close=%d Src=%ws\n",
                  __FUNCTION__, ContextType, StreamContext
+                 , StreamContext->CreateCount, StreamContext->CleanupCount, StreamContext->CloseCount
                  , StreamContext->FileFullPath.Buffer != NULLPTR ? StreamContext->FileFullPath.Buffer : L"(null)" ) );
 
     DeallocateBuffer( &StreamContext->FileFullPath );
+    ExDeleteResourceLite( StreamContext->Resource );
 }
 
 void CtxStreamHandleContextCleanupCallback( PCTX_STREAMHANDLE_CONTEXT StreamHandleContext, FLT_CONTEXT_TYPE ContextType )

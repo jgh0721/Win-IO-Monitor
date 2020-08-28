@@ -37,24 +37,30 @@ FLT_PREOP_CALLBACK_STATUS WinIOPreCreate( PFLT_CALLBACK_DATA Data, PCFLT_RELATED
 FLT_POSTOP_CALLBACK_STATUS WinIOPostCreate( PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects,
                                             PVOID CompletionContext, FLT_POST_OPERATION_FLAGS Flags )
 {
+    UNREFERENCED_PARAMETER( Flags );
+
     NTSTATUS Status = STATUS_SUCCESS;
     auto IrpContext = ( PIRP_CONTEXT )CompletionContext;
 
-    if( NT_SUCCESS( Data->IoStatus.Status ) )
+    if( NT_SUCCESS( Data->IoStatus.Status ) && Data->IoStatus.Status != STATUS_REPARSE )
     {
         Status = CtxGetOrSetContext( FltObjects, Data->Iopb->TargetFileObject, ( PFLT_CONTEXT* )&IrpContext->StreamContext, FLT_STREAM_CONTEXT );
+        if( NT_SUCCESS( Status ) )
+        {
+            KeEnterCriticalRegion();
+            ExAcquireResourceExclusiveLite( IrpContext->StreamContext->Resource, TRUE );
+
+            IrpContext->StreamContext->CreateCount++;
+
+            ExReleaseResourceLite( IrpContext->StreamContext->Resource );
+            KeLeaveCriticalRegion();
+        }
+
         if( !NT_SUCCESS( Status ) )
         {
             KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_TRACE_LEVEL, "[WinIOMon] EvtID=%09d %s %s Status=0x%08x\n",
                          IrpContext->EvtID, __FUNCTION__, "CtxGetOrSetContext FAILED", Status ) );
         }
-    }
-
-    if( NT_SUCCESS( Status ) )
-    {
-        if( IrpContext->StreamContext != NULLPTR )
-            CtxReleaseContext( IrpContext->StreamContext );
-        IrpContext->StreamContext = NULLPTR;
     }
 
     CloseIrpContext( IrpContext );

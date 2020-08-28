@@ -68,6 +68,11 @@ typedef struct _CTX_STREAM_CONTEXT
 {
     TyGenericBuffer<WCHAR>          FileFullPath;
 
+    ULONG                           CreateCount;
+    ULONG                           CleanupCount;
+    ULONG                           CloseCount;
+
+    PERESOURCE                      Resource;
 
 } CTX_STREAM_CONTEXT, * PCTX_STREAM_CONTEXT;
 

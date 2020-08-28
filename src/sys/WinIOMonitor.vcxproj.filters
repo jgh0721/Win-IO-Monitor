@@ -81,6 +81,9 @@
     <ClCompile Include="callbacks\fltCleanup.cpp">
       <Filter>callbacks</Filter>
     </ClCompile>
+    <ClCompile Include="callbacks\fltNetworkQueryOpen.cpp">
+      <Filter>callbacks</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="WinIOMonitor.hpp">
@@ -159,6 +162,9 @@
       <Filter>callbacks</Filter>
     </ClInclude>
     <ClInclude Include="callbacks\fltCleanup.hpp">
+      <Filter>callbacks</Filter>
+    </ClInclude>
+    <ClInclude Include="callbacks\fltNetworkQueryOpen.hpp">
       <Filter>callbacks</Filter>
     </ClInclude>
   </ItemGroup>

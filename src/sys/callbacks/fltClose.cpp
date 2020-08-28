@@ -18,7 +18,20 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI WinIOPreClose( PFLT_CALLBACK_DATA Data, PCFLT_R
     {
         if( IrpContext != NULLPTR )
         {
+            KeEnterCriticalRegion();
+            ExAcquireResourceExclusiveLite( IrpContext->StreamContext->Resource, TRUE );
+
+            IrpContext->StreamContext->CloseCount++;
+
+            ExReleaseResourceLite( IrpContext->StreamContext->Resource );
+            KeLeaveCriticalRegion();
+
             PrintIrpContext( IrpContext );
+
+            if( IrpContext->StreamContext )
+                CtxReleaseContext( IrpContext->StreamContext );
+            IrpContext->StreamContext = NULLPTR;
+
             FltStatus = FLT_PREOP_SYNCHRONIZE;
             *CompletionContext = IrpContext;
         }
@@ -38,7 +51,6 @@ FLT_POSTOP_CALLBACK_STATUS FLTAPI WinIOPostClose( PFLT_CALLBACK_DATA Data, PCFLT
         
     } while( false );
 
-    CtxReleaseContext( IrpContext->StreamContext );
     CloseIrpContext( IrpContext );
 
     return FltStatus;

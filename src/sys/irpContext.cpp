@@ -207,6 +207,9 @@ void CloseIrpContext( PIRP_CONTEXT& IrpContext )
     DeallocateBuffer( &IrpContext->SrcFileFullPath );
     DeallocateBuffer( &IrpContext->DstFileFullPath );
 
+    if( IrpContext->StreamContext )
+        CtxReleaseContext( IrpContext->StreamContext );
+
     ExFreePool( IrpContext );
     IrpContext = NULLPTR;
 }
@@ -230,7 +233,7 @@ void PrintIrpContext( const PIRP_CONTEXT IrpContext )
             auto DesiredAccess = SecurityContext->DesiredAccess;
             auto Disposition = (IrpContext->Data->Iopb->Parameters.Create.Options >> 24 ) & 0x000000ff;
 
-            KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_TRACE_LEVEL, "[WinIOMon] EvtID=%09d IRP=%4s%17s Proc=%06d,%ws Src=%ws\n",
+            KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_TRACE_LEVEL, "[WinIOMon] EvtID=%09d IRP=%4s%-17s Proc=%06d,%ws Src=%ws\n",
                          IrpContext->EvtID
                          , IsPreIO == true ? "Pre" : "Post", nsW32API::ConvertIRPMajorFunction( IrpContext->Data->Iopb->MajorFunction )
                          , IrpContext->ProcessId, IrpContext->ProcessFileName == NULLPTR ? L"(null)" : IrpContext->ProcessFileName
@@ -246,7 +249,7 @@ void PrintIrpContext( const PIRP_CONTEXT IrpContext )
         } break;
         case IRP_MJ_CREATE_NAMED_PIPE: { } break;
         case IRP_MJ_CLOSE: {
-            KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_TRACE_LEVEL, "[WinIOMon] EvtID=%09d IRP=%4s%17s Proc=%06d,%ws Src=%ws\n"
+            KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_TRACE_LEVEL, "[WinIOMon] EvtID=%09d IRP=%4s%-17s Proc=%06d,%ws Src=%ws\n"
                          , IrpContext->EvtID
                          , IsPreIO == true ? "Pre" : "Post", nsW32API::ConvertIRPMajorFunction( IrpContext->Data->Iopb->MajorFunction )
                          , IrpContext->ProcessId, IrpContext->ProcessFileName == NULLPTR ? L"(null)" : IrpContext->ProcessFileName
@@ -259,7 +262,7 @@ void PrintIrpContext( const PIRP_CONTEXT IrpContext )
         case IRP_MJ_SET_INFORMATION: {
             const auto& FileInformationClass = ( nsW32API::FILE_INFORMATION_CLASS )IrpContext->Data->Iopb->Parameters.SetFileInformation.FileInformationClass;
 
-            KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_TRACE_LEVEL, "[WinIOMon] EvtID=%09d IRP=%4s%17s CLASS=%45s\n",
+            KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_TRACE_LEVEL, "[WinIOMon] EvtID=%09d IRP=%4s%-17s CLASS=%-45s\n",
                          IrpContext->EvtID
                          , IsPreIO == true ? "Pre" : "Post", nsW32API::ConvertIRPMajorFunction( IrpContext->Data->Iopb->MajorFunction )
                          , nsW32API::ConvertFileInformationClassTo( FileInformationClass )

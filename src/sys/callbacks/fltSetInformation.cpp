@@ -65,7 +65,6 @@ FLT_POSTOP_CALLBACK_STATUS FLTAPI WinIOPostSetInformation( PFLT_CALLBACK_DATA Da
         case nsW32API::FileRenameInformationEx: {} break;
     }
 
-    CtxReleaseContext( IrpContext->StreamContext );
     CloseIrpContext( IrpContext );
 
     return FLT_POSTOP_FINISHED_PROCESSING;

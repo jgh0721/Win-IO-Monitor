@@ -87,7 +87,7 @@ CONST FLT_OPERATION_REGISTRATION FilterCallbacks[] = {
 
     { IRP_MJ_FAST_IO_CHECK_IF_POSSIBLE,                 0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
 
-    { IRP_MJ_NETWORK_QUERY_OPEN,                        0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
+    { IRP_MJ_NETWORK_QUERY_OPEN,                        0,      WinIOPreNetworkQueryOpen,      WinIOPostNetworkQueryOpen    },
 
     { IRP_MJ_MDL_READ,                                  0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
 

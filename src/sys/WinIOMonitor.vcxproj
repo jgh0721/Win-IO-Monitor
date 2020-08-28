@@ -25,6 +25,7 @@
     <ClCompile Include="callbacks\fltClose.cpp" />
     <ClCompile Include="callbacks\fltCreateFile.cpp" />
     <ClCompile Include="callbacks\fltInstance.cpp" />
+    <ClCompile Include="callbacks\fltNetworkQueryOpen.cpp" />
     <ClCompile Include="callbacks\fltSetInformation.cpp" />
     <ClCompile Include="deviceCntl.cpp" />
     <ClCompile Include="deviceMgmt.cpp" />
@@ -49,6 +50,7 @@
     <ClInclude Include="callbacks\fltClose.hpp" />
     <ClInclude Include="callbacks\fltCreateFile.hpp" />
     <ClInclude Include="callbacks\fltInstance.hpp" />
+    <ClInclude Include="callbacks\fltNetworkQueryOpen.hpp" />
     <ClInclude Include="callbacks\fltSetInformation.hpp" />
     <ClInclude Include="deviceCntl.hpp" />
     <ClInclude Include="deviceMgmt.hpp" />

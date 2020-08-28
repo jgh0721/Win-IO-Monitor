@@ -7,6 +7,7 @@
 #include "fltSetInformation.hpp"
 #include "fltCleanup.hpp"
 #include "fltClose.hpp"
+#include "fltNetworkQueryOpen.hpp"
 #include "fltInstance.hpp"
 
 #if defined(_MSC_VER)
