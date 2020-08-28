@@ -308,8 +308,9 @@ void CtxFileContextCleanupCallback( PCTX_FILE_CONTEXT FileContext, FLT_CONTEXT_T
 
 void CtxStreamContextCleanupCallback( PCTX_STREAM_CONTEXT StreamContext, FLT_CONTEXT_TYPE ContextType )
 {
-    KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_TRACE_LEVEL, "[WinIOMon] %s ContextType=%d Context=%p\n",
-                 __FUNCTION__, ContextType, StreamContext ) );
+    KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_TRACE_LEVEL, "[WinIOMon] %s ContextType=%d Context=%p Src=%ws\n",
+                 __FUNCTION__, ContextType, StreamContext
+                 , StreamContext->FileFullPath.Buffer != NULLPTR ? StreamContext->FileFullPath.Buffer : L"(null)" ) );
 
     DeallocateBuffer( &StreamContext->FileFullPath );
 }

@@ -75,6 +75,12 @@
     <ClCompile Include="callbacks\fltSetInformation.cpp">
       <Filter>callbacks</Filter>
     </ClCompile>
+    <ClCompile Include="callbacks\fltClose.cpp">
+      <Filter>callbacks</Filter>
+    </ClCompile>
+    <ClCompile Include="callbacks\fltCleanup.cpp">
+      <Filter>callbacks</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="WinIOMonitor.hpp">
@@ -148,6 +154,12 @@
     </ClInclude>
     <ClInclude Include="utilities\bufferMgr_Defs.hpp">
       <Filter>utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="callbacks\fltClose.hpp">
+      <Filter>callbacks</Filter>
+    </ClInclude>
+    <ClInclude Include="callbacks\fltCleanup.hpp">
+      <Filter>callbacks</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

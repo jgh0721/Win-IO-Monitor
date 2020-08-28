@@ -3,6 +3,7 @@
 
 #include "irpContext.hpp"
 #include "WinIOMonitor_W32API.hpp"
+#include "utilities/contextMgr.hpp"
 
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
@@ -64,6 +65,7 @@ FLT_POSTOP_CALLBACK_STATUS FLTAPI WinIOPostSetInformation( PFLT_CALLBACK_DATA Da
         case nsW32API::FileRenameInformationEx: {} break;
     }
 
+    CtxReleaseContext( IrpContext->StreamContext );
     CloseIrpContext( IrpContext );
 
     return FLT_POSTOP_FINISHED_PROCESSING;

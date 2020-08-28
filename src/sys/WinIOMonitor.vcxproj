@@ -21,6 +21,8 @@
   <ItemGroup>
     <ClCompile Include="..\cmn\WinIOMonitor_W32API.cpp" />
     <ClCompile Include="callbacks\callbacks.cpp" />
+    <ClCompile Include="callbacks\fltCleanup.cpp" />
+    <ClCompile Include="callbacks\fltClose.cpp" />
     <ClCompile Include="callbacks\fltCreateFile.cpp" />
     <ClCompile Include="callbacks\fltInstance.cpp" />
     <ClCompile Include="callbacks\fltSetInformation.cpp" />
@@ -43,6 +45,8 @@
     <ClInclude Include="..\cmn\WinIOMonitor_Names.hpp" />
     <ClInclude Include="..\cmn\WinIOMonitor_W32API.hpp" />
     <ClInclude Include="callbacks\callbacks.hpp" />
+    <ClInclude Include="callbacks\fltCleanup.hpp" />
+    <ClInclude Include="callbacks\fltClose.hpp" />
     <ClInclude Include="callbacks\fltCreateFile.hpp" />
     <ClInclude Include="callbacks\fltInstance.hpp" />
     <ClInclude Include="callbacks\fltSetInformation.hpp" />

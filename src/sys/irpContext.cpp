@@ -245,7 +245,14 @@ void PrintIrpContext( const PIRP_CONTEXT IrpContext )
 
         } break;
         case IRP_MJ_CREATE_NAMED_PIPE: { } break;
-        case IRP_MJ_CLOSE: { } break;
+        case IRP_MJ_CLOSE: {
+            KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_TRACE_LEVEL, "[WinIOMon] EvtID=%09d IRP=%4s%17s Proc=%06d,%ws Src=%ws\n"
+                         , IrpContext->EvtID
+                         , IsPreIO == true ? "Pre" : "Post", nsW32API::ConvertIRPMajorFunction( IrpContext->Data->Iopb->MajorFunction )
+                         , IrpContext->ProcessId, IrpContext->ProcessFileName == NULLPTR ? L"(null)" : IrpContext->ProcessFileName
+                         , IrpContext->SrcFileFullPath.Buffer == NULLPTR ? L"(null)" : IrpContext->SrcFileFullPath.Buffer
+                         ) );
+        } break;
         case IRP_MJ_READ: { } break;
         case IRP_MJ_WRITE: { } break;
         case IRP_MJ_QUERY_INFORMATION: { } break;
@@ -273,24 +280,12 @@ void PrintIrpContext( const PIRP_CONTEXT IrpContext )
                                      ) );
                     } break;
 
-                    case nsW32API::FileLinkInformation:
-                    {
+                    case nsW32API::FileLinkInformation: {
                         const auto InfoBuffer = ( nsW32API::FILE_LINK_INFORMATION* )( IrpContext->Data->Iopb->Parameters.SetFileInformation.InfoBuffer );
 
                         KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_TRACE_LEVEL, "[WinIOMon] EvtID=%09d        >> Flags=0x%08x Src=%ws Dst=%ws\n",
                                      IrpContext->EvtID
                                      , InfoBuffer->ReplaceIfExists != FALSE ? FILE_LINK_REPLACE_IF_EXISTS : FALSE
-                                     , IrpContext->SrcFileFullPath.Buffer != NULLPTR ? IrpContext->SrcFileFullPath.Buffer : L"(null)"
-                                     , IrpContext->DstFileFullPath.Buffer != NULLPTR ? IrpContext->DstFileFullPath.Buffer : L"(null)"
-                                     ) );
-                    } break;
-
-                    case nsW32API::FileRenameInformationEx: {
-                        const auto InfoBuffer = ( nsW32API::FILE_RENAME_INFORMATION_EX* )( IrpContext->Data->Iopb->Parameters.SetFileInformation.InfoBuffer );
-
-                        KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_TRACE_LEVEL, "[WinIOMon] EvtID=%09d        >> Flags=0x%08x Src=%ws Dst=%ws\n",
-                                     IrpContext->EvtID
-                                     , InfoBuffer->Flags
                                      , IrpContext->SrcFileFullPath.Buffer != NULLPTR ? IrpContext->SrcFileFullPath.Buffer : L"(null)"
                                      , IrpContext->DstFileFullPath.Buffer != NULLPTR ? IrpContext->DstFileFullPath.Buffer : L"(null)"
                                      ) );
@@ -306,15 +301,15 @@ void PrintIrpContext( const PIRP_CONTEXT IrpContext )
                                      ) );
 
                     } break;
-                    case nsW32API::FileDispositionInformationEx: {
-                        const auto InfoBuffer = ( nsW32API::FILE_DISPOSITION_INFORMATION_EX* )( IrpContext->Data->Iopb->Parameters.SetFileInformation.InfoBuffer );
 
-                        KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_TRACE_LEVEL, "[WinIOMon] EvtID=%09d        >> Flags=0x%08x Name=%ws\n"
+                    case nsW32API::FileAllocationInformation: {
+                        const auto InfoBuffer = ( nsW32API::FILE_ALLOCATION_INFORMATION* )( IrpContext->Data->Iopb->Parameters.SetFileInformation.InfoBuffer );
+
+                        KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_TRACE_LEVEL, "[WinIOMon] EvtID=%09d        >> AllocationSize=%I64d Name=%ws\n"
                                      , IrpContext->EvtID
-                                     , InfoBuffer->Flags
+                                     , InfoBuffer->AllocationSize.QuadPart
                                      , IrpContext->SrcFileFullPath.Buffer != NULLPTR ? IrpContext->SrcFileFullPath.Buffer : L"(null)"
                                      ) );
-
                     } break;
 
                     case nsW32API::FileEndOfFileInformation: {
@@ -327,6 +322,28 @@ void PrintIrpContext( const PIRP_CONTEXT IrpContext )
                                      , IrpContext->SrcFileFullPath.Buffer != NULLPTR ? IrpContext->SrcFileFullPath.Buffer : L"(null)"
                                      ) );
 
+                    } break;
+
+                    case nsW32API::FileDispositionInformationEx: {
+                        const auto InfoBuffer = ( nsW32API::FILE_DISPOSITION_INFORMATION_EX* )( IrpContext->Data->Iopb->Parameters.SetFileInformation.InfoBuffer );
+
+                        KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_TRACE_LEVEL, "[WinIOMon] EvtID=%09d        >> Flags=0x%08x Name=%ws\n"
+                                     , IrpContext->EvtID
+                                     , InfoBuffer->Flags
+                                     , IrpContext->SrcFileFullPath.Buffer != NULLPTR ? IrpContext->SrcFileFullPath.Buffer : L"(null)"
+                                     ) );
+
+                    } break;
+
+                    case nsW32API::FileRenameInformationEx: {
+                        const auto InfoBuffer = ( nsW32API::FILE_RENAME_INFORMATION_EX* )( IrpContext->Data->Iopb->Parameters.SetFileInformation.InfoBuffer );
+
+                        KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_TRACE_LEVEL, "[WinIOMon] EvtID=%09d        >> Flags=0x%08x Src=%ws Dst=%ws\n",
+                                     IrpContext->EvtID
+                                     , InfoBuffer->Flags
+                                     , IrpContext->SrcFileFullPath.Buffer != NULLPTR ? IrpContext->SrcFileFullPath.Buffer : L"(null)"
+                                     , IrpContext->DstFileFullPath.Buffer != NULLPTR ? IrpContext->DstFileFullPath.Buffer : L"(null)"
+                                     ) );
                     } break;
 
                     case nsW32API::FileLinkInformationEx: {

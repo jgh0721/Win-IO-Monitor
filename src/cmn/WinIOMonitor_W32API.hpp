@@ -455,6 +455,11 @@ namespace nsW32API
     #define FILE_LINK_FORCE_RESIZE_SOURCE_SR                0x00000100  // If FILE_LINK_SUPPRESS_STORAGE_RESERVE_INHERITANCE is not also specified, when creating a link in a new directory that is part of a different storage reserve area, always shrink the source directory's storage reserve area by the full size of the file being linked. Requires manage volume access.
     #define FILE_LINK_FORCE_RESIZE_SR                       0x00000180  // Equivalent to specifying both FILE_LINK_FORCE_RESIZE_TARGET_SR and FILE_LINK_FORCE_RESIZE_SOURCE_SR.
 
+    typedef struct _FILE_ALLOCATION_INFORMATION
+    {
+        LARGE_INTEGER AllocationSize;
+    } FILE_ALLOCATION_INFORMATION, * PFILE_ALLOCATION_INFORMATION;
+
     ///////////////////////////////////////////////////////////////////////////
 
     typedef struct _NtOsKrnlAPI

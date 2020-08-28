@@ -5,6 +5,8 @@
 
 #include "fltCreateFile.hpp"
 #include "fltSetInformation.hpp"
+#include "fltCleanup.hpp"
+#include "fltClose.hpp"
 #include "fltInstance.hpp"
 
 #if defined(_MSC_VER)
