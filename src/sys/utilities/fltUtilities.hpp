@@ -38,6 +38,9 @@ namespace nsUtils
     bool                                    WildcardMatch_straight( const char* pszString, const char* pszMatch, bool isCaseSensitive = false );
     bool                                    WildcardMatch_straight( const wchar_t* pszString, const wchar_t* pszMatch, bool isCaseSensitive = false );
 
+    NTSTATUS                                DfAllocateUnicodeString( __inout PUNICODE_STRING String );
+    VOID                                    DfFreeUnicodeString( __inout PUNICODE_STRING String );
+
     ///////////////////////////////////////////////////////////////////////////
     /// File, Path...
 
@@ -52,6 +55,43 @@ namespace nsUtils
 
 
     TyGenericBuffer< WCHAR >                ExtractFileFullPath( __in PFILE_OBJECT FileObject, __in_opt CTX_INSTANCE_CONTEXT* InstanceContext, __in bool IsInCreate );
+    NTSTATUS                                DfGetVolumeGuidName( __in PCFLT_RELATED_OBJECTS FltObjects, __inout PUNICODE_STRING VolumeGuidName );
+    NTSTATUS                                DfBuildFileIdString( __in PFLT_CALLBACK_DATA Data,
+                                                                 __in PCFLT_RELATED_OBJECTS FltObjects,
+                                                                 __in PCTX_STREAM_CONTEXT StreamContext,
+                                                                 __out PUNICODE_STRING String );
+
+    NTSTATUS                                DfDetectDeleteByFileId( __in PFLT_CALLBACK_DATA Data,
+                                                                    __in PCFLT_RELATED_OBJECTS FltObjects,
+                                                                    __in PCTX_STREAM_CONTEXT StreamContext );
+
+    /*++
+
+    Routine Description:
+
+        This routine gets and parses the file name information, obtains the File
+        ID and saves them in the stream context.
+
+    Arguments:
+
+        Data  - Pointer to FLT_CALLBACK_DATA.
+
+        StreamContext - Pointer to stream context that will receive the file
+                        information.
+
+    Return Value:
+
+        Returns statuses forwarded from Flt(Get|Parse)FileNameInformation or
+        FltQueryInformationFile.
+
+    --*/
+    NTSTATUS                                DfGetFileNameInformation( __in PFLT_CALLBACK_DATA Data, __inout PCTX_STREAM_CONTEXT StreamContext );
+    NTSTATUS                                DfGetFileId( __in PFLT_CALLBACK_DATA Data, __inout PCTX_STREAM_CONTEXT StreamContext );
+
+    NTSTATUS                                DfIsFileDeleted( __in PFLT_CALLBACK_DATA Data,
+                                                             __in PCFLT_RELATED_OBJECTS FltObjects,
+                                                             __in PCTX_STREAM_CONTEXT StreamContext,
+                                                             __in BOOLEAN IsTransaction );
 
 } // nsUtils
 

@@ -23,6 +23,8 @@ extern "C" {
 #include <fltkernel.h>
 #include <sal.h>
 #include <WinDef.h>
+#include <dontuse.h>
+#include <suppress.h>
 
 #ifdef __cplusplus
 }

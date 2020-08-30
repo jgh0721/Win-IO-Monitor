@@ -52,6 +52,14 @@ FLT_POSTOP_CALLBACK_STATUS WinIOPostCreate( PFLT_CALLBACK_DATA Data, PCFLT_RELAT
 
             IrpContext->StreamContext->CreateCount++;
 
+            //
+            //  Set DeleteOnClose on the stream context: a delete-on-close stream will
+            //  always be checked for deletion on cleanup.
+            //
+
+            IrpContext->StreamContext->DeleteOnClose = BooleanFlagOn( Data->Iopb->Parameters.Create.Options,
+                                                                      FILE_DELETE_ON_CLOSE );
+
             ExReleaseResourceLite( IrpContext->StreamContext->Resource );
             KeLeaveCriticalRegion();
         }

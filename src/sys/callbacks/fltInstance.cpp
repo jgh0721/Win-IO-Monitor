@@ -98,6 +98,8 @@ NTSTATUS CreateInstanceContext( PCFLT_RELATED_OBJECTS FltObjects, FLT_INSTANCE_S
             FltGetVolumeGuidName( FltObjects->Volume, &InstanceContext->VolumeGUIDName, NULL );
         }
 
+        nsW32API::IsVolumeWritable( FltObjects->Volume, &InstanceContext->IsWritable );
+
         KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_INFO_LEVEL, "[WinIOMon] %s DeviceName=%wZ DriveLetter=%wc\n",
                      __FUNCTION__, &InstanceContext->DeviceName, InstanceContext->DriveLetter ) );
 

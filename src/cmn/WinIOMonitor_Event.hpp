@@ -22,20 +22,27 @@
 typedef enum _MSG_CATEGORY
 {
     MSG_CATE_FILESYSTEM,
-    MSG_CATE_PROCESS
+    MSG_CATE_FILESYSTEM_NOTIFY,
+    MSG_CATE_PROCESS,
 } MSG_CATEGORY;
 
 typedef enum _MSG_TYPE
 {
-    FS_PRE_CREATE = 0x1,
-    FS_POST_CREATE = 0x2,
+    FS_PRE_CREATE                       = 0x1,
+    FS_POST_CREATE                      = 0x2,
+
+    FS_PRE_QUERY_INFORMATION,
+    FS_POST_QUERY_INFORMATION,
+
+    FS_PRE_SET_INFORMATION,
+    FS_POST_SET_INFORMATION,
 
     FS_PRE_CLEANUP,
     FS_POST_CLEANUP,
 
     FS_PRE_CLOSE,
     FS_POST_CLOSE, 
-};
+} MSG_TYPE;
 
 //typedef enum _MessageType
 //{
@@ -86,6 +93,19 @@ typedef enum TyEnFileNotifyType
 
 } FileNotifyType, * PFileNotifyType;
 
+typedef union TyMsgParameters
+{
+    struct
+    {
+        ACCESS_MASK DesiredAccess;
+        ULONG FileAttributes;
+        ULONG ShareAccess;
+        ULONG CreateDisposition;
+        ULONG CreateOptions;
+    } Create;
+
+} MSG_PARAMETERS, *PMSG_PARAMETERS;
+
 typedef struct _MSG_SEND_PACKET
 {
     ULONG                           MessageSize;
@@ -96,18 +116,7 @@ typedef struct _MSG_SEND_PACKET
 
     ULONG                           ProcessId;
 
-    union
-    {
-        struct
-        {
-            ACCESS_MASK DesiredAccess;
-            ULONG FileAttributes;
-            ULONG ShareAccess;
-            ULONG CreateDisposition;
-            ULONG CreateOptions;
-        } Create;
-        
-    } Parameters;
+    MSG_PARAMETERS                  Parameters;
 
     ULONG LengthOfSrcFileFullPath;                      // BYTE
     ULONG OffsetOfSrcFileFullPath;                      // BYTE
@@ -120,9 +129,32 @@ typedef struct _MSG_SEND_PACKET
 
 } MSG_SEND_PACKET, *PMSG_SEND_PACKET;
 
+////The status return to filter,instruct filter driver what action needs to be done.
+//typedef enum _FilterStatus
+//{
+//    FILTER_MESSAGE_IS_DIRTY = 0x00000001, //Set this flag if the reply message need to be processed.
+//    FILTER_COMPLETE_PRE_OPERATION = 0x00000002, //Set this flag if complete the pre operation. 
+//    FILTER_DATA_BUFFER_IS_UPDATED = 0x00000004, //Set this flag if the databuffer was updated.
+//    FILTER_BLOCK_DATA_WAS_RETURNED = 0x00000008, //Set this flag if return read block databuffer to filter.
+//    FILTER_CACHE_FILE_WAS_RETURNED = 0x00000010, //Set this flag if the whole cache file was downloaded.
+//    FILTER_REHYDRATE_FILE_VIA_CACHE_FILE = 0x00000020, //Set this flag if the whole cache file was downloaded and stub file needs to be rehydrated.
+//
+//} FilterStatus, * PFilterStatus;
+
+typedef enum _MSG_FILTER_STATUS
+{
+    FILTER_MSG_IS_DIRTY = 0x00000001
+} ;
+
 typedef struct _MSG_REPLY_PACKET
 {
-    ULONG                           ReturnStatus;
+    ULONG                           ReturnStatus;           // IoStatus.Status
+    ULONG                           FilterStatus;
+
+    MSG_PARAMETERS                  Parameters;
+
+    ULONG                           LengthOfContents;
+    ULONG                           OffsetOfContents;
 
 } MSG_REPLY_PACKET, *PMSG_REPLY_PACKET;
 

@@ -17,6 +17,9 @@
     #define EXTERN_C_END }
 #endif
 
+#define FlagOnAll( F, T )                                                    \
+    (FlagOn( F, T ) == T)
+
 #define NULLPTR nullptr
 
 #define IF_FALSE_BREAK( var, expr ) if( !NT_SUCCESS( ( (var) = (expr) ) ) ) break;

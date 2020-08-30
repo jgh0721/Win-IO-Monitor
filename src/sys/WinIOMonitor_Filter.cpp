@@ -143,6 +143,14 @@ CONST FLT_CONTEXT_REGISTRATION FilterContextVista[] = {
     },
 
     {
+        FLT_TRANSACTION_CONTEXT,
+        0,
+        ( PFLT_CONTEXT_CLEANUP_CALLBACK )CtxTransactionContextCleanupCallback,
+        CTX_TRANSACTION_CONTEXT_SIZE,
+        CTX_TRANSACTION_CONTEXT_TAG
+    },
+
+    {
         FLT_CONTEXT_END
     }
 };
@@ -176,7 +184,14 @@ const nsW32API::FLT_REGISTRATION_VISTA FilterRegistrationVista = {
     InstanceSetup,
     InstanceQueryTeardown,
     InstanceTeardownStart,
-    InstanceTeardownComplete
+    InstanceTeardownComplete,
+
+    NULL,
+    NULL,
+    NULL,
+
+    (nsW32API::PFLT_TRANSACTION_NOTIFICATION_CALLBACK)FilterTransactionNotificationCallback,
+    NULL
 };
 
 NTSTATUS InitializeMiniFilter( CTX_GLOBAL_DATA* GlobalContext )
@@ -294,14 +309,14 @@ NTSTATUS FLTAPI MiniFilterUnload( FLT_FILTER_UNLOAD_FLAGS Flags )
     return STATUS_SUCCESS;
 }
 
-NTSTATUS ClientConnectNotify( PFLT_PORT ClientPort, PVOID ServerPortCookie, PVOID ConnectionContext,
+NTSTATUS FLTAPI ClientConnectNotify( PFLT_PORT ClientPort, PVOID ServerPortCookie, PVOID ConnectionContext,
                               ULONG SizeOfContext, PVOID* ConnectionPortCookie )
 {
     *ConnectionPortCookie = ClientPort;
     return STATUS_SUCCESS;
 }
 
-void ClientDisconnectNotify( PVOID ConnectionCookie )
+void FLTAPI ClientDisconnectNotify( PVOID ConnectionCookie )
 {
     KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_TRACE_LEVEL, "[WinIOMon] %s ConnectionCookie=%d", __FUNCTION__, ConnectionCookie ) );
 
@@ -309,7 +324,7 @@ void ClientDisconnectNotify( PVOID ConnectionCookie )
     GlobalContext.ClientPort = NULLPTR;
 }
 
-NTSTATUS ClientMessageNotify( PVOID PortCookie, PVOID InputBuffer, ULONG InputBufferLength, PVOID OutputBuffer,
+NTSTATUS FLTAPI ClientMessageNotify( PVOID PortCookie, PVOID InputBuffer, ULONG InputBufferLength, PVOID OutputBuffer,
                               ULONG OutputBufferLength, PULONG ReturnOutputBufferLength )
 {
     return STATUS_SUCCESS;

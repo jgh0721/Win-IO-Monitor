@@ -9,6 +9,28 @@
 
 namespace nsW32API
 {
+    //  This helps us deal with ReFS 128-bit file IDs and NTFS 64-bit file IDs.
+    typedef union _DF_FILE_REFERENCE
+    {
+
+        struct
+        {
+            ULONGLONG   Value;          //  The 64-bit file ID lives here.
+            ULONGLONG   UpperZeroes;    //  In a 64-bit file ID this will be 0.
+        } FileId64;
+
+        UCHAR           FileId128[ 16 ];  //  The 128-bit file ID lives here.
+
+    } DF_FILE_REFERENCE, * PDF_FILE_REFERENCE;
+
+#define DfSizeofFileId(FID) (               \
+    ((FID).FileId64.UpperZeroes == 0ll) ?   \
+        sizeof((FID).FileId64.Value)    :   \
+        sizeof((FID).FileId128)             \
+    )
+
+#define VOLUME_GUID_NAME_SIZE 48
+
     typedef NTSTATUS( FLTAPI* PFLT_TRANSACTION_NOTIFICATION_CALLBACK )
         ( __in PCFLT_RELATED_OBJECTS FltObjects,
           __in PFLT_CONTEXT TransactionContext,
@@ -460,6 +482,19 @@ namespace nsW32API
         LARGE_INTEGER AllocationSize;
     } FILE_ALLOCATION_INFORMATION, * PFILE_ALLOCATION_INFORMATION;
 
+    typedef struct _FILE_ID_128
+    {
+        BYTE Identifier[ 16 ];
+    } FILE_ID_128, * PFILE_ID_128;
+
+    typedef struct _FILE_ID_INFORMATION
+    {
+        ULONGLONG VolumeSerialNumber;
+        FILE_ID_128 FileId;
+    } FILE_ID_INFORMATION, * PFILE_ID_INFORMATION;
+
+    const LONGLONG FILE_INVALID_FILE_ID = -1;
+
     ///////////////////////////////////////////////////////////////////////////
 
     typedef struct _NtOsKrnlAPI
@@ -503,6 +538,49 @@ namespace nsW32API
 
     typedef struct _FltMgrAPI
     {
+        /**
+         * @brief
+         *
+         * Windows XP SP3 ~ 
+        */
+        typedef NTSTATUS( FLTAPI* FltCreateFileEx )( __in PFLT_FILTER Filter,
+                                                     __in_opt PFLT_INSTANCE Instance,
+                                                     __out PHANDLE FileHandle,
+                                                     __deref_opt_out PFILE_OBJECT* FileObject,
+                                                     __in ACCESS_MASK DesiredAccess,
+                                                     __in POBJECT_ATTRIBUTES ObjectAttributes,
+                                                     __out PIO_STATUS_BLOCK IoStatusBlock,
+                                                     __in_opt PLARGE_INTEGER AllocationSize,
+                                                     __in ULONG FileAttributes,
+                                                     __in ULONG ShareAccess,
+                                                     __in ULONG CreateDisposition,
+                                                     __in ULONG CreateOptions,
+                                                     __in_bcount_opt( EaLength ) PVOID EaBuffer,
+                                                     __in ULONG EaLength,
+                                                     __in ULONG Flags );
+
+        /**
+         * @brief Minifilter drivers call FltCreateFileEx2 to create a new file or open an existing file. This routine also includes an optional create context parameter.
+         *
+         * Available in starting with Windows Vista
+        */
+        typedef NTSTATUS( NTAPI* FltCreateFileEx2 )( __in       PFLT_FILTER Filter,
+                                                     __in_opt   PFLT_INSTANCE Instance,
+                                                     __out      PHANDLE FileHandle,
+                                                     __out_opt  PFILE_OBJECT* FileObject,
+                                                     __in       ACCESS_MASK DesiredAccess,
+                                                     __in       POBJECT_ATTRIBUTES ObjectAttributes,
+                                                     __out      PIO_STATUS_BLOCK IoStatusBlock,
+                                                     __in_opt   PLARGE_INTEGER AllocationSize,
+                                                     __in       ULONG FileAttributes,
+                                                     __in       ULONG ShareAccess,
+                                                     __in       ULONG CreateDisposition,
+                                                     __in       ULONG CreateOptions,
+                                                     __in_opt   PVOID EaBuffer,
+                                                     __in       ULONG EaLength,
+                                                     __in       ULONG Flags,
+                                                     __in_opt   PIO_DRIVER_CREATE_CONTEXT DriverContext );
+
         typedef NTSTATUS( NTAPI* FltGetFileContext )( __in PFLT_INSTANCE Instance,
                                                       __in PFILE_OBJECT FileObject,
                                                       __out PFLT_CONTEXT* Context );
@@ -530,12 +608,23 @@ namespace nsW32API
                                                            __in  PFLT_CONTEXT TransactionContext,
                                                            __in  NOTIFICATION_MASK NotificationMask );
 
+        // The FltIsVolumeWritable routine determines whether the disk device that corresponds to a volume or minifilter driver instance is writable.
+        typedef NTSTATUS( NTAPI* FltIsVolumeWritable )( __in PVOID FltObject, __out PBOOLEAN IsWritable );
+
+        typedef NTSTATUS( FLTAPI* FltGetFileSystemType )( __in PVOID FltObject,
+                                                          __out PFLT_FILESYSTEM_TYPE FileSystemType );
+
+        FltCreateFileEx                     pfnFltCreateFileEx;
+        FltCreateFileEx2                    pfnFltCreateFileEx2;
+
         FltGetFileContext                   pfnFltGetFileContext;
         FltSetFileContext                   pfnFltSetFileContext;
         FltGetTransactionContext            pfnFltGetTransactionContext;
         FltSetTransactionContext            pfnFltSetTransactionContext;
         FltEnlistInTransaction              pfnFltEnlistInTransaction;
 
+        FltIsVolumeWritable                 pfnFltIsVolumeWritable;
+        FltGetFileSystemType                pfnFltGetFileSystemType;
     } FltMgrAPI;
 
     const char* ConvertFileInformationClassTo( __in const FILE_INFORMATION_CLASS FileInformationClass );
@@ -552,6 +641,26 @@ namespace nsW32API
 
     extern nsW32API::NtOsKrnlAPI NtOsKrnlAPIMgr;
     extern nsW32API::FltMgrAPI FltMgrAPIMgr;
+
+    ///////////////////////////////////////////////////////////////////////////
+
+#ifndef IOCTL_DISK_BASE
+#define IOCTL_DISK_BASE                 FILE_DEVICE_DISK
+#endif
+
+#ifndef IOCTL_DISK_IS_WRITABLE
+#define IOCTL_DISK_IS_WRITABLE          CTL_CODE(IOCTL_DISK_BASE, 0x0009, METHOD_BUFFERED, FILE_ANY_ACCESS)
+#endif
+
+    /**
+     * @brief The FltIsVolumeWritable routine determines whether the disk device that corresponds to a volume or minifilter driver instance is writable. 
+     * @param FltObject  Volume or Instance Object
+     * @param IsWritable 
+     * @return
+     *
+     * Support WinXP
+    */
+    NTSTATUS IsVolumeWritable( __in PVOID FltObject, __out PBOOLEAN IsWritable );
 
 } // nsW32API
 

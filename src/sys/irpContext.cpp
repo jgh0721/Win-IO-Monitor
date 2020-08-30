@@ -262,10 +262,11 @@ void PrintIrpContext( const PIRP_CONTEXT IrpContext )
         case IRP_MJ_SET_INFORMATION: {
             const auto& FileInformationClass = ( nsW32API::FILE_INFORMATION_CLASS )IrpContext->Data->Iopb->Parameters.SetFileInformation.FileInformationClass;
 
-            KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_TRACE_LEVEL, "[WinIOMon] EvtID=%09d IRP=%4s%-17s CLASS=%-45s\n",
+            KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_TRACE_LEVEL, "[WinIOMon] EvtID=%09d IRP=%4s%-17s CLASS=%-45s ResultStatus=0x%08x\n",
                          IrpContext->EvtID
                          , IsPreIO == true ? "Pre" : "Post", nsW32API::ConvertIRPMajorFunction( IrpContext->Data->Iopb->MajorFunction )
                          , nsW32API::ConvertFileInformationClassTo( FileInformationClass )
+                         , IrpContext->Data->IoStatus.Status
                          ) );
 
             if( IsPreIO == true )
@@ -361,6 +362,18 @@ void PrintIrpContext( const PIRP_CONTEXT IrpContext )
                     } break;
 
                 }
+            }   // if IsPreIO == true
+            else
+            {
+                switch( FileInformationClass )
+                {
+                    case nsW32API::FileRenameInformation: {
+                        
+                    } break;
+                    case nsW32API::FileRenameInformationEx: {
+                        
+                    } break;
+                }
             }
 
         } break;
@@ -375,7 +388,14 @@ void PrintIrpContext( const PIRP_CONTEXT IrpContext )
         case IRP_MJ_INTERNAL_DEVICE_CONTROL: { } break;
         case IRP_MJ_SHUTDOWN: { } break;
         case IRP_MJ_LOCK_CONTROL: { } break;
-        case IRP_MJ_CLEANUP: { } break;
+        case IRP_MJ_CLEANUP: {
+            KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_TRACE_LEVEL, "[WinIOMon] EvtID=%09d IRP=%4s%-17s Proc=%06d,%ws Src=%ws\n",
+                         IrpContext->EvtID
+                         , IsPreIO == true ? "Pre" : "Post", nsW32API::ConvertIRPMajorFunction( IrpContext->Data->Iopb->MajorFunction )
+                         , IrpContext->ProcessId, IrpContext->ProcessFileName == NULLPTR ? L"(null)" : IrpContext->ProcessFileName
+                         , IrpContext->SrcFileFullPath.Buffer == NULLPTR ? L"(null)" : IrpContext->SrcFileFullPath.Buffer
+                         ) );
+        } break;
         case IRP_MJ_CREATE_MAILSLOT: { } break;
         case IRP_MJ_QUERY_SECURITY: { } break;
         case IRP_MJ_SET_SECURITY: { } break;

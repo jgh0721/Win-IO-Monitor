@@ -4,6 +4,7 @@
 #include "fltBase.hpp"
 
 #include "bufferMgr_Defs.hpp"
+#include "WinIOMonitor_W32API.hpp"
 
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
@@ -46,6 +47,8 @@ typedef struct _CTX_INSTANCE_CONTEXT
 
     WCHAR                           DriveLetter;
 
+    BOOLEAN                         IsWritable;
+
 } CTX_INSTANCE_CONTEXT, *PCTX_INSTANCE_CONTEXT;
 
 #define CTX_INSTANCE_CONTEXT_SIZE sizeof( CTX_INSTANCE_CONTEXT )
@@ -68,9 +71,22 @@ typedef struct _CTX_STREAM_CONTEXT
 {
     TyGenericBuffer<WCHAR>          FileFullPath;
 
+    PFLT_FILE_NAME_INFORMATION      NameInfo;
+
     ULONG                           CreateCount;
     ULONG                           CleanupCount;
     ULONG                           CloseCount;
+
+    //  File ID, obtained from querying the file system for FileInternalInformation.
+    //  If the File ID is 128 bits (as in ReFS) we get it via FileIdInformation.
+    nsW32API::DF_FILE_REFERENCE     FileId;
+    BOOLEAN                         FileIdSet;
+
+    volatile LONG                   NumOps;
+    volatile LONG                   IsNotified;
+
+    BOOLEAN                         SetDisp;
+    BOOLEAN                         DeleteOnClose;
 
     PERESOURCE                      Resource;
 
@@ -97,9 +113,42 @@ typedef struct _CTX_SECTION_CONTEXT
 
 typedef struct _CTX_TRANSACTION_CONTEXT
 {
+    //  List of DF_DELETE_NOTIFY structures representing pending delete
+    //  notifications.
+    LIST_ENTRY                      DeleteNotifyList;
+
+    PERESOURCE                      Resource;
 
 } CTX_TRANSACTION_CONTEXT, * PCTX_TRANSACTION_CONTEXT;
 
 #define CTX_TRANSACTION_CONTEXT_SIZE sizeof( CTX_TRANSACTION_CONTEXT )
+
+//
+//  This structure represents pending delete notifications for files that have
+//  been deleted in an open transaction.
+//
+
+typedef struct _DF_DELETE_NOTIFY
+{
+
+    //
+    //  Links to other DF_DELETE_NOTIFY structures in the list.
+    //
+
+    LIST_ENTRY Links;
+
+    //
+    //  Pointer to the stream context for the deleted stream/file.
+    //
+
+    PCTX_STREAM_CONTEXT StreamContext;
+
+    //
+    //  TRUE for a deleted file, FALSE for a stream.
+    //
+
+    BOOLEAN FileDelete;
+
+} DF_DELETE_NOTIFY, * PDF_DELETE_NOTIFY;
 
 #endif // HDR_UTIL_CONTEXTMGR_DEFS

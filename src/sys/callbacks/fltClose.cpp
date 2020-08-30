@@ -28,10 +28,6 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI WinIOPreClose( PFLT_CALLBACK_DATA Data, PCFLT_R
 
             PrintIrpContext( IrpContext );
 
-            if( IrpContext->StreamContext )
-                CtxReleaseContext( IrpContext->StreamContext );
-            IrpContext->StreamContext = NULLPTR;
-
             FltStatus = FLT_PREOP_SYNCHRONIZE;
             *CompletionContext = IrpContext;
         }

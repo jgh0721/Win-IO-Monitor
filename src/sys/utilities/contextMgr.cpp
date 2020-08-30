@@ -68,6 +68,24 @@ NTSTATUS CtxAllocateContext( PFLT_FILTER Filter, FLT_CONTEXT_TYPE ContextType, P
                         }
                     }
                 } break;
+
+                case FLT_TRANSACTION_CONTEXT: {
+                    PCTX_TRANSACTION_CONTEXT TransactionContext = (PCTX_TRANSACTION_CONTEXT)*Context;
+
+                    InitializeListHead( &TransactionContext->DeleteNotifyList );
+                    TransactionContext->Resource = (PERESOURCE)ExAllocatePoolWithTag( NonPagedPool, sizeof( ERESOURCE ), 'cTxc' );
+
+                    if( TransactionContext->Resource == NULLPTR )
+                    {
+                        FltReleaseContext( *Context );
+                        *Context = NULLPTR;
+                        Status = STATUS_INSUFFICIENT_RESOURCES;
+                        break;
+                    }
+
+                    ExInitializeResourceLite( TransactionContext->Resource );
+
+                } break;
             }
         }
 
@@ -305,25 +323,25 @@ NTSTATUS CtxReleaseContext( PFLT_CONTEXT Context )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void CtxInstanceContextCleanupCallback( PCTX_INSTANCE_CONTEXT InstanceContext, FLT_CONTEXT_TYPE ContextType )
+void FLTAPI CtxInstanceContextCleanupCallback( PCTX_INSTANCE_CONTEXT InstanceContext, FLT_CONTEXT_TYPE ContextType )
 {
     KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_TRACE_LEVEL, "[WinIOMon] %s ContextType=%d Context=%p\n", 
                  __FUNCTION__, ContextType, InstanceContext ) );
 }
 
-void CtxVolumeContextCleanupCallback( PCTX_VOLUME_CONTEXT VolumeContext, FLT_CONTEXT_TYPE ContextType )
+void FLTAPI CtxVolumeContextCleanupCallback( PCTX_VOLUME_CONTEXT VolumeContext, FLT_CONTEXT_TYPE ContextType )
 {
     KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_TRACE_LEVEL, "[WinIOMon] %s ContextType=%d Context=%p\n",
                  __FUNCTION__, ContextType, VolumeContext ) );
 }
 
-void CtxFileContextCleanupCallback( PCTX_FILE_CONTEXT FileContext, FLT_CONTEXT_TYPE ContextType )
+void FLTAPI CtxFileContextCleanupCallback( PCTX_FILE_CONTEXT FileContext, FLT_CONTEXT_TYPE ContextType )
 {
     KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_TRACE_LEVEL, "[WinIOMon] %s ContextType=%d Context=%p\n",
                  __FUNCTION__, ContextType, FileContext ) );
 }
 
-void CtxStreamContextCleanupCallback( PCTX_STREAM_CONTEXT StreamContext, FLT_CONTEXT_TYPE ContextType )
+void FLTAPI CtxStreamContextCleanupCallback( PCTX_STREAM_CONTEXT StreamContext, FLT_CONTEXT_TYPE ContextType )
 {
     KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_TRACE_LEVEL, "[WinIOMon] %s ContextType=%d Context=%p Create=%d Clean=%d Close=%d Src=%ws\n",
                  __FUNCTION__, ContextType, StreamContext
@@ -334,14 +352,51 @@ void CtxStreamContextCleanupCallback( PCTX_STREAM_CONTEXT StreamContext, FLT_CON
     ExDeleteResourceLite( StreamContext->Resource );
 }
 
-void CtxStreamHandleContextCleanupCallback( PCTX_STREAMHANDLE_CONTEXT StreamHandleContext, FLT_CONTEXT_TYPE ContextType )
+void FLTAPI CtxStreamHandleContextCleanupCallback( PCTX_STREAMHANDLE_CONTEXT StreamHandleContext, FLT_CONTEXT_TYPE ContextType )
 {
     KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_TRACE_LEVEL, "[WinIOMon] %s ContextType=%d Context=%p\n",
                  __FUNCTION__, ContextType, StreamHandleContext ) );
 }
 
-void CtxTransactionContextCleanupCallback( PCTX_TRANSACTION_CONTEXT TransactionContext, FLT_CONTEXT_TYPE ContextType )
+void FLTAPI CtxTransactionContextCleanupCallback( PCTX_TRANSACTION_CONTEXT TransactionContext, FLT_CONTEXT_TYPE ContextType )
 {
     KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_TRACE_LEVEL, "[WinIOMon] %s ContextType=%d Context=%p\n",
                  __FUNCTION__, ContextType, TransactionContext ) );
+
+    UNREFERENCED_PARAMETER( ContextType );
+
+    ASSERT( ContextType == FLT_TRANSACTION_CONTEXT );
+
+    if( TransactionContext->Resource != NULLPTR )
+    {
+
+        FltAcquireResourceExclusive( TransactionContext->Resource );
+
+        while( !IsListEmpty( &TransactionContext->DeleteNotifyList ) )
+        {
+
+            //
+            //  Remove every DF_DELETE_NOTIFY, releasing their corresponding
+            //  FLT_FILE_NAME_INFORMATION objects and freeing pool used by
+            //  them.
+            //
+
+            PDF_DELETE_NOTIFY deleteNotify = CONTAINING_RECORD( RemoveHeadList( &TransactionContext->DeleteNotifyList ),
+                                                                DF_DELETE_NOTIFY,
+                                                                Links );
+
+            FltReleaseContext( deleteNotify->StreamContext );
+            ExFreePool( deleteNotify );
+
+        }
+
+        FltReleaseResource( TransactionContext->Resource );
+
+        //
+        //  Delete and free the DeleteNotifyList synchronization resource.
+        //
+
+        ExDeleteResourceLite( TransactionContext->Resource );
+        ExFreePool( TransactionContext->Resource );
+    }
 }

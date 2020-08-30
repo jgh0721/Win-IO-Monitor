@@ -1,5 +1,7 @@
 ﻿#include "WinIOMonitor_W32API.hpp"
 
+#include "utilities/osInfoMgr.hpp"
+
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
 #endif
@@ -220,9 +222,78 @@ void nsW32API::InitializeFltMgrAPI( FltMgrAPI* fltMgrAPI )
 {
     ASSERT( fltMgrAPI != NULLPTR );
 
+    fltMgrAPI->pfnFltCreateFileEx           = ( FltMgrAPI::FltCreateFileEx ) FltGetRoutineAddress( "FltCreateFileEx" );
+    fltMgrAPI->pfnFltCreateFileEx2          = ( FltMgrAPI::FltCreateFileEx2 ) FltGetRoutineAddress( "FltCreateFileEx2" );
+
     fltMgrAPI->pfnFltGetFileContext         = ( FltMgrAPI::FltGetFileContext ) FltGetRoutineAddress( "FltGetFileContext" );
     fltMgrAPI->pfnFltSetFileContext         = ( FltMgrAPI::FltSetFileContext ) FltGetRoutineAddress( "FltSetFileContext" );
     fltMgrAPI->pfnFltGetTransactionContext  = ( FltMgrAPI::FltGetTransactionContext ) FltGetRoutineAddress( "FltGetTransactionContext" );
     fltMgrAPI->pfnFltSetTransactionContext  = ( FltMgrAPI::FltSetTransactionContext ) FltGetRoutineAddress( "FltSetTransactionContext" );
     fltMgrAPI->pfnFltEnlistInTransaction    = ( FltMgrAPI::FltEnlistInTransaction ) FltGetRoutineAddress( "FltEnlistInTransaction" );
+
+    fltMgrAPI->pfnFltIsVolumeWritable       = ( FltMgrAPI::FltIsVolumeWritable ) FltGetRoutineAddress( "FltIsVolumeWritable" );
+    fltMgrAPI->pfnFltGetFileSystemType      = ( FltMgrAPI::FltGetFileSystemType ) FltGetRoutineAddress( "FltGetFileSystemType" );
+}
+
+NTSTATUS nsW32API::IsVolumeWritable( PVOID FltObject, PBOOLEAN IsWritable )
+{
+    // from https://greemate.tistory.com/entry/FltIsVolumeWritable
+
+    if( nsUtils::VerifyVersionInfoEx( 6, ">=" ) == true )
+        return FltMgrAPIMgr.pfnFltIsVolumeWritable( FltObject, IsWritable );
+
+    NTSTATUS Status = STATUS_UNSUCCESSFUL;
+    PDEVICE_OBJECT VolumeDeviceObject = NULL;
+
+    do
+    {
+        KEVENT kEvent;
+        PIRP pIrp = NULL;
+        IO_STATUS_BLOCK IoStatusBlock;
+
+        if( FltObject == NULL || IsWritable == NULL )
+        {
+            Status = STATUS_INVALID_PARAMETER;
+            break;
+        }
+
+        *IsWritable = TRUE;
+
+        Status = FltGetDiskDeviceObject( ( PFLT_VOLUME )FltObject, &VolumeDeviceObject );
+        if( !NT_SUCCESS( Status ) )
+            break;
+
+        KeInitializeEvent( &kEvent, NotificationEvent, FALSE );
+
+        pIrp = IoBuildDeviceIoControlRequest( IOCTL_DISK_IS_WRITABLE,
+                                              VolumeDeviceObject,
+                                              NULL, 0, NULL, 0, FALSE,
+                                              &kEvent,
+                                              &IoStatusBlock );
+
+        if( pIrp == NULL )
+        {
+            Status = STATUS_INSUFFICIENT_RESOURCES;
+            break;
+        }
+
+        Status = IoCallDriver( VolumeDeviceObject, pIrp );
+        if( Status == STATUS_PENDING )
+        {
+            KeWaitForSingleObject( &kEvent, Executive, KernelMode, FALSE, NULL );
+            Status = IoStatusBlock.Status;
+        }
+
+        if( Status == STATUS_MEDIA_WRITE_PROTECTED )
+            *IsWritable = FALSE;
+
+        // IoCompleteRequest( pIrp, IO_NO_INCREMENT );
+        Status = STATUS_SUCCESS;
+
+    } while( false );
+
+    if( VolumeDeviceObject != NULL )
+        ObDereferenceObject( VolumeDeviceObject );
+
+    return Status;
 }
