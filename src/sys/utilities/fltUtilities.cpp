@@ -881,7 +881,7 @@ namespace nsUtils
 		NTSTATUS status = STATUS_SUCCESS;
 		FILE_OBJECTID_BUFFER fileObjectIdBuf;
 
-		FLT_FILESYSTEM_TYPE fileSystemType;
+		FLT_FILESYSTEM_TYPE fileSystemType = FLT_FSTYPE_UNKNOWN;
 
 		PAGED_CODE();
 
@@ -889,12 +889,27 @@ namespace nsUtils
 		//  We need to know whether we're on ReFS or NTFS.
 		//
 
-		status = nsW32API::FltMgrAPIMgr.pfnFltGetFileSystemType( FltObjects->Instance, (nsW32API::PFLT_FILESYSTEM_TYPE)&fileSystemType );
-
-		if( status != STATUS_SUCCESS )
+		if( nsUtils::VerifyVersionInfoEx( 6, ">="	) == true )
 		{
+			status = nsW32API::FltMgrAPIMgr.pfnFltGetFileSystemType( FltObjects->Instance, ( nsW32API::PFLT_FILESYSTEM_TYPE ) & fileSystemType );
 
-			return status;
+			if( status != STATUS_SUCCESS )
+			{
+
+				return status;
+			}
+		}
+		else
+		{
+			PCTX_INSTANCE_CONTEXT InstanceContext = NULLPTR;
+
+			CtxGetContext( FltObjects, NULLPTR, FLT_INSTANCE_CONTEXT, ( PFLT_CONTEXT* )&InstanceContext );
+
+			if( InstanceContext != NULLPTR )
+			{
+				fileSystemType = InstanceContext->VolumeFileSystemType;
+				CtxReleaseContext( InstanceContext );
+			}
 		}
 
 		//
