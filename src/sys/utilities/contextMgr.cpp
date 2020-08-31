@@ -349,6 +349,9 @@ void FLTAPI CtxStreamContextCleanupCallback( PCTX_STREAM_CONTEXT StreamContext, 
                  , StreamContext->FileFullPath.Buffer != NULLPTR ? StreamContext->FileFullPath.Buffer : L"(null)" ) );
 
     DeallocateBuffer( &StreamContext->FileFullPath );
+    if( StreamContext->NameInfo != NULLPTR )
+        FltReleaseFileNameInformation( StreamContext->NameInfo );
+    StreamContext->NameInfo = NULLPTR;
     ExDeleteResourceLite( StreamContext->Resource );
 }
 
