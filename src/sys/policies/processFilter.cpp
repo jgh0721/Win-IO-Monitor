@@ -152,7 +152,7 @@ NTSTATUS CloseProcessFilter()
     return STATUS_SUCCESS;
 }
 
-NTSTATUS ProcessFilter_Add( __in PROCESS_FILTER* ProcessFilter )
+NTSTATUS ProcessFilter_Add( __in const PROCESS_FILTER* ProcessFilter )
 {
     NTSTATUS Status = STATUS_SUCCESS;
 
@@ -323,6 +323,27 @@ void ProcessFilter_RemoveMask( LIST_ENTRY* ListHead )
         RemoveEntryList( &entry->ListEntry );
         ExFreePool( entry );
     }
+}
+
+DWORD ProcessFilter_Count()
+{
+    DWORD ProcessFilterCount = 0;
+    auto ProcessFilter = ProcessFilter_Ref();
+
+    do
+    {
+        if( ProcessFilter == NULLPTR )
+            break;
+
+        LIST_ENTRY* Head = &ProcessFilter->ListHead;
+
+        for( LIST_ENTRY* Current = Head->Flink; Current != Head; Current = Current->Flink )
+            ProcessFilterCount++;
+
+    } while( false );
+
+    ProcessFilter_Release( ProcessFilter );
+    return ProcessFilterCount;
 }
 
 NTSTATUS ProcessFilter_Match( ULONG ProcessId, const WCHAR* ProcessName )

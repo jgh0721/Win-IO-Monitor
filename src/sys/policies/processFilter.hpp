@@ -37,10 +37,11 @@ typedef struct _PROCESS_FILTER_MASK_ENTRY
 NTSTATUS InitializeProcessFilter();
 NTSTATUS CloseProcessFilter();
 
-NTSTATUS ProcessFilter_Add( __in PROCESS_FILTER* ProcessFilter );
+NTSTATUS ProcessFilter_Add( __in const PROCESS_FILTER* ProcessFilter );
 NTSTATUS ProcessFilter_AddMask( __in LIST_ENTRY* ListHead, __in const WCHAR* wszFilterMask );
 NTSTATUS ProcessFilter_Remove( __in ULONG ProcessId, __in WCHAR* ProcessMask );
 void ProcessFilter_RemoveMask( __in LIST_ENTRY* ListHead );
+DWORD ProcessFilter_Count();
 
 // include mask Match, none, exclude mask match
 // STATUS_SUCCESS, STATUS_NOT_FOUND, STATUS_OBJECT_NAME_NOT_FOUND

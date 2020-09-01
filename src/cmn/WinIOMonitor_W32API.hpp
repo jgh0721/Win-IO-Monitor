@@ -7,6 +7,25 @@
 #   pragma execution_character_set( "utf-8" )
 #endif
 
+#define ABSOLUTE(wait) (wait)
+#define RELATIVE(wait) (-(wait))
+#define NANOSECONDS(nanos) (((signed __int64)(nanos)) / 100L)
+#define MICROSECONDS(micros) (((signed __int64)(micros)) * NANOSECONDS(1000L))
+#define MILLISECONDS(milli) (((signed __int64)(milli)) * MICROSECONDS(1000L))
+#define SECONDS(seconds) (((signed __int64)(seconds)) * MILLISECONDS(1000L))
+
+#define WIN10_BUILD_TH1_1507 10240
+#define WIN10_BUILD_TH2_1511 10586
+#define WIN10_BUILD_RS1_1607 14393
+#define WIN10_BUILD_RS2_1703 15063
+#define WIN10_BUILD_RS3_1709 16299
+#define WIN10_BUILD_RS4_1803 17134
+#define WIN10_BUILD_RS5_1809 17763 
+#define WIN10_BUILD_19H1_1903 18362
+#define WIN10_BUILD_19H2_1909 18363
+#define WIN10_BUILD_20H1_2004 19041
+#define WIN10_BUILD_20H2_2009 19042
+
 namespace nsW32API
 {
     //  This helps us deal with ReFS 128-bit file IDs and NTFS 64-bit file IDs.

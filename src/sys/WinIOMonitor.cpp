@@ -94,6 +94,7 @@ NTSTATUS InitializeGlobalContext( PDRIVER_OBJECT DriverObject )
     {
         RtlZeroMemory( &GlobalContext, sizeof( CTX_GLOBAL_DATA ) );
         GlobalContext.DriverObject = DriverObject;
+        GlobalContext.TimeOutMs.QuadPart = RELATIVE( MILLISECONDS( 3000 ) );
 
         IF_FALSE_BREAK( Status, CreateControlDevice( GlobalContext ) );
 

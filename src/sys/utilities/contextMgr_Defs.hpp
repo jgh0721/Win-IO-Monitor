@@ -28,6 +28,8 @@ typedef struct _CTX_GLOBAL_DATA
 
     PVOID                           ProcessFilter;
 
+    LARGE_INTEGER                   TimeOutMs;
+
 } CTX_GLOBAL_DATA, * PCTX_GLOBAL_DATA;
 
 extern CTX_GLOBAL_DATA GlobalContext;
