@@ -12,11 +12,16 @@ FLT_PREOP_CALLBACK_STATUS WinIOPreCreate( PFLT_CALLBACK_DATA Data, PCFLT_RELATED
                                           PVOID* CompletionContext )
 {
     FLT_PREOP_CALLBACK_STATUS       FltStatus       = FLT_PREOP_SUCCESS_NO_CALLBACK;
-    auto                            IrpContext      = CreateIrpContext( Data, FltObjects );
+    IRP_CONTEXT*                    IrpContext      = NULLPTR;
     CTX_INSTANCE_CONTEXT*           InstanceContext = NULLPTR;
 
     __try
     {
+        if( BooleanFlagOn( Data->Iopb->OperationFlags, SL_OPEN_TARGET_DIRECTORY ) || 
+            BooleanFlagOn( Data->Iopb->OperationFlags, SL_OPEN_PAGING_FILE ) )
+            __leave;
+
+        IrpContext = CreateIrpContext( Data, FltObjects );
         CtxGetContext( FltObjects, NULLPTR, FLT_INSTANCE_CONTEXT, ( PFLT_CONTEXT* )&InstanceContext );
 
         if( IrpContext != NULLPTR )
