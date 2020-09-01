@@ -313,6 +313,7 @@ NTSTATUS FLTAPI ClientConnectNotify( PFLT_PORT ClientPort, PVOID ServerPortCooki
                               ULONG SizeOfContext, PVOID* ConnectionPortCookie )
 {
     *ConnectionPortCookie = ClientPort;
+    GlobalContext.ClientPort = ClientPort;
     return STATUS_SUCCESS;
 }
 

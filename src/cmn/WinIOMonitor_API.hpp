@@ -15,6 +15,8 @@
 #include <fltUserStructures.h>
 #endif
 
+#include "WinIOMonitor_Event.hpp"
+
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
 #endif
@@ -49,8 +51,24 @@ typedef enum TyEnMessageCategory
     MESSAGE_REGISTRY
 };
 
+typedef BOOL( WINAPI* MessageCallback )( __in MSG_SEND_PACKET* msg, __inout MSG_REPLY_PACKET* reply );
+typedef void( WINAPI* DisconnectCallback )( );
+
+///////////////////////////////////////////////////////////////////////////////
+
+DWORD ConnectTo();
+DWORD Disconnect();
+
 DWORD SetTimeOut( __in DWORD TimeOutMs );
 DWORD GetTimeOut( __out DWORD* TimeOutMs );
+
+// combinations of TyEnFilterType
+DWORD SetFilterType( __in ULONG FilterTypeFlags );
+
+DWORD RegisterCallback( __in ULONG ThreadCount, __in MessageCallback pfnMessageCallback, __in DisconnectCallback pfnDisconnectCallback );
+
+DWORD SetStartFiltering( __in BOOLEAN IsFiltering );
+DWORD GetStartFiltering( __out BOOLEAN* IsFiltering );
 
 DWORD AddGlobalFileFilterMask( __in const wchar_t* wszFilterMask, __in bool isInclude );
 DWORD RemoveGlobalFileFilterMask( __in const wchar_t* wszFilterMask, __in bool isInclude );

@@ -10,6 +10,7 @@
 #endif
 
 #define PORT_NAME                           L"\\WinIOMonFltPort"
+#define PORT_PROC_NAME                      L"\\WinIOMonProcFltPort"
 #define DEVICE_NAME                         L"\\WinIOMon"
 
 #endif // HDR_WINIOMONITOR_NAMES
