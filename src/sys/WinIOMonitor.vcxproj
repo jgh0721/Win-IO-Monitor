@@ -24,6 +24,7 @@
     <ClCompile Include="callbacks\fltCleanup.cpp" />
     <ClCompile Include="callbacks\fltClose.cpp" />
     <ClCompile Include="callbacks\fltCreateFile.cpp" />
+    <ClCompile Include="callbacks\fltDirectoryControl.cpp" />
     <ClCompile Include="callbacks\fltInstance.cpp" />
     <ClCompile Include="callbacks\fltNetworkQueryOpen.cpp" />
     <ClCompile Include="callbacks\fltSetInformation.cpp" />
@@ -49,6 +50,7 @@
     <ClInclude Include="callbacks\fltCleanup.hpp" />
     <ClInclude Include="callbacks\fltClose.hpp" />
     <ClInclude Include="callbacks\fltCreateFile.hpp" />
+    <ClInclude Include="callbacks\fltDirectoryControl.hpp" />
     <ClInclude Include="callbacks\fltInstance.hpp" />
     <ClInclude Include="callbacks\fltNetworkQueryOpen.hpp" />
     <ClInclude Include="callbacks\fltSetInformation.hpp" />

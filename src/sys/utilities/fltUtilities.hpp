@@ -26,6 +26,16 @@ namespace nsUtils
     WCHAR* UpperWString( __inout_z WCHAR* wszString );
 
     /**
+     * @brief Find wszPattern in wszString from end position to begin
+     * @param wszString 
+     * @param wszPattern 
+     * @return if found begin pattern begin pointer in wszString or NULLPTR
+
+     *  IRQL = PAASIVE_LEVEL
+    */
+    WCHAR* EndsWithW( __in_z WCHAR* wszString, __in_z const WCHAR* wszPattern );
+
+    /**
      * @brief 지정한 문자열에서 와일드카드(*,?) 를 이용하여 일치하는지 검사
      * @param pszString
      * @param pszMatch

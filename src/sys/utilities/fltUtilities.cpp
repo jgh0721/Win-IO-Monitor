@@ -74,7 +74,27 @@ namespace nsUtils
 		return wszString;
     }
 
-	bool WildcardMatch_straight( const char* pszString, const char* pszMatch, bool isCaseSensitive /* = false */ )
+    WCHAR* EndsWithW( WCHAR* wszString, const WCHAR* wszPattern )
+    {
+		auto lhs = strlength( wszString );
+		auto rhs = strlength( wszPattern );
+
+		if( lhs < rhs )
+			return NULLPTR;
+
+		auto base = lhs - rhs;
+		for( auto idx = base; idx < lhs; ++idx )
+		{
+			if( RtlUpcaseUnicodeChar( wszString[ idx ] ) != RtlUpcaseUnicodeChar( wszPattern[ idx - base ] ) )
+			{
+				return NULLPTR;
+			}
+		}
+
+		return &wszString[ base ];
+    }
+
+    bool WildcardMatch_straight( const char* pszString, const char* pszMatch, bool isCaseSensitive /* = false */ )
 	{
 		const char* mp = NULL;
 		const char* cp = NULL;

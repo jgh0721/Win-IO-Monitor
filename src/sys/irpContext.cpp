@@ -75,29 +75,37 @@ PIRP_CONTEXT CreateIrpContext( PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS Fl
         if( IrpContext->StreamContext == NULLPTR )
         {
             Status = CtxGetContext( FltObjects, FltObjects->FileObject, FLT_STREAM_CONTEXT, ( PFLT_CONTEXT* )&IrpContext->StreamContext );
+
             if( !NT_SUCCESS( Status ) || IrpContext->StreamContext == NULLPTR )
             {
                 KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_TRACE_LEVEL, "[WinIOMon] EvtID=%09d %s IRP=%4s%17s Line=%d %s Status=0x%08x\n",
                              IrpContext->EvtID, __FUNCTION__
                              , IsPreIO == true ? "Pre" : "Post", nsW32API::ConvertIRPMajorFunction( IrpContext->Data->Iopb->MajorFunction )
                              , __LINE__, "CtxGetContext FAILED", Status ) );
-                break;
             }
         }
 
         IrpContext->ProcessId = FltGetRequestorProcessId( Data );
         SearchProcessInfo( IrpContext->ProcessId, &IrpContext->ProcessFullPath, &IrpContext->ProcessFileName );
 
-        if( IrpContext->StreamContext->FileFullPath.Buffer == NULLPTR )
+        if( IrpContext->StreamContext != NULLPTR )
         {
-            IrpContext->StreamContext->FileFullPath = nsUtils::ExtractFileFullPath( FltObjects->FileObject, InstanceContext, 
-                                                                                    (MajorFunction == IRP_MJ_CREATE) && (IsPreIO == true) );
-        }
+            if( IrpContext->StreamContext->FileFullPath.Buffer == NULLPTR )
+            {
+                IrpContext->StreamContext->FileFullPath = nsUtils::ExtractFileFullPath( FltObjects->FileObject, InstanceContext,
+                                                                                        ( MajorFunction == IRP_MJ_CREATE ) && ( IsPreIO == true ) );
+            }
 
-        if( IrpContext->StreamContext->FileFullPath.Buffer != NULLPTR )
+            if( IrpContext->StreamContext->FileFullPath.Buffer != NULLPTR )
+            {
+                IrpContext->SrcFileFullPath = AllocateBuffer<WCHAR>( BUFFER_FILENAME, IrpContext->StreamContext->FileFullPath.BufferSize );
+                RtlStringCbCopyW( IrpContext->SrcFileFullPath.Buffer, IrpContext->SrcFileFullPath.BufferSize, IrpContext->StreamContext->FileFullPath.Buffer );
+            }
+        }
+        else
         {
-            IrpContext->SrcFileFullPath = AllocateBuffer<WCHAR>( BUFFER_FILENAME, IrpContext->StreamContext->FileFullPath.BufferSize );
-            RtlStringCbCopyW( IrpContext->SrcFileFullPath.Buffer, IrpContext->SrcFileFullPath.BufferSize, IrpContext->StreamContext->FileFullPath.Buffer );
+            IrpContext->SrcFileFullPath = nsUtils::ExtractFileFullPath( FltObjects->FileObject, InstanceContext,
+                                                                        ( MajorFunction == IRP_MJ_CREATE ) && ( IsPreIO == true ) );
         }
         
         if( MajorFunction == IRP_MJ_SET_INFORMATION )
@@ -382,7 +390,18 @@ void PrintIrpContext( const PIRP_CONTEXT IrpContext )
         case IRP_MJ_FLUSH_BUFFERS: { } break;
         case IRP_MJ_QUERY_VOLUME_INFORMATION: { } break;
         case IRP_MJ_SET_VOLUME_INFORMATION: { } break;
-        case IRP_MJ_DIRECTORY_CONTROL: { } break;
+        case IRP_MJ_DIRECTORY_CONTROL: {
+            const auto& FileInformationClass = ( nsW32API::FILE_INFORMATION_CLASS )IrpContext->Data->Iopb->Parameters.DirectoryControl.QueryDirectory.FileInformationClass;
+
+            KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_TRACE_LEVEL, "[WinIOMon] EvtID=%09d IRP=%4s%-17s CLASS=%-45s Proc=%06d,%ws Src=%ws ResultStatus=0x%08x\n",
+                         IrpContext->EvtID
+                         , IsPreIO == true ? "Pre" : "Post", nsW32API::ConvertIRPMajorFunction( IrpContext->Data->Iopb->MajorFunction )
+                         , nsW32API::ConvertFileInformationClassTo( FileInformationClass )
+                         , IrpContext->ProcessId, IrpContext->ProcessFileName == NULLPTR ? L"(null)" : IrpContext->ProcessFileName
+                         , IrpContext->SrcFileFullPath.Buffer == NULLPTR ? L"(null)" : IrpContext->SrcFileFullPath.Buffer
+                         , IrpContext->Data->IoStatus.Status
+                         ) );
+        } break;
         case IRP_MJ_FILE_SYSTEM_CONTROL: { } break;
         case IRP_MJ_DEVICE_CONTROL: { } break;
         case IRP_MJ_INTERNAL_DEVICE_CONTROL: { } break;

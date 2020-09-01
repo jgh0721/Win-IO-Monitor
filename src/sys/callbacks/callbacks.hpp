@@ -8,6 +8,7 @@
 #include "fltCleanup.hpp"
 #include "fltClose.hpp"
 #include "fltNetworkQueryOpen.hpp"
+#include "fltDirectoryControl.hpp"
 #include "fltInstance.hpp"
 
 #include "utilities/contextMgr_Defs.hpp"

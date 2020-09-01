@@ -104,6 +104,16 @@ typedef union TyMsgParameters
         ULONG CreateOptions;
     } Create;
 
+    union
+    {
+        struct
+        {
+            FILE_INFORMATION_CLASS FileInformationClass;
+
+        } QueryDirectory;
+
+    } DirectoryControl;
+
 } MSG_PARAMETERS, *PMSG_PARAMETERS;
 
 typedef struct _MSG_SEND_PACKET

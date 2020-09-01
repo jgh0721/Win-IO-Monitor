@@ -47,7 +47,7 @@ CONST FLT_OPERATION_REGISTRATION FilterCallbacks[] = {
 
     { IRP_MJ_SET_VOLUME_INFORMATION,        0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
 
-    { IRP_MJ_DIRECTORY_CONTROL,             0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
+    { IRP_MJ_DIRECTORY_CONTROL,             0,      WinIOPreDirectoryControl,      WinIOPostDirectoryControl    },
 
     { IRP_MJ_FILE_SYSTEM_CONTROL,           0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
 
