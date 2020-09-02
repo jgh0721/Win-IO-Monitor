@@ -154,7 +154,7 @@ typedef struct _MSG_SEND_PACKET
 typedef enum _MSG_FILTER_STATUS
 {
     FILTER_MSG_IS_DIRTY = 0x00000001
-};
+} MSG_FILTER_STATUS;
 
 typedef struct _MSG_REPLY_PACKET
 {

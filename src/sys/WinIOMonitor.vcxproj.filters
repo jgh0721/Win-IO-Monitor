@@ -87,6 +87,9 @@
     <ClCompile Include="callbacks\fltDirectoryControl.cpp">
       <Filter>callbacks</Filter>
     </ClCompile>
+    <ClCompile Include="notifyMgr.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="WinIOMonitor.hpp">
@@ -172,6 +175,12 @@
     </ClInclude>
     <ClInclude Include="callbacks\fltDirectoryControl.hpp">
       <Filter>callbacks</Filter>
+    </ClInclude>
+    <ClInclude Include="notifyMgr.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="notifyMgr_Defs.hpp">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

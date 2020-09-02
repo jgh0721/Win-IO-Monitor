@@ -43,7 +43,7 @@ enum TyEnFilterType
     FILTER_REG_MONITOR          = 0x200
 };
 
-typedef enum TyEnMessageCategory
+enum TyEnMessageCategory
 {
     MESSAGE_UNKNOWN             ,
     MESSAGE_FILESYSTEM          ,
@@ -93,5 +93,7 @@ DWORD GetProcessFileFilterCount( __out DWORD* FilterCount );
 DWORD RemoveProcessFileFilterMask( __in const wchar_t* wszFilterMask );
 DWORD RemoveProcessFileFilterMask( __in DWORD ProcessId );
 DWORD ResetProcessFileFilterMask();
+
+DWORD CollectNotifyEventItems( __inout PVOID Buffer, __in ULONG BufferSize, __out ULONG* WrittenItemCount );
 
 #endif // HDR_WINIOMONITOR_API

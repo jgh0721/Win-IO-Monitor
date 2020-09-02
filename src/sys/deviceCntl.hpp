@@ -29,4 +29,6 @@ BOOLEAN DevIOCntlDelProcessPolicyByMask( IN PVOID InputBuffer OPTIONAL, IN ULONG
 BOOLEAN DevIOCntlGetProcessPolicyCount( IN PVOID InputBuffer OPTIONAL, IN ULONG InputBufferLength, OUT PVOID OutputBuffer OPTIONAL, IN ULONG OutputBufferLength, OUT PIO_STATUS_BLOCK IoStatus );
 BOOLEAN DevIOCntlClearProcessPolicy( IN PVOID InputBuffer OPTIONAL, IN ULONG InputBufferLength, OUT PVOID OutputBuffer OPTIONAL, IN ULONG OutputBufferLength, OUT PIO_STATUS_BLOCK IoStatus );
 
+BOOLEAN DevIOCntlCollectNotifyEventItems( IN PVOID InputBuffer OPTIONAL, IN ULONG InputBufferLength, OUT PVOID OutputBuffer OPTIONAL, IN ULONG OutputBufferLength, OUT PIO_STATUS_BLOCK IoStatus );
+
 #endif // HDR_WINIOMONITOR_DEVICE_CNTL

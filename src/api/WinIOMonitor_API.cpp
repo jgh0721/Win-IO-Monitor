@@ -363,6 +363,48 @@ DWORD ResetProcessFileFilterMask()
     return dwRet;
 }
 
+DWORD CollectNotifyEventItems( PVOID Buffer, ULONG BufferSize, ULONG* WrittenItemCount )
+{
+    DWORD dwRet = ERROR_SUCCESS;
+    HANDLE hDevice = INVALID_HANDLE_VALUE;
+
+    do
+    {
+        hDevice = CreateFileW( L"\\\\." DEVICE_NAME, GENERIC_READ | GENERIC_WRITE,
+                               FILE_SHARE_READ | FILE_SHARE_DELETE,
+                               NULL,
+                               OPEN_EXISTING,
+                               FILE_ATTRIBUTE_NORMAL,
+                               NULL );
+
+        if( hDevice != INVALID_HANDLE_VALUE )
+        {
+            dwRet = GetLastError();
+            break;
+        }
+
+        DWORD dwReturnBytes = 0;
+        BOOL isSuccess = DeviceIoControl( hDevice, IOCTL_GET_NOTIFY_EVENTS,
+                                          NULL, 0,
+                                          Buffer, BufferSize, &dwReturnBytes, NULL );
+
+        if( isSuccess == FALSE )
+        {
+            dwRet = GetLastError();
+            break;
+        }
+
+        if( WrittenItemCount != NULL )
+            *WrittenItemCount = *( ULONG* )Buffer;
+
+    } while( false );
+
+    if( hDevice != INVALID_HANDLE_VALUE )
+        CloseHandle( hDevice );
+
+    return dwRet;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 
 #pragma pack(1)

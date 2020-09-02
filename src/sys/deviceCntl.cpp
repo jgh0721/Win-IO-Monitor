@@ -1,5 +1,6 @@
 ﻿#include "deviceCntl.hpp"
 
+#include "notifyMgr.hpp"
 #include "policies/processFilter.hpp"
 
 #include "WinIOMonitor_API.hpp"
@@ -52,6 +53,10 @@ BOOLEAN FLTAPI FastIoDeviceControl( PFILE_OBJECT FileObject, BOOLEAN Wait, PVOID
         } break;
         case IOCTL_CLEAR_PROCESS_POLICY: {
             DevIOCntlClearProcessPolicy( InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength, IoStatus );
+        } break;
+
+        case IOCTL_GET_NOTIFY_EVENTS: {
+            DevIOCntlCollectNotifyEventItems( InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength, IoStatus );
         } break;
     }
     
@@ -232,6 +237,47 @@ BOOLEAN DevIOCntlClearProcessPolicy( PVOID InputBuffer, ULONG InputBufferLength,
     {
         IoStatus->Status = CloseProcessFilter();
         IoStatus->Information = 0;
+
+    } while( false );
+
+    return bRet;
+}
+
+BOOLEAN DevIOCntlCollectNotifyEventItems( PVOID InputBuffer, ULONG InputBufferLength, PVOID OutputBuffer, ULONG OutputBufferLength, PIO_STATUS_BLOCK IoStatus )
+{
+    BOOLEAN bRet = TRUE;
+
+    UNREFERENCED_PARAMETER( InputBuffer );
+    UNREFERENCED_PARAMETER( InputBufferLength );
+
+    do
+    {
+        if( OutputBuffer == NULLPTR )
+        {
+            IoStatus->Status = STATUS_INVALID_PARAMETER;
+            IoStatus->Information = 0;
+            break;
+        }
+
+        if( OutputBufferLength <= sizeof( MSG_SEND_PACKET ) + sizeof(ULONG) )
+        {
+            IoStatus->Status = STATUS_BUFFER_TOO_SMALL;
+            IoStatus->Information = sizeof( MSG_SEND_PACKET ) + sizeof( ULONG ) + ( MAX_PATH * sizeof( WCHAR ) );
+            break;
+        }
+
+        ULONG WrittenBytes = 0;
+        ULONG NotifyItemCount = 0;
+
+        IoStatus->Status = CollectNotifyItem( Add2Ptr( OutputBuffer, sizeof( ULONG ) ), OutputBufferLength - sizeof( ULONG ),
+                                              &WrittenBytes,
+                                              &NotifyItemCount );
+
+        if( NT_SUCCESS( IoStatus->Status ) )
+        {
+            *( ULONG* )OutputBuffer = NotifyItemCount;
+            IoStatus->Information = WrittenBytes;
+        }
 
     } while( false );
 
