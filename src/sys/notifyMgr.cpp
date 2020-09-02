@@ -43,7 +43,7 @@ void CloseNotifyMgr()
 
         InterlockedDecrement( &nsDetail::CurrentItemCount );
         auto Item = CONTAINING_RECORD( ListItem, NOTIFY_ITEM, ListEntry );
-        FreeNoitifyItem( Item );
+        FreeNotifyItem( Item );
 
     } while( true );
 }
@@ -60,7 +60,7 @@ NOTIFY_ITEM* AllocateNotifyItem( ULONG SendPacketSize )
             PLIST_ENTRY ListItem = ExInterlockedRemoveHeadList( &nsDetail::ListHead, &nsDetail::ListLock );
             InterlockedDecrement( &nsDetail::CurrentItemCount );
             auto Old = CONTAINING_RECORD( ListItem, NOTIFY_ITEM, ListEntry );
-            FreeNoitifyItem( Old );
+            FreeNotifyItem( Old );
         }
 
         Item = (NOTIFY_ITEM*)ExAllocatePool( NonPagedPool, sizeof( NOTIFY_ITEM ) );
@@ -82,7 +82,7 @@ NOTIFY_ITEM* AllocateNotifyItem( ULONG SendPacketSize )
     return Item;
 }
 
-void FreeNoitifyItem( NOTIFY_ITEM* NotifyItem )
+void FreeNotifyItem( NOTIFY_ITEM* NotifyItem )
 {
     if( NotifyItem == NULLPTR )
         return;
@@ -142,7 +142,7 @@ NTSTATUS CollectNotifyItem( PVOID Buffer, ULONG BufferSize, __out ULONG* Written
             // Prepare Next Entry
             Item = (MSG_SEND_PACKET*)Add2Ptr( Item, NotifyItem->SendPacket->MessageSize );
 
-            FreeNoitifyItem( NotifyItem );
+            FreeNotifyItem( NotifyItem );
 
         } while( BufferSize > sizeof( MSG_SEND_PACKET ) );
     }

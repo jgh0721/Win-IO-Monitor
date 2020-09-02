@@ -12,7 +12,7 @@ NTSTATUS InitializeNotifyMgr();
 VOID CloseNotifyMgr();
 
 NOTIFY_ITEM* AllocateNotifyItem( __in ULONG SendPacketSize );
-VOID FreeNoitifyItem( __in NOTIFY_ITEM* NotifyItem );
+VOID FreeNotifyItem( __in NOTIFY_ITEM* NotifyItem );
 VOID AppendNotifyItem( __in NOTIFY_ITEM* NotifyItem );
 
 NTSTATUS CollectNotifyItem( __inout PVOID Buffer, __in ULONG BufferSize, __out ULONG* WrittenBytes, __out ULONG* NotifyItemCount );
