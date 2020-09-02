@@ -33,7 +33,7 @@ CONST FLT_OPERATION_REGISTRATION FilterCallbacks[] = {
 
     { IRP_MJ_WRITE,                         0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
 
-    { IRP_MJ_QUERY_INFORMATION,             0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
+    { IRP_MJ_QUERY_INFORMATION,             0,      WinIOPreQueryInformation,      WinIOPostQueryInformation    },
 
     { IRP_MJ_SET_INFORMATION,               0,      WinIOPreSetInformation,      WinIOPostSetInformation    },
 

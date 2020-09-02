@@ -87,6 +87,9 @@
     <ClCompile Include="callbacks\fltDirectoryControl.cpp">
       <Filter>callbacks</Filter>
     </ClCompile>
+    <ClCompile Include="callbacks\fltQueryInformation.cpp">
+      <Filter>callbacks</Filter>
+    </ClCompile>
     <ClCompile Include="notifyMgr.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -174,6 +177,9 @@
       <Filter>callbacks</Filter>
     </ClInclude>
     <ClInclude Include="callbacks\fltDirectoryControl.hpp">
+      <Filter>callbacks</Filter>
+    </ClInclude>
+    <ClInclude Include="callbacks\fltQueryInformation.hpp">
       <Filter>callbacks</Filter>
     </ClInclude>
     <ClInclude Include="notifyMgr.hpp">

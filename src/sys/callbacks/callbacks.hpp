@@ -4,6 +4,7 @@
 #include "fltBase.hpp"
 
 #include "fltCreateFile.hpp"
+#include "fltQueryInformation.hpp"
 #include "fltSetInformation.hpp"
 #include "fltCleanup.hpp"
 #include "fltClose.hpp"
