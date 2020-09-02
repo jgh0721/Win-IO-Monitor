@@ -42,12 +42,17 @@ NTSTATUS ProcessFilter_AddMask( __in LIST_ENTRY* ListHead, __in const WCHAR* wsz
 NTSTATUS ProcessFilter_Remove( __in ULONG ProcessId, __in WCHAR* ProcessMask );
 void ProcessFilter_RemoveMask( __in LIST_ENTRY* ListHead );
 DWORD ProcessFilter_Count();
+void ProcessFilter_CloseHandle( __in PVOID ProcessFilterHandle );
 
 // include mask Match, none, exclude mask match
 // STATUS_SUCCESS, STATUS_NOT_FOUND, STATUS_OBJECT_NAME_NOT_FOUND
 
 NTSTATUS ProcessFilter_Match( __in_opt ULONG ProcessId, __in_opt const WCHAR* ProcessName );
 NTSTATUS ProcessFilter_Match( __in_opt ULONG ProcessId, __in_opt const WCHAR* ProcessName, __in const WCHAR* FileFullPath );
+
+NTSTATUS ProcessFilter_Match( __in_opt ULONG ProcessId, __in_opt const WCHAR* ProcessName, __out_opt PVOID* ProcessFilterHandle, __out_opt PVOID* ProcessFilter  );
+NTSTATUS ProcessFilter_Match( __in_opt ULONG ProcessId, __in_opt const WCHAR* ProcessName, __in const WCHAR* FileFullPath, __out_opt PVOID* ProcessFilterHandle, __out_opt PVOID* ProcessFilter );
+
 FORCEINLINE NTSTATUS ProcessFilter_MatchMask( __in LIST_ENTRY* ListHead, __in const WCHAR* FileFullPath );
 
 #endif // HDR_POLICY_PROCESS_FILTER

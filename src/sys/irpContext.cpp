@@ -5,6 +5,8 @@
 #include "utilities/fltUtilities.hpp"
 
 #include "WinIOMonitor_W32API.hpp"
+#include "WinIOMonitor_Event.hpp"
+#include "policies/processFilter.hpp"
 
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
@@ -41,6 +43,7 @@ PIRP_CONTEXT CreateIrpContext( PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS Fl
         IrpContext->FltObjects  = FltObjects;
 
         IrpContext->EvtID       = CreateEvtID();
+        IrpContext->MsgType     = ConvertIRPMajorFuncToFSTYPE( Data );
 
         Status = CtxGetContext( FltObjects, NULLPTR, FLT_INSTANCE_CONTEXT, ( PFLT_CONTEXT* )&InstanceContext );
         if( !NT_SUCCESS( Status ) || InstanceContext == NULLPTR )
@@ -218,8 +221,126 @@ void CloseIrpContext( PIRP_CONTEXT& IrpContext )
     if( IrpContext->StreamContext )
         CtxReleaseContext( IrpContext->StreamContext );
 
+    if( IrpContext->ProcessFilterHandle != NULLPTR )
+        ProcessFilter_CloseHandle( IrpContext->ProcessFilterHandle );
+
     ExFreePool( IrpContext );
     IrpContext = NULLPTR;
+}
+
+void CheckEvent( IRP_CONTEXT* IrpContext, PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects )
+{
+    ASSERT( IrpContext != NULLPTR );
+    if( IrpContext == NULLPTR )
+        return;
+
+    IrpContext->MsgType = ConvertIRPMajorFuncToFSTYPE( Data );
+
+    NTSTATUS Match = ProcessFilter_Match( IrpContext->ProcessId, IrpContext->ProcessFullPath.Buffer, &IrpContext->ProcessFilterHandle, &IrpContext->ProcessFilterEntry );
+    if( Match == STATUS_NOT_FOUND )
+        return;
+
+    auto ProcessFilter = ( ( PROCESS_FILTER_ENTRY* )IrpContext->ProcessFilterEntry );
+
+    if( !BooleanFlagOn( ProcessFilter->FileIOFlags, IrpContext->MsgType ) )
+        return;
+
+    if( IsListEmpty( &ProcessFilter->ExcludeMaskListHead ) && 
+        IsListEmpty( &ProcessFilter->IncludeMaskListHead ) )
+    {
+        IrpContext->isSendTo = true;
+        return;
+    }
+
+    Match = ProcessFilter_MatchMask( &ProcessFilter->ExcludeMaskListHead, IrpContext->SrcFileFullPath.Buffer );
+    if( Match == STATUS_SUCCESS )
+        return;
+
+    if( IrpContext->DstFileFullPath.Buffer != NULLPTR )
+    {
+        Match = ProcessFilter_MatchMask( &ProcessFilter->ExcludeMaskListHead, IrpContext->DstFileFullPath.Buffer );
+        if( Match == STATUS_SUCCESS )
+            return;
+    }
+
+    Match = ProcessFilter_MatchMask( &ProcessFilter->IncludeMaskListHead, IrpContext->SrcFileFullPath.Buffer );
+    if( Match == STATUS_SUCCESS )
+    {
+        IrpContext->isSendTo = true;
+        return;
+    }
+
+    if( IrpContext->DstFileFullPath.Buffer != NULLPTR )
+    {
+        Match = ProcessFilter_MatchMask( &ProcessFilter->IncludeMaskListHead, IrpContext->DstFileFullPath.Buffer );
+        if( Match == STATUS_SUCCESS )
+        {
+            IrpContext->isSendTo = true;
+            return;
+        }
+    }
+
+}
+
+ULONG ConvertIRPMajorFuncToFSTYPE( PFLT_CALLBACK_DATA Data )
+{
+    ULONG FsType = 0;
+    auto IsPreIO = BooleanFlagOn( Data->Flags, FLTFL_CALLBACK_DATA_POST_OPERATION ) == FALSE;
+
+    if( IsPreIO == true )
+    {
+        switch( Data->Iopb->MajorFunction )
+        {
+            case IRP_MJ_CREATE:
+                return FS_PRE_CREATE;
+            case IRP_MJ_READ:
+                return FS_PRE_READ;
+            case IRP_MJ_WRITE:
+                return FS_PRE_WRITE;
+            case IRP_MJ_QUERY_INFORMATION:
+                return FS_PRE_QUERY_INFORMATION;
+            case IRP_MJ_SET_INFORMATION:
+                return FS_PRE_SET_INFORMATION;
+            case IRP_MJ_DIRECTORY_CONTROL:
+                return FS_PRE_DIRECTORY_CONTROL;
+            case IRP_MJ_QUERY_SECURITY:
+                return FS_PRE_QUERY_INFORMATION;
+            case IRP_MJ_SET_SECURITY:
+                return FS_PRE_SET_SECURITY;
+            case IRP_MJ_CLEANUP:
+                return FS_PRE_CLEANUP;
+            case IRP_MJ_CLOSE:
+                return FS_PRE_CLOSE;
+        }
+    }
+    else
+    {
+        switch( Data->Iopb->MajorFunction )
+        {
+            case IRP_MJ_CREATE:
+                return FS_POST_CREATE;
+            case IRP_MJ_READ:
+                return FS_POST_READ;
+            case IRP_MJ_WRITE:
+                return FS_POST_WRITE;
+            case IRP_MJ_QUERY_INFORMATION:
+                return FS_POST_QUERY_INFORMATION;
+            case IRP_MJ_SET_INFORMATION:
+                return FS_POST_SET_INFORMATION;
+            case IRP_MJ_DIRECTORY_CONTROL:
+                return FS_POST_DIRECTORY_CONTROL;
+            case IRP_MJ_QUERY_SECURITY:
+                return FS_POST_QUERY_INFORMATION;
+            case IRP_MJ_SET_SECURITY:
+                return FS_POST_SET_SECURITY;
+            case IRP_MJ_CLEANUP:
+                return FS_POST_CLEANUP;
+            case IRP_MJ_CLOSE:
+                return FS_POST_CLOSE;
+        }
+    }
+
+    return FsType;
 }
 
 void PrintIrpContext( const PIRP_CONTEXT IrpContext )

@@ -346,7 +346,22 @@ DWORD ProcessFilter_Count()
     return ProcessFilterCount;
 }
 
+void ProcessFilter_CloseHandle( PVOID ProcessFilterHandle )
+{
+    ProcessFilter_Release( (PROCESS_FILTER_KN*)ProcessFilterHandle );
+}
+
 NTSTATUS ProcessFilter_Match( ULONG ProcessId, const WCHAR* ProcessName )
+{
+    return ProcessFilter_Match( ProcessId, ProcessName, NULLPTR, NULLPTR );
+}
+
+NTSTATUS ProcessFilter_Match( ULONG ProcessId, const WCHAR* ProcessName, const WCHAR* FileFullPath )
+{
+    return ProcessFilter_Match( ProcessId, ProcessName, FileFullPath, NULLPTR, NULLPTR );
+}
+
+NTSTATUS ProcessFilter_Match( ULONG ProcessId, const WCHAR* ProcessName, PVOID* ProcessFilterHandle, PVOID* ProcessFilter )
 {
     NTSTATUS Status = STATUS_NOT_FOUND;
     auto Filter = ProcessFilter_Ref();
@@ -359,28 +374,45 @@ NTSTATUS ProcessFilter_Match( ULONG ProcessId, const WCHAR* ProcessName )
         {
             PROCESS_FILTER_ENTRY* Item = CONTAINING_RECORD( Current, PROCESS_FILTER_ENTRY, ListEntry );
 
-            if( Item->ProcessId > 0 && Item->ProcessId == ProcessId )
+            do
             {
-                Status = STATUS_SUCCESS;
-                break;
-            }
+                if( Item->ProcessId > 0 && Item->ProcessId == ProcessId )
+                {
+                    Status = STATUS_SUCCESS;
+                    break;
+                }
 
-            if( ProcessName != NULLPTR && 
-                nsUtils::WildcardMatch_straight( ProcessName, Item->ProcessMask ) == true )
+                if( ProcessName != NULLPTR &&
+                    nsUtils::WildcardMatch_straight( ProcessName, Item->ProcessMask ) == true )
+                {
+                    Status = STATUS_SUCCESS;
+                    break;
+                }
+
+            } while( false );
+
+            if( Status == STATUS_SUCCESS )
             {
-                Status = STATUS_SUCCESS;
+                if( ProcessFilterHandle != NULLPTR && ProcessFilter != NULLPTR )
+                {
+                    *ProcessFilterHandle = Filter;
+                    *ProcessFilter = Item;
+                }
+
                 break;
             }
         }
-        
+
     } while( false );
 
-    ProcessFilter_Release( Filter );
+    // caller must be CloseHandle ProcessFilterHandle
+    if( ProcessFilterHandle == NULLPTR )
+        ProcessFilter_Release( Filter );
 
     return Status;
 }
 
-NTSTATUS ProcessFilter_Match( ULONG ProcessId, const WCHAR* ProcessName, const WCHAR* FileFullPath )
+NTSTATUS ProcessFilter_Match( ULONG ProcessId, const WCHAR* ProcessName, const WCHAR* FileFullPath, PVOID* ProcessFilterHandle, PVOID* ProcessFilter )
 {
     NTSTATUS Status = STATUS_NOT_FOUND;
     auto Filter = ProcessFilter_Ref();
@@ -403,22 +435,39 @@ NTSTATUS ProcessFilter_Match( ULONG ProcessId, const WCHAR* ProcessName, const W
             if( isMatch == false )
                 continue;
 
-            if( ProcessFilter_MatchMask( &Item->ExcludeMaskListHead, FileFullPath ) == STATUS_SUCCESS )
+            do
             {
-                Status = STATUS_OBJECT_NAME_NOT_FOUND;
-                break;
-            }
+                if( ProcessFilter_MatchMask( &Item->ExcludeMaskListHead, FileFullPath ) == STATUS_SUCCESS )
+                {
+                    Status = STATUS_OBJECT_NAME_NOT_FOUND;
+                    break;
+                }
 
-            if( ProcessFilter_MatchMask( &Item->IncludeMaskListHead, FileFullPath ) == STATUS_SUCCESS )
+                if( ProcessFilter_MatchMask( &Item->IncludeMaskListHead, FileFullPath ) == STATUS_SUCCESS )
+                {
+                    Status = STATUS_SUCCESS;
+                    break;
+                }
+
+            } while( false );
+
+            if( Status != STATUS_NOT_FOUND )
             {
-                Status = STATUS_SUCCESS;
+                if( ProcessFilterHandle != NULLPTR && ProcessFilter != NULLPTR )
+                {
+                    *ProcessFilterHandle = Filter;
+                    *ProcessFilter = Item;
+                }
+
                 break;
             }
         }
 
     } while( false );
 
-    ProcessFilter_Release( Filter );
+    // caller must be CloseHandle ProcessFilterHandle
+    if( ProcessFilterHandle == NULLPTR )
+        ProcessFilter_Release( Filter );
 
     return Status;
 }

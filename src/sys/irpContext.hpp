@@ -21,6 +21,7 @@ typedef struct _IRP_CONTEXT
     PCFLT_RELATED_OBJECTS           FltObjects;
 
     LONG                            EvtID;
+    ULONG                           MsgType;
 
     ULONG                           ProcessId;
     TyGenericBuffer< WCHAR >        ProcessFullPath;
@@ -28,15 +29,24 @@ typedef struct _IRP_CONTEXT
     TyGenericBuffer< WCHAR >        SrcFileFullPath;
     TyGenericBuffer< WCHAR >        DstFileFullPath;
 
-    bool isSendTo;
-    bool isControl;
+    bool                            isSendTo;
+    bool                            isControl;
 
     CTX_STREAM_CONTEXT*             StreamContext;
+
+    PVOID                           ProcessFilterHandle;    // dont use direcetly this pointer, just refcount 
+    PVOID                           ProcessFilterEntry;
 
 } IRP_CONTEXT, *PIRP_CONTEXT;
 
 PIRP_CONTEXT CreateIrpContext( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_OBJECTS FltObjects );
 void CloseIrpContext( __in PIRP_CONTEXT& IrpContext );
+
+void CheckEvent( __inout IRP_CONTEXT* IrpContext, __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_OBJECTS FltObjects );
+
+ULONG ConvertIRPMajorFuncToFSTYPE( __in PFLT_CALLBACK_DATA Data );
+
+///////////////////////////////////////////////////////////////////////////////
 
 void PrintIrpContext( __in const PIRP_CONTEXT IrpContext );
 
