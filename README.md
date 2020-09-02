@@ -10,3 +10,19 @@ Goals
 Support OS
 
     Windows XP SP2 and Later.
+
+
+Build Environments
+
+    Driver 
+
+        Windows Driver Kit 7.1 ( 7600.16385.1 )
+        Visual Studio 2015
+
+    API 
+        Visual Studio 2017 
+
+    Control 
+        Visual Studio 2017 
+        Qt 5.14.2 
+        QtitanDataGrid, but because this module is commercial sw, it's source code were note included. 
