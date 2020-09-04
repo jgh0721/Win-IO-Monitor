@@ -14,17 +14,20 @@
     <ProjectGuid>{3457112C-DDEB-49B4-B8C9-476C9C5FE383}</ProjectGuid>
     <Keyword>QtVS_v303</Keyword>
     <QtMsBuild Condition="'$(QtMsBuild)'=='' OR !Exists('$(QtMsBuild)\qt.targets')">$(MSBuildProjectDirectory)\QtMsBuild</QtMsBuild>
+    <WindowsTargetPlatformVersion>7.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
-    <PlatformToolset>v140_xp</PlatformToolset>
+    <PlatformToolset>v141_xp</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
+    <SpectreMitigation>false</SpectreMitigation>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
-    <PlatformToolset>v140_xp</PlatformToolset>
+    <PlatformToolset>v141_xp</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
+    <SpectreMitigation>false</SpectreMitigation>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <Target Name="QtMsBuildNotFound" BeforeTargets="CustomBuild;ClCompile" Condition="!Exists('$(QtMsBuild)\qt.targets') or !Exists('$(QtMsBuild)\qt.props')">
@@ -52,22 +55,30 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>$(SolutionDir)cmn;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)cmn;$(ProjectDir)ext\QtitanDataGrid\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>QTITAN_LIBRARY_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>$(ProjectDir)ext\QtitanDataGrid\lib\$(PlatformShortName);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>$(SolutionDir)cmn;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)cmn;$(ProjectDir)ext\QtitanDataGrid\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>QTITAN_LIBRARY_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>$(ProjectDir)ext\QtitanDataGrid\lib\$(PlatformShortName);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
   </ItemDefinitionGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'" Label="QtSettings">
-    <QtInstall>Qt-5.6.5-VC2015_XP-X64-S-MT</QtInstall>
-    <QtModules>core;gui;widgets</QtModules>
+    <QtInstall>Qt-5.14.2-VC2017_XP-X64</QtInstall>
+    <QtModules>core;gui;printsupport;sql;widgets</QtModules>
     <QtBuildConfig>debug</QtBuildConfig>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'" Label="QtSettings">
-    <QtInstall>Qt-5.6.5-VC2015_XP-X64-S-MT</QtInstall>
-    <QtModules>core;gui;widgets</QtModules>
+    <QtInstall>Qt-5.14.2-VC2017_XP-X64</QtInstall>
+    <QtModules>core;gui;printsupport;sql;widgets</QtModules>
     <QtBuildConfig>release</QtBuildConfig>
   </PropertyGroup>
   <ImportGroup Condition="Exists('$(QtMsBuild)\qt.props')">
@@ -79,7 +90,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
-      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <UsePrecompiledHeader>Use</UsePrecompiledHeader>
       <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
     </ClCompile>
@@ -97,7 +108,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <DebugInformationFormat>None</DebugInformationFormat>
       <Optimization>MaxSpeed</Optimization>
-      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <UsePrecompiledHeader>Use</UsePrecompiledHeader>
       <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
     </ClCompile>
@@ -110,11 +121,88 @@
     </QtMoc>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <QtRcc Include="ext\QtitanDataGrid\src\base\QtnBaseResources.qrc" />
+    <QtRcc Include="ext\QtitanDataGrid\src\grid\QtnGridResources.qrc" />
+    <QtRcc Include="ext\QtitanDataGrid\src\grid\QtnGridTranslations.qrc" />
     <QtRcc Include="WinIOMonitorControl.qrc" />
     <QtUic Include="WinIOMonitorControl.ui" />
     <QtMoc Include="WinIOMonitorControl.h" />
+    <ClCompile Include="ext\QtitanDataGrid\src\base\QtnBackstageWidget.cpp" />
+    <ClCompile Include="ext\QtitanDataGrid\src\base\QtnColorButton.cpp" />
+    <ClCompile Include="ext\QtitanDataGrid\src\base\QtnCommonStyle.cpp" />
+    <ClCompile Include="ext\QtitanDataGrid\src\base\QtnCommonStyle_win.cpp" />
+    <ClCompile Include="ext\QtitanDataGrid\src\base\QtnCustomLayout.cpp" />
+    <ClCompile Include="ext\QtitanDataGrid\src\base\QtnMaterialWidget.cpp" />
+    <ClCompile Include="ext\QtitanDataGrid\src\base\QtnPlatform.cpp" />
+    <ClCompile Include="ext\QtitanDataGrid\src\base\QtnPlatform_win.cpp" />
+    <ClCompile Include="ext\QtitanDataGrid\src\base\QtnScrollWidgetBar.cpp" />
+    <ClCompile Include="ext\QtitanDataGrid\src\base\QtnSegoeMDL2Assets.cpp" />
+    <ClCompile Include="ext\QtitanDataGrid\src\base\QtnStyleHelper.cpp" />
+    <ClCompile Include="ext\QtitanDataGrid\src\base\QtnStyleOption.cpp" />
+    <ClCompile Include="ext\QtitanDataGrid\src\base\QtnToolTip.cpp" />
+    <ClCompile Include="ext\QtitanDataGrid\src\base\QtnWindowTitleBar.cpp" />
+    <ClCompile Include="ext\QtitanDataGrid\src\base\QtnWindowTitleBarGlow_win.cpp" />
+    <ClCompile Include="ext\QtitanDataGrid\src\base\QtnWindowTitleBar_win.cpp" />
+    <ClCompile Include="ext\QtitanDataGrid\src\grid\QtnDBGrid.cpp" />
+    <ClCompile Include="ext\QtitanDataGrid\src\grid\QtnDBGridBandedTableView.cpp" />
+    <ClCompile Include="ext\QtitanDataGrid\src\grid\QtnDBGridTableView.cpp" />
+    <ClCompile Include="ext\QtitanDataGrid\src\grid\QtnGrid.cpp" />
+    <ClCompile Include="ext\QtitanDataGrid\src\grid\QtnGridBandedTableView.cpp" />
+    <ClCompile Include="ext\QtitanDataGrid\src\grid\QtnGridCardView.cpp" />
+    <ClCompile Include="ext\QtitanDataGrid\src\grid\QtnGridCardViewPrivate.cpp" />
+    <ClCompile Include="ext\QtitanDataGrid\src\grid\QtnGridColumnHeaderLayout.cpp" />
+    <ClCompile Include="ext\QtitanDataGrid\src\grid\QtnGridControls.cpp" />
+    <ClCompile Include="ext\QtitanDataGrid\src\grid\QtnGridDef.cpp" />
+    <ClCompile Include="ext\QtitanDataGrid\src\grid\QtnGridEditors.cpp" />
+    <ClCompile Include="ext\QtitanDataGrid\src\grid\QtnGridFilter.cpp" />
+    <ClCompile Include="ext\QtitanDataGrid\src\grid\QtnGridFilterWindow.cpp" />
+    <ClCompile Include="ext\QtitanDataGrid\src\grid\QtnGridGraphics.cpp" />
+    <ClCompile Include="ext\QtitanDataGrid\src\grid\QtnGridModelController.cpp" />
+    <ClCompile Include="ext\QtitanDataGrid\src\grid\QtnGridStyleSheet.cpp" />
+    <ClCompile Include="ext\QtitanDataGrid\src\grid\QtnGridTableView.cpp" />
+    <ClCompile Include="ext\QtitanDataGrid\src\grid\QtnGridTableViewPrivate.cpp" />
+    <ClCompile Include="ext\QtitanDataGrid\src\grid\QtnGridViewGraphics.cpp" />
     <ClCompile Include="WinIOMonitorControl.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClInclude Include="ext\QtitanDataGrid\src\base\QtitanDef.h" />
+    <ClInclude Include="ext\QtitanDataGrid\src\base\QtitanMSVSDebug.h" />
+    <QtMoc Include="ext\QtitanDataGrid\src\base\QtnBackstageWidget.h" />
+    <QtMoc Include="ext\QtitanDataGrid\src\base\QtnColorButton.h" />
+    <QtMoc Include="ext\QtitanDataGrid\src\base\QtnCommonStyle.h" />
+    <QtMoc Include="ext\QtitanDataGrid\src\base\QtnCommonStylePrivate.h" />
+    <QtMoc Include="ext\QtitanDataGrid\src\base\QtnCustomLayout.h" />
+    <QtMoc Include="ext\QtitanDataGrid\src\base\QtnMaterialWidget.h" />
+    <ClInclude Include="ext\QtitanDataGrid\src\base\QtnPlatform.h" />
+    <ClInclude Include="ext\QtitanDataGrid\src\base\QtnPlatform_win.h" />
+    <QtMoc Include="ext\QtitanDataGrid\src\base\QtnScrollWidgetBar.h" />
+    <ClInclude Include="ext\QtitanDataGrid\src\base\QtnSegoeMDL2Assets.h" />
+    <ClInclude Include="ext\QtitanDataGrid\src\base\QtnStyleHelperPrivate.h" />
+    <ClInclude Include="ext\QtitanDataGrid\src\base\QtnStyleOption.h" />
+    <QtMoc Include="ext\QtitanDataGrid\src\base\QtnToolTip.h" />
+    <QtMoc Include="ext\QtitanDataGrid\src\base\QtnWindowTitleBar.h" />
+    <ClInclude Include="ext\QtitanDataGrid\src\base\QtnWindowTitleBarGlow_win.h" />
+    <QtMoc Include="ext\QtitanDataGrid\src\base\QtnWindowTitleBarPrivate.h" />
+    <ClInclude Include="ext\QtitanDataGrid\src\base\QtnWindowTitleBar_win.h" />
+    <QtMoc Include="ext\QtitanDataGrid\src\grid\QtnDBGrid.h" />
+    <QtMoc Include="ext\QtitanDataGrid\src\grid\QtnDBGridBandedTableView.h" />
+    <QtMoc Include="ext\QtitanDataGrid\src\grid\QtnDBGridTableView.h" />
+    <QtMoc Include="ext\QtitanDataGrid\src\grid\QtnGrid.h" />
+    <QtMoc Include="ext\QtitanDataGrid\src\grid\QtnGridBandedTableView.h" />
+    <QtMoc Include="ext\QtitanDataGrid\src\grid\QtnGridCardView.h" />
+    <QtMoc Include="ext\QtitanDataGrid\src\grid\QtnGridCardViewPrivate.h" />
+    <ClInclude Include="ext\QtitanDataGrid\src\grid\QtnGridColumnHeaderLayout.h" />
+    <QtMoc Include="ext\QtitanDataGrid\src\grid\QtnGridControls.h" />
+    <ClInclude Include="ext\QtitanDataGrid\src\grid\QtnGridDef.h" />
+    <QtMoc Include="ext\QtitanDataGrid\src\grid\QtnGridEditors.h" />
+    <QtMoc Include="ext\QtitanDataGrid\src\grid\QtnGridFilter.h" />
+    <QtMoc Include="ext\QtitanDataGrid\src\grid\QtnGridFilterWindow.h" />
+    <QtMoc Include="ext\QtitanDataGrid\src\grid\QtnGridGraphics.h" />
+    <QtMoc Include="ext\QtitanDataGrid\src\grid\QtnGridModelController.h" />
+    <ClInclude Include="ext\QtitanDataGrid\src\grid\QtnGridModelControllerPrivate.h" />
+    <ClInclude Include="ext\QtitanDataGrid\src\grid\QtnGridStyleSheet.h" />
+    <QtMoc Include="ext\QtitanDataGrid\src\grid\QtnGridTableView.h" />
+    <QtMoc Include="ext\QtitanDataGrid\src\grid\QtnGridTableViewPrivate.h" />
+    <QtMoc Include="ext\QtitanDataGrid\src\grid\QtnGridViewGraphics.h" />
     <ClInclude Include="stdafx.h" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">Create</PrecompiledHeader>

@@ -6,20 +6,36 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>600</width>
-    <height>400</height>
+    <width>836</width>
+    <height>583</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>WinIOMonitorControl</string>
   </property>
-  <widget class="QWidget" name="centralWidget"/>
+  <widget class="QWidget" name="centralWidget">
+   <layout class="QHBoxLayout" name="horizontalLayout">
+    <item>
+     <widget class="DBGrid" name="grid">
+      <property name="toolTip">
+       <string>Advanced DataGrid for Qt with Database support.</string>
+      </property>
+      <property name="whatsThis">
+       <string>Advanced DataGrid for Qt with Database support.</string>
+      </property>
+      <property name="viewType">
+       <enum>Grid::BandedTableView</enum>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
   <widget class="QMenuBar" name="menuBar">
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>600</width>
+     <width>836</width>
      <height>21</height>
     </rect>
    </property>
@@ -27,8 +43,15 @@
     <property name="title">
      <string>File(&amp;F)</string>
     </property>
+    <addaction name="actionExit_x"/>
+   </widget>
+   <widget class="QMenu" name="menuOptions_O">
+    <property name="title">
+     <string>Options(&amp;O)</string>
+    </property>
    </widget>
    <addaction name="menuFile_F"/>
+   <addaction name="menuOptions_O"/>
   </widget>
   <widget class="QToolBar" name="mainToolBar">
    <attribute name="toolBarArea">
@@ -37,10 +60,46 @@
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
+   <addaction name="separator"/>
+   <addaction name="acStart"/>
+   <addaction name="acStop"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
+  <action name="actionExit_x">
+   <property name="text">
+    <string>Exit(&amp;x)</string>
+   </property>
+  </action>
+  <action name="acStart">
+   <property name="text">
+    <string>Start(&amp;S)</string>
+   </property>
+   <property name="toolTip">
+    <string>Start Filtering</string>
+   </property>
+  </action>
+  <action name="acStop">
+   <property name="text">
+    <string>Stop(&amp;t)</string>
+   </property>
+   <property name="toolTip">
+    <string>Stop Filtering</string>
+   </property>
+  </action>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
+ <customwidgets>
+  <customwidget>
+   <class>Grid</class>
+   <extends>QWidget</extends>
+   <header>DevMachines/QtitanGrid</header>
+  </customwidget>
+  <customwidget>
+   <class>DBGrid</class>
+   <extends>Grid</extends>
+   <header>DevMachines/QtitanGrid</header>
+  </customwidget>
+ </customwidgets>
  <resources>
   <include location="WinIOMonitorControl.qrc"/>
  </resources>

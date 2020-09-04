@@ -3,6 +3,7 @@
 _build/
 _object/
 _ReSharper.Caches/
+QtitanDataGrid/
 
 # Prerequisites
 *.d
