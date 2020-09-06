@@ -22,12 +22,23 @@ struct TyBaseBuffer
     TyEnBufferType      BufferType;
     BOOLEAN             IsAllocatedFromLookasideList;
     ULONG               BufferSize;
+
+    TyBaseBuffer() : BufferType( BUFFER_UNKNOWN )
+        , IsAllocatedFromLookasideList( FALSE )
+        , BufferSize( 0 )
+    {
+    }
 };
 
 template< typename T >
 struct TyGenericBuffer : public TyBaseBuffer
 {
     T* Buffer;
+
+    TyGenericBuffer<T>() : TyBaseBuffer(), Buffer( NULLPTR )
+    {
+    }
+
 };
 
 

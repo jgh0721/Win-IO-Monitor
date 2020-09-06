@@ -4,6 +4,7 @@
 #include "fltUtilities.hpp"
 #include "utilities/osInfoMgr.hpp"
 #include "WinIOMonitor_W32API.hpp"
+#include "policies/processFilter.hpp"
 
 #if defined(_MSC_VER)
 #	pragma warning( disable: 4311 )
@@ -382,9 +383,59 @@ void CreateProcessNotifyRoutine( HANDLE ParentId, HANDLE ProcessId, BOOLEAN Crea
 	{
 		/// Process Creation
 		InsertProcessInfo( ( ULONG )ParentId, ( ULONG )ProcessId );
+
+		NTSTATUS Status = STATUS_SUCCESS;
+		TyGenericBuffer<WCHAR> ProcessFileFullPath;
+		PVOID ProcessFilterHandle = NULLPTR;
+		PROCESS_FILTER_ENTRY* ProcessFilterItem = NULLPTR;
+
+        do
+        {
+			Status = SearchProcessInfo( ( ULONG )ProcessId, &ProcessFileFullPath, NULLPTR );
+			if( !NT_SUCCESS( Status ) )
+				break;
+
+			Status = ProcessFilter_Match( ( ULONG )ProcessId, ProcessFileFullPath.Buffer, &ProcessFilterHandle, ( PVOID* )&ProcessFilterItem );
+			if( !NT_SUCCESS( Status ) )
+				break;
+
+			if( BooleanFlagOn( ProcessFilterItem->Flags, PROCESS_NOTIFY_CREATION_TERMINATION ) )
+			{
+				// TODO: Send Control Packet To Client    
+			}
+
+        } while( false );
+
+		ProcessFilter_CloseHandle( ProcessFilterHandle );
+		DeallocateBuffer( &ProcessFileFullPath );
 	}
 	else
 	{
+		NTSTATUS Status = STATUS_SUCCESS;
+		TyGenericBuffer<WCHAR> ProcessFileFullPath;
+		PVOID ProcessFilterHandle = NULLPTR;
+		PROCESS_FILTER_ENTRY* ProcessFilterItem = NULLPTR;
+
+        do
+        {
+			Status = SearchProcessInfo( ( ULONG )ProcessId, &ProcessFileFullPath, NULLPTR );
+			if( !NT_SUCCESS( Status ) )
+				break;
+
+			Status = ProcessFilter_Match( ( ULONG )ProcessId, ProcessFileFullPath.Buffer, &ProcessFilterHandle, ( PVOID* )&ProcessFilterItem );
+			if( !NT_SUCCESS( Status ) )
+				break;
+
+			if( BooleanFlagOn( ProcessFilterItem->Flags, PROCESS_NOTIFY_CREATION_TERMINATION ) )
+			{
+			    // TODO: Send Control Packet To Client    
+			}
+
+        } while( false );
+
+		ProcessFilter_CloseHandle( ProcessFilterHandle );
+		DeallocateBuffer( &ProcessFileFullPath );
+
 		/// Process Termination
 		DeleteProcessInfo( ( ULONG )ProcessId );
 	}
@@ -600,13 +651,14 @@ NTSTATUS SearchProcessInfo( ULONG ProcessId, TyGenericBuffer<WCHAR>* ProcessFile
     do
     {
 		RtlZeroMemory( ProcessFileFullPath, sizeof( TyGenericBuffer<WCHAR> ) );
-
+		
 		if( ProcessId <= 4 )
 		{
 			Status = STATUS_SUCCESS;
 			*ProcessFileFullPath = AllocateBuffer<WCHAR>( BUFFER_PROCNAME );
 			wcscpy( ProcessFileFullPath->Buffer, L"\\SYSTEM" );
-			*wszProcessName = ProcessFileFullPath->Buffer + 1;
+			if( wszProcessName != NULLPTR )
+			    *wszProcessName = ProcessFileFullPath->Buffer + 1;
 			break;
 		}
 

@@ -185,7 +185,7 @@ NTSTATUS ProcessFilter_Add( __in const PROCESS_FILTER* ProcessFilter )
 
         FilterItem->ProcessId               = ProcessFilter->uProcessId;
         RtlStringCchCopyW( FilterItem->ProcessMask, MAX_PATH, ProcessFilter->wszProcessMask );
-        FilterItem->Flags                   = ProcessFilter->isChildRecursive;
+        FilterItem->Flags                   = ProcessFilter->uFlags;
 
         FilterItem->FileIOFlags             = ProcessFilter->uFileIOTypes;
         FilterItem->FileNotifyFlags         = ProcessFilter->uFileNotifyTypes;

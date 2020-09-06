@@ -50,7 +50,7 @@ void ProcessFilter_CloseHandle( __in PVOID ProcessFilterHandle );
 NTSTATUS ProcessFilter_Match( __in_opt ULONG ProcessId, __in_opt const WCHAR* ProcessName );
 NTSTATUS ProcessFilter_Match( __in_opt ULONG ProcessId, __in_opt const WCHAR* ProcessName, __in const WCHAR* FileFullPath );
 
-NTSTATUS ProcessFilter_Match( __in_opt ULONG ProcessId, __in_opt const WCHAR* ProcessName, __out_opt PVOID* ProcessFilterHandle, __out_opt PVOID* ProcessFilter  );
+NTSTATUS ProcessFilter_Match( __in_opt ULONG ProcessId, __in_opt const WCHAR* ProcessName, __out_opt PVOID* ProcessFilterHandle, __out_opt PVOID* ProcessFilter );
 NTSTATUS ProcessFilter_Match( __in_opt ULONG ProcessId, __in_opt const WCHAR* ProcessName, __in const WCHAR* FileFullPath, __out_opt PVOID* ProcessFilterHandle, __out_opt PVOID* ProcessFilter );
 
 FORCEINLINE NTSTATUS ProcessFilter_MatchMask( __in LIST_ENTRY* ListHead, __in const WCHAR* FileFullPath );
