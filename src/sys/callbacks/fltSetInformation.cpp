@@ -2,8 +2,11 @@
 
 
 #include "irpContext.hpp"
+#include "notifyMgr.hpp"
+#include "WinIOMonitor_Event.hpp"
 #include "WinIOMonitor_W32API.hpp"
 #include "utilities/contextMgr.hpp"
+#include "utilities/fltUtilities.hpp"
 
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
@@ -91,6 +94,52 @@ FLT_POSTOP_CALLBACK_STATUS FLTAPI WinIOPostSetInformation( PFLT_CALLBACK_DATA Da
 
     switch( FileInformationClass )
     {
+        case FileRenameInformation: 
+        case nsW32API::FileRenameInformationEx: {
+            // if file rename was failed, it's ignore
+            if( !NT_SUCCESS( Data->IoStatus.Status ) )
+                break;
+
+            CheckEvent( IrpContext, IrpContext->Data, IrpContext->FltObjects, FILE_WAS_RENAMED );
+            if( IrpContext->isSendTo == true )
+            {
+                ULONG PacketSize = sizeof( MSG_SEND_PACKET ) + IrpContext->ProcessFullPath.BufferSize + IrpContext->SrcFileFullPath.BufferSize + IrpContext->DstFileFullPath.BufferSize;
+                auto NotifyItem = AllocateNotifyItem( PacketSize );
+
+                if( NotifyItem != NULLPTR )
+                {
+                    auto SendPacket = NotifyItem->SendPacket;
+
+                    SendPacket->MessageSize = PacketSize;
+                    SendPacket->MessageCategory = MSG_CATE_FILESYSTEM_NOTIFY;
+                    SendPacket->MessageType = FILE_WAS_RENAMED;
+                    SendPacket->IsNotified = TRUE;
+                    KeQuerySystemTime( &SendPacket->EventTime );
+
+                    SendPacket->ProcessId = IrpContext->ProcessId;
+
+                    SendPacket->LengthOfSrcFileFullPath = ( nsUtils::strlength( IrpContext->SrcFileFullPath.Buffer ) + 1 ) * sizeof( WCHAR );
+                    SendPacket->OffsetOfSrcFileFullPath = sizeof( MSG_SEND_PACKET ); 
+                    SendPacket->LengthOfDstFileFullPath = ( nsUtils::strlength( IrpContext->DstFileFullPath.Buffer ) + 1 ) * sizeof( WCHAR );
+                    SendPacket->OffsetOfDstFileFullPath = SendPacket->OffsetOfSrcFileFullPath + SendPacket->LengthOfSrcFileFullPath;
+                    SendPacket->LengthOfProcessFullPath = ( nsUtils::strlength( IrpContext->ProcessFullPath.Buffer ) + 1 ) * sizeof( WCHAR );
+                    SendPacket->OffsetOfProcessFullPath = SendPacket->OffsetOfDstFileFullPath + SendPacket->LengthOfDstFileFullPath;
+                        
+                    RtlStringCbCopyW( ( PWCH )Add2Ptr( SendPacket, SendPacket->OffsetOfSrcFileFullPath ), SendPacket->LengthOfSrcFileFullPath,
+                                      IrpContext->SrcFileFullPath.Buffer );
+                    RtlStringCbCopyW( ( PWCH )Add2Ptr( SendPacket, SendPacket->OffsetOfDstFileFullPath ), SendPacket->LengthOfDstFileFullPath,
+                                      IrpContext->DstFileFullPath.Buffer );
+                    RtlStringCbCopyW( ( PWCH )Add2Ptr( SendPacket, SendPacket->OffsetOfProcessFullPath ), SendPacket->LengthOfProcessFullPath,
+                                      IrpContext->ProcessFullPath.Buffer );
+
+                    SendPacket->LengthOfContents = 0;
+
+                    AppendNotifyItem( NotifyItem );
+                }
+            }
+
+        } break;
+
         case FileDispositionInformation:
         case nsW32API::FileDispositionInformationEx: {
 

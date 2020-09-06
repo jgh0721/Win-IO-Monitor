@@ -2,6 +2,7 @@
 #define HDR_MINIFILTER_CLEANUP
 
 #include "fltBase.hpp"
+#include "irpContext.hpp"
 #include "utilities/contextMgr_Defs.hpp"
 
 #if defined(_MSC_VER)
@@ -26,9 +27,9 @@ EXTERN_C_END
 
 NTSTATUS DfProcessDelete( __inout PFLT_CALLBACK_DATA Data,
                           __in PCFLT_RELATED_OBJECTS FltObjects,
-                          __in PCTX_STREAM_CONTEXT StreamContext );
+                          __in IRP_CONTEXT* IrpContext );
 
-VOID DfNotifyDelete( __in PCTX_STREAM_CONTEXT StreamContext,
+VOID DfNotifyDelete( __in PIRP_CONTEXT IrpContext,
                      __in BOOLEAN IsFile,
                      __inout_opt PCTX_TRANSACTION_CONTEXT TransactionContext );
 

@@ -228,7 +228,7 @@ void CloseIrpContext( PIRP_CONTEXT& IrpContext )
     IrpContext = NULLPTR;
 }
 
-void CheckEvent( IRP_CONTEXT* IrpContext, PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects )
+void CheckEvent( IRP_CONTEXT* IrpContext, PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, __in ULONG NotifyEvent )
 {
     ASSERT( IrpContext != NULLPTR );
     if( IrpContext == NULLPTR )
@@ -242,7 +242,10 @@ void CheckEvent( IRP_CONTEXT* IrpContext, PFLT_CALLBACK_DATA Data, PCFLT_RELATED
 
     auto ProcessFilter = ( ( PROCESS_FILTER_ENTRY* )IrpContext->ProcessFilterEntry );
 
-    if( !BooleanFlagOn( ProcessFilter->FileIOFlags, IrpContext->MsgType ) )
+    bool IsMatchFileIO = BooleanFlagOn( ProcessFilter->FileIOFlags, IrpContext->MsgType );
+    bool IsMatchNotify = BooleanFlagOn( ProcessFilter->FileNotifyFlags, NotifyEvent );
+
+    if( IsMatchFileIO == false && IsMatchNotify == false )
         return;
 
     if( IsListEmpty( &ProcessFilter->ExcludeMaskListHead ) && 

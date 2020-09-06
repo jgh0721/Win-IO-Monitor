@@ -42,7 +42,7 @@ typedef struct _IRP_CONTEXT
 PIRP_CONTEXT CreateIrpContext( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_OBJECTS FltObjects );
 void CloseIrpContext( __in PIRP_CONTEXT& IrpContext );
 
-void CheckEvent( __inout IRP_CONTEXT* IrpContext, __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_OBJECTS FltObjects );
+void CheckEvent( __inout IRP_CONTEXT* IrpContext, __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_OBJECTS FltObjects, __in ULONG NotifyEvent );
 
 ULONG ConvertIRPMajorFuncToFSTYPE( __in PFLT_CALLBACK_DATA Data );
 

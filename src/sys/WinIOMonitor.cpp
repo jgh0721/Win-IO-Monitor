@@ -2,6 +2,7 @@
 
 #include "deviceCntl.hpp"
 #include "deviceMgmt.hpp"
+#include "notifyMgr.hpp"
 #include "WinIOMonitor_Filter.hpp"
 #include "policies/processFilter.hpp"
 #include "utilities/bufferMgr.hpp"
@@ -72,6 +73,7 @@ void DriverUnload( PDRIVER_OBJECT DriverObject )
     if( GlobalContext.Filter != NULLPTR )
         MiniFilterUnload( 0 );
 
+    CloseNotifyMgr();
     StopProcessNotify();
     CloseProcessFilter();
 
@@ -130,6 +132,7 @@ NTSTATUS InitializeFeatures( CTX_GLOBAL_DATA* GlobalContext )
 
     do
     {
+        IF_FALSE_BREAK( Status, InitializeNotifyMgr() );
         IF_FALSE_BREAK( Status, InitializeProcessFilter() );
         IF_FALSE_BREAK( Status, StartProcessNotify() );
         

@@ -1,6 +1,8 @@
 ﻿#include "fltCleanup.hpp"
 
 #include "irpContext.hpp"
+#include "notifyMgr.hpp"
+#include "WinIOMonitor_Event.hpp"
 #include "utilities/contextMgr.hpp"
 #include "utilities/fltUtilities.hpp"
 
@@ -112,7 +114,7 @@ FLT_POSTOP_CALLBACK_STATUS FLTAPI WinIOPostCleanup( PFLT_CALLBACK_DATA Data, PCF
 
                     Status = DfProcessDelete( Data,
                                               FltObjects,
-                                              StreamContext );
+                                              IrpContext );
 
                     if( !NT_SUCCESS( Status ) )
                     {
@@ -134,7 +136,7 @@ FLT_POSTOP_CALLBACK_STATUS FLTAPI WinIOPostCleanup( PFLT_CALLBACK_DATA Data, PCF
     return FltStatus;
 }
 
-NTSTATUS DfProcessDelete( PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PCTX_STREAM_CONTEXT StreamContext )
+NTSTATUS DfProcessDelete( PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, IRP_CONTEXT* IrpContext )
 {
     BOOLEAN isTransaction;
     BOOLEAN isFileDeleted = FALSE;
@@ -171,7 +173,7 @@ NTSTATUS DfProcessDelete( PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObje
 
     status = nsUtils::DfIsFileDeleted( Data,
                                        FltObjects,
-                                       StreamContext,
+                                       IrpContext->StreamContext,
                                        isTransaction );
 
     if( STATUS_FILE_DELETED == status )
@@ -192,7 +194,7 @@ NTSTATUS DfProcessDelete( PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObje
         goto _exit;
     }
 
-    DfNotifyDelete( StreamContext,
+    DfNotifyDelete( IrpContext,
                     isFileDeleted,
                     transactionContext );
 
@@ -206,11 +208,11 @@ _exit:
     return status;
 }
 
-void DfNotifyDelete( PCTX_STREAM_CONTEXT StreamContext, BOOLEAN IsFile, PCTX_TRANSACTION_CONTEXT TransactionContext )
+void DfNotifyDelete( PIRP_CONTEXT IrpContext, BOOLEAN IsFile, PCTX_TRANSACTION_CONTEXT TransactionContext )
 {
     PAGED_CODE();
 
-    if( InterlockedIncrement( &StreamContext->IsNotified ) > 1 )
+    if( InterlockedIncrement( &IrpContext->StreamContext->IsNotified ) > 1 )
         return;
 
     if( IsFile != FALSE )
@@ -218,14 +220,49 @@ void DfNotifyDelete( PCTX_STREAM_CONTEXT StreamContext, BOOLEAN IsFile, PCTX_TRA
         if( TransactionContext == NULLPTR )
         {
             KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_INFO_LEVEL, "[WinIOMon] %s %s %ws\n",
-                         __FUNCTION__, "File Deleted : ", StreamContext->FileFullPath.Buffer ) );
+                         __FUNCTION__, "File Deleted : ", IrpContext->StreamContext->FileFullPath.Buffer ) );
+
+            CheckEvent( IrpContext, IrpContext->Data, IrpContext->FltObjects, FILE_WAS_DELETED );
+            if( IrpContext->isSendTo == true )
+            {
+                ULONG PacketSize = sizeof( MSG_SEND_PACKET ) + IrpContext->ProcessFullPath.BufferSize + IrpContext->SrcFileFullPath.BufferSize;
+                auto NotifyItem = AllocateNotifyItem( PacketSize );
+
+                if( NotifyItem != NULLPTR )
+                {
+                    auto SendPacket = NotifyItem->SendPacket;
+
+                    SendPacket->MessageSize = PacketSize;
+                    SendPacket->MessageCategory = MSG_CATE_FILESYSTEM_NOTIFY;
+                    SendPacket->MessageType = FILE_WAS_DELETED;
+                    SendPacket->IsNotified = TRUE;
+                    KeQuerySystemTime( &SendPacket->EventTime );
+
+                    SendPacket->ProcessId = IrpContext->ProcessId;
+
+                    SendPacket->LengthOfSrcFileFullPath = ( nsUtils::strlength( IrpContext->SrcFileFullPath.Buffer ) + 1 ) * sizeof( WCHAR );
+                    SendPacket->OffsetOfSrcFileFullPath = SendPacket->OffsetOfProcessFullPath + SendPacket->LengthOfProcessFullPath;
+                    SendPacket->LengthOfDstFileFullPath = 0;
+                    SendPacket->LengthOfProcessFullPath = ( nsUtils::strlength( IrpContext->ProcessFullPath.Buffer ) + 1 ) * sizeof( WCHAR );
+                    SendPacket->OffsetOfProcessFullPath = sizeof( MSG_SEND_PACKET );
+
+                    RtlStringCbCopyW( ( PWCH )Add2Ptr( SendPacket, SendPacket->OffsetOfProcessFullPath ), SendPacket->LengthOfProcessFullPath,
+                                      IrpContext->ProcessFullPath.Buffer );
+                    RtlStringCbCopyW( ( PWCH )Add2Ptr( SendPacket, SendPacket->OffsetOfSrcFileFullPath ), SendPacket->LengthOfSrcFileFullPath,
+                                      IrpContext->SrcFileFullPath.Buffer );
+
+                    SendPacket->LengthOfContents = 0;
+
+                    AppendNotifyItem( NotifyItem );
+                }
+            }
         }
         else
         {
             KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_INFO_LEVEL, "[WinIOMon] %s %s %ws\n",
-                         __FUNCTION__, "File Deleted In a Transaction : ", StreamContext->FileFullPath.Buffer ) );
+                         __FUNCTION__, "File Deleted In a Transaction : ", IrpContext->StreamContext->FileFullPath.Buffer ) );
 
-            DfAddTransDeleteNotify( StreamContext,
+            DfAddTransDeleteNotify( IrpContext->StreamContext,
                                     TransactionContext,
                                     IsFile );
         }
@@ -240,7 +277,7 @@ void DfNotifyDelete( PCTX_STREAM_CONTEXT StreamContext, BOOLEAN IsFile, PCTX_TRA
         }
         else
         {
-            DfAddTransDeleteNotify( StreamContext,
+            DfAddTransDeleteNotify( IrpContext->StreamContext,
                                     TransactionContext,
                                     IsFile );
         }
