@@ -16,7 +16,7 @@
   <widget class="QWidget" name="centralWidget">
    <layout class="QHBoxLayout" name="horizontalLayout">
     <item>
-     <widget class="DBGrid" name="grid">
+     <widget class="Grid" name="gridActivity">
       <property name="toolTip">
        <string>Advanced DataGrid for Qt with Database support.</string>
       </property>
@@ -50,7 +50,15 @@
      <string>Options(&amp;O)</string>
     </property>
    </widget>
+   <widget class="QMenu" name="menuPolicy_Management">
+    <property name="title">
+     <string>Policy Management(&amp;P)</string>
+    </property>
+    <addaction name="acProcess_Lifecycle_Control"/>
+    <addaction name="acFilesystem_Per_Process_Control"/>
+   </widget>
    <addaction name="menuFile_F"/>
+   <addaction name="menuPolicy_Management"/>
    <addaction name="menuOptions_O"/>
   </widget>
   <widget class="QToolBar" name="mainToolBar">
@@ -86,17 +94,22 @@
     <string>Stop Filtering</string>
    </property>
   </action>
+  <action name="acProcess_Lifecycle_Control">
+   <property name="text">
+    <string>Process Lifecycle Control</string>
+   </property>
+  </action>
+  <action name="acFilesystem_Per_Process_Control">
+   <property name="text">
+    <string>Filesystem Per Process Control</string>
+   </property>
+  </action>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <customwidgets>
   <customwidget>
    <class>Grid</class>
    <extends>QWidget</extends>
-   <header>DevMachines/QtitanGrid</header>
-  </customwidget>
-  <customwidget>
-   <class>DBGrid</class>
-   <extends>Grid</extends>
    <header>DevMachines/QtitanGrid</header>
   </customwidget>
  </customwidgets>

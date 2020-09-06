@@ -73,15 +73,22 @@ DWORD GetStartFiltering( __out BOOLEAN* IsFiltering );
 DWORD AddGlobalFileFilterMask( __in const wchar_t* wszFilterMask, __in bool isInclude );
 DWORD RemoveGlobalFileFilterMask( __in const wchar_t* wszFilterMask, __in bool isInclude );
 
+enum TyEnProcessFilterFlags
+{
+    PROCESS_NOTIFY_CREATION_TERMINATION = 0x1,
+    PROCESS_DENY_CREATION               = 0x2,
+    PROCESS_DENY_TERMINATION            = 0x4,
+    PROCESS_APPLY_CHILD_PROCESS         = 0x8
+};
+
 typedef struct _PROCESS_FILTER
 {
     ULONG                   uProcessId;                         // uProcessId or wszProcessMask 
     WCHAR                   wszProcessMask[ MAX_PATH ];         // mask can use wildcard(*)
+    ULONG                   uFlags;                             // combinations of TyEnProcessFilterFlags
 
     ULONG                   uFileIOTypes;
     ULONG                   uFileNotifyTypes;                   // combinations of TyEnFileNotifyType 
-
-    BOOLEAN                 isChildRecursive;
 
     WCHAR                   wszIncludeMask[ FILTER_MASK_MAX_LENGTH ];   // mask can use wildcard(*), separator '|', must be ended with sep
     WCHAR                   wszExcludeMask[ FILTER_MASK_MAX_LENGTH ];   // mask can use wildcard(*), separator '|', must be ended with sep

@@ -34,6 +34,15 @@
     <Filter Include="external\QtitanDataGrid\grid">
       <UniqueIdentifier>{a1198859-02aa-4e90-8b1f-82c8d39da41b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="common files">
+      <UniqueIdentifier>{8622d99a-a244-4fcb-860c-5936a9c660a6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="internal">
+      <UniqueIdentifier>{c98a58eb-4c12-42ba-a9bc-02ed3e2915b5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="UIs">
+      <UniqueIdentifier>{0204753b-a4f1-435a-9a7a-a98ce25b6229}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <QtRcc Include="WinIOMonitorControl.qrc">
@@ -173,6 +182,15 @@
     <ClCompile Include="ext\QtitanDataGrid\src\grid\QtnGridViewGraphics.cpp">
       <Filter>external\QtitanDataGrid\grid</Filter>
     </ClCompile>
+    <ClCompile Include="cmn\cmnString.cpp">
+      <Filter>internal</Filter>
+    </ClCompile>
+    <ClCompile Include="mdlActivity.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="UIs\dlgProcessLifecyclePolicy.cpp">
+      <Filter>UIs</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ext\QtitanDataGrid\src\base\QtitanDef.h">
@@ -213,6 +231,42 @@
     </ClInclude>
     <ClInclude Include="ext\QtitanDataGrid\src\grid\QtnGridStyleSheet.h">
       <Filter>external\QtitanDataGrid\grid</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cmn\WinIOMonitor_API.hpp">
+      <Filter>common files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cmn\WinIOMonitor_Event.hpp">
+      <Filter>common files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cmn\WinIOMonitor_IOCTL.hpp">
+      <Filter>common files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cmn\WinIOMonitor_Names.hpp">
+      <Filter>common files</Filter>
+    </ClInclude>
+    <ClInclude Include="cmn\cmnBase.hpp">
+      <Filter>internal</Filter>
+    </ClInclude>
+    <ClInclude Include="cmn\cmnCompilerDetection.hpp">
+      <Filter>internal</Filter>
+    </ClInclude>
+    <ClInclude Include="cmn\cmnLibMgr.hpp">
+      <Filter>internal</Filter>
+    </ClInclude>
+    <ClInclude Include="cmn\cmnString.hpp">
+      <Filter>internal</Filter>
+    </ClInclude>
+    <ClInclude Include="cmn\cmnSystemDetection.hpp">
+      <Filter>internal</Filter>
+    </ClInclude>
+    <ClInclude Include="cmn\cmnTypes.hpp">
+      <Filter>internal</Filter>
+    </ClInclude>
+    <ClInclude Include="cmnConfig.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="cmn\cmnStateMgr.hpp">
+      <Filter>internal</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -294,5 +348,19 @@
     <QtMoc Include="ext\QtitanDataGrid\src\grid\QtnGridViewGraphics.h">
       <Filter>external\QtitanDataGrid\grid</Filter>
     </QtMoc>
+    <QtMoc Include="mdlActivity.hpp">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="UIs\dlgProcessLifecyclePolicy.hpp">
+      <Filter>UIs</Filter>
+    </QtMoc>
+  </ItemGroup>
+  <ItemGroup>
+    <QtUic Include="UIs\dlgProcessFSPolicy.ui">
+      <Filter>Resource Files</Filter>
+    </QtUic>
+    <QtUic Include="UIs\dlgProcessLifecyclePolicy.ui">
+      <Filter>Resource Files</Filter>
+    </QtUic>
   </ItemGroup>
 </Project>
