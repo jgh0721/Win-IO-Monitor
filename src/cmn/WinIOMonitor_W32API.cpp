@@ -216,6 +216,9 @@ void nsW32API::InitializeNtOsKrnlAPI( NtOsKrnlAPI* ntOsKrnlAPI )
 
     RtlInitUnicodeString( &routineName, L"ZwQueryInformationProcess" );
     ntOsKrnlAPI->pfnZwQueryInformationProcess = ( NtOsKrnlAPI::ZwQueryInformationProcess )MmGetSystemRoutineAddress( &routineName );
+
+    RtlInitUnicodeString( &routineName, L"IoReplaceFileObjectName" );
+    ntOsKrnlAPI->pfnIoReplaceFileObjectName = ( NtOsKrnlAPI::IoReplaceFileObjectName )MmGetSystemRoutineAddress( &routineName );
 }
 
 void nsW32API::InitializeFltMgrAPI( FltMgrAPI* fltMgrAPI )
@@ -233,6 +236,8 @@ void nsW32API::InitializeFltMgrAPI( FltMgrAPI* fltMgrAPI )
 
     fltMgrAPI->pfnFltIsVolumeWritable       = ( FltMgrAPI::FltIsVolumeWritable ) FltGetRoutineAddress( "FltIsVolumeWritable" );
     fltMgrAPI->pfnFltGetFileSystemType      = ( FltMgrAPI::FltGetFileSystemType ) FltGetRoutineAddress( "FltGetFileSystemType" );
+
+    fltMgrAPI->pfnFltQueryDirectoryFile     = ( FltMgrAPI::FltQueryDirectoryFile ) FltGetRoutineAddress( "FltQueryDirectoryFile" );
 }
 
 NTSTATUS nsW32API::IsVolumeWritable( PVOID FltObject, PBOOLEAN IsWritable )
@@ -294,6 +299,119 @@ NTSTATUS nsW32API::IsVolumeWritable( PVOID FltObject, PBOOLEAN IsWritable )
 
     if( VolumeDeviceObject != NULL )
         ObDereferenceObject( VolumeDeviceObject );
+
+    return Status;
+}
+
+NTSTATUS nsW32API::IoReplaceFileObjectName( PFILE_OBJECT FileObject, PWSTR NewFileName, USHORT FileNameLength )
+{
+    if( nsUtils::VerifyVersionInfoEx( 6, 1, ">=" ) == true )
+        return nsW32API::NtOsKrnlAPIMgr.pfnIoReplaceFileObjectName( FileObject, NewFileName, FileNameLength );
+
+    PWSTR buffer = NULLPTR;
+    PUNICODE_STRING fileName = NULLPTR;
+    USHORT newMaxLength;
+
+    do
+    {
+        fileName = &FileObject->FileName;
+
+        //
+        // If the new name fits inside the current buffer we simply copy it over
+        // instead of allocating a new buffer (and keep the MaximumLength value
+        // the same).
+        //
+        if( FileNameLength <= fileName->MaximumLength )
+            break;
+
+        //
+        // Use an optimal buffer size
+        //
+        newMaxLength = FileNameLength;
+
+        buffer = ( PWSTR )ExAllocatePoolWithTag( PagedPool,
+                                                 newMaxLength,
+                                                 'main' );
+
+        if( !buffer )
+        {
+            return STATUS_INSUFFICIENT_RESOURCES;
+        }
+
+        if( fileName->Buffer != NULL )
+        {
+            ExFreePool( fileName->Buffer );
+        }
+
+        fileName->Buffer = buffer;
+        fileName->MaximumLength = newMaxLength;
+
+    } while( false );
+
+    fileName->Length = FileNameLength;
+    RtlZeroMemory( fileName->Buffer, fileName->MaximumLength );
+    RtlCopyMemory( fileName->Buffer, NewFileName, FileNameLength );
+
+    return STATUS_SUCCESS;
+}
+
+NTSTATUS nsW32API::FltQueryDirectoryFile( PFLT_INSTANCE Instance, PFILE_OBJECT FileObject, PVOID FileInformation, ULONG Length, FILE_INFORMATION_CLASS FileInformationClass, BOOLEAN ReturnSingleEntry, PUNICODE_STRING FileName, BOOLEAN RestartScan, PULONG LengthReturned )
+{
+    if( nsUtils::VerifyVersionInfoEx( 6, 0, ">=" ) == true )
+        return nsW32API::FltMgrAPIMgr.pfnFltQueryDirectoryFile( Instance, FileObject, FileInformation, Length, FileInformationClass, ReturnSingleEntry, FileName, RestartScan, LengthReturned );
+
+    PFLT_CALLBACK_DATA Info;
+    NTSTATUS Status;
+
+    PAGED_CODE();
+
+    Status = FltAllocateCallbackData( Instance, FileObject, &Info );
+
+    if( !NT_SUCCESS( Status ) )
+    {
+
+        return Status;
+    }
+
+    Info->Iopb->MajorFunction = IRP_MJ_DIRECTORY_CONTROL;
+    Info->Iopb->MinorFunction = IRP_MN_QUERY_DIRECTORY;
+
+    Info->Iopb->Parameters.DirectoryControl.QueryDirectory.Length = Length;
+    Info->Iopb->Parameters.DirectoryControl.QueryDirectory.FileName = FileName;
+    Info->Iopb->Parameters.DirectoryControl.QueryDirectory.FileInformationClass = (::FILE_INFORMATION_CLASS)FileInformationClass;
+    Info->Iopb->Parameters.DirectoryControl.QueryDirectory.FileIndex = 0;
+
+    Info->Iopb->Parameters.DirectoryControl.QueryDirectory.DirectoryBuffer = FileInformation;
+    Info->Iopb->Parameters.DirectoryControl.QueryDirectory.MdlAddress = NULL;
+
+    if( RestartScan )
+    {
+
+        Info->Iopb->OperationFlags |= SL_RESTART_SCAN;
+    }
+
+    if( ReturnSingleEntry )
+    {
+
+        Info->Iopb->OperationFlags |= SL_RETURN_SINGLE_ENTRY;
+    }
+
+    //
+    //  Perform the operation
+    //
+
+    FltPerformSynchronousIo( Info );
+
+    Status = Info->IoStatus.Status;
+
+    if( ARGUMENT_PRESENT( LengthReturned ) &&
+        NT_SUCCESS( Status ) )
+    {
+
+        *LengthReturned = ( ULONG )Info->IoStatus.Information;
+    }
+
+    FltFreeCallbackData( Info );
 
     return Status;
 }

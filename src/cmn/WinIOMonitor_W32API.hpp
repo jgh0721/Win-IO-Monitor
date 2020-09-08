@@ -544,6 +544,13 @@ namespace nsW32API
                                                                __in ULONG ProcessInformationLength,
                                                                __out_opt PULONG ReturnLength );
 
+        /*!
+            The IoReplaceFileObjectName routine replaces the name of a file object.
+
+            Windows 7 ~
+        */
+        typedef NTSTATUS( NTAPI* IoReplaceFileObjectName )( __in PFILE_OBJECT FileObject, __in PWSTR NewFileName, __in USHORT FileNameLength );
+
         PsSetLoadImageNotifyRoutine             pfnPsSetLoadImageNotifyRoutine;
         PsSetCreateProcessNotifyRoutine         pfnPsSetCreateProcessNotifyRoutine;
         PsSetCreateProcessNotifyRoutineEx       pfnPsSetCreateProcessNotifyRoutineEx;
@@ -553,6 +560,7 @@ namespace nsW32API
         SeLocateProcessImageName                pfnSeLocateProcessImageName;
         ZwQueryInformationProcess               pfnZwQueryInformationProcess;
 
+        IoReplaceFileObjectName                 pfnIoReplaceFileObjectName;
     } NtOsKrnlAPI;
 
     typedef struct _FltMgrAPI
@@ -632,6 +640,21 @@ namespace nsW32API
 
         typedef NTSTATUS( FLTAPI* FltGetFileSystemType )( __in PVOID FltObject,
                                                           __out PFLT_FILESYSTEM_TYPE FileSystemType );
+        /**
+         * @brief The FltQueryDirectoryFile routine returns various kinds of information about files in the directory specified by a given file object.
+
+            Windows Vista~
+        */
+        typedef NTSTATUS( FLTAPI* FltQueryDirectoryFile )( __in       PFLT_INSTANCE Instance,
+                                                           __in       PFILE_OBJECT FileObject,
+                                                           __out      PVOID FileInformation,
+                                                           __in       ULONG Length,
+                                                           __in       FILE_INFORMATION_CLASS FileInformationClass,
+                                                           __in       BOOLEAN ReturnSingleEntry,
+                                                           __in_opt   PUNICODE_STRING FileName,
+                                                           __in       BOOLEAN RestartScan,
+                                                           __out_opt  PULONG LengthReturned );
+
 
         FltCreateFileEx                     pfnFltCreateFileEx;
         FltCreateFileEx2                    pfnFltCreateFileEx2;
@@ -644,6 +667,8 @@ namespace nsW32API
 
         FltIsVolumeWritable                 pfnFltIsVolumeWritable;
         FltGetFileSystemType                pfnFltGetFileSystemType;
+
+        FltQueryDirectoryFile               pfnFltQueryDirectoryFile;
     } FltMgrAPI;
 
     const char* ConvertFileInformationClassTo( __in const FILE_INFORMATION_CLASS FileInformationClass );
@@ -680,7 +705,56 @@ namespace nsW32API
      * Support WinXP
     */
     NTSTATUS IsVolumeWritable( __in PVOID FltObject, __out PBOOLEAN IsWritable );
+    /*!
+        The IoReplaceFileObjectName routine replaces the name of a file object.
 
+        Support WinXP
+    */
+    NTSTATUS IoReplaceFileObjectName( __in PFILE_OBJECT FileObject, __in PWSTR NewFileName, __in USHORT FileNameLength );
+
+    /*++
+
+    Routine Description:
+
+        This function issues a directory control operation to the filesystem
+
+    Arguments:
+
+
+        Instance - Supplies the Instance initiating this IO.
+
+        FileObject - Supplies the file object about which the requested
+            Information should be queried.
+
+        FileInformation - Supplies a buffer to hold the directory control
+            results.
+
+        Length - Supplies the length, in bytes, of the FileInformation buffer.
+
+        FileInformationClass - Specifies the file Information class requested.
+
+        ReturnSingleEntry - Retrieve only one file at a time.
+
+        FileName - This is the pattern to search for.
+
+        RestartScan - Restart the directory enumeration from the start.
+
+        LengthReturned - On success, this is how much Information was placed
+            into the FileInformation buffer.
+
+    Return Value:
+
+        The status returned is the final completion Status of the operation.
+    --*/
+    NTSTATUS FltQueryDirectoryFile( __in       PFLT_INSTANCE Instance,
+                                    __in       PFILE_OBJECT FileObject,
+                                    __out      PVOID FileInformation,
+                                    __in       ULONG Length,
+                                    __in       FILE_INFORMATION_CLASS FileInformationClass,
+                                    __in       BOOLEAN ReturnSingleEntry,
+                                    __in_opt   PUNICODE_STRING FileName,
+                                    __in       BOOLEAN RestartScan,
+                                    __out_opt  PULONG LengthReturned );
 } // nsW32API
 
 #define IsClassContainDst( FileInformationClass ) \
