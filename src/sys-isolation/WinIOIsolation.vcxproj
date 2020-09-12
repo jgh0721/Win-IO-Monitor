@@ -19,33 +19,48 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\cmn\fltCmnLibs.hpp" />
+    <ClInclude Include="..\cmn\fltCmnLibs_base.hpp" />
+    <ClInclude Include="..\cmn\fltCmnLibs_path.hpp" />
+    <ClInclude Include="..\cmn\fltCmnLibs_string.hpp" />
     <ClInclude Include="..\cmn\W32API.hpp" />
     <ClInclude Include="..\cmn\W32API_Base.hpp" />
     <ClInclude Include="..\cmn\W32API_FltMgr.hpp" />
     <ClInclude Include="..\cmn\W32API_LibMgr.hpp" />
     <ClInclude Include="..\cmn\W32API_NtOsKrnl.hpp" />
     <ClInclude Include="callbacks\callbacks.hpp" />
+    <ClInclude Include="callbacks\fltInstance.hpp" />
     <ClInclude Include="deviceCntl.hpp" />
     <ClInclude Include="deviceMgmt.hpp" />
     <ClInclude Include="fltBase.hpp" />
     <ClInclude Include="pool.hpp" />
+    <ClInclude Include="privateFCBMgr.hpp" />
+    <ClInclude Include="privateFCBMgr_Defs.hpp" />
     <ClInclude Include="stdafx.hpp" />
     <ClInclude Include="utilities\bufferMgr.hpp" />
     <ClInclude Include="utilities\bufferMgr_Defs.hpp" />
     <ClInclude Include="utilities\contextMgr.hpp" />
     <ClInclude Include="utilities\contextMgr_Defs.hpp" />
     <ClInclude Include="utilities\osInfoMgr.hpp" />
+    <ClInclude Include="utilities\procNameMgr.hpp" />
     <ClInclude Include="WinIOIsolation.hpp" />
     <ClInclude Include="WinIOIsolation_Filter.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\cmn\fltCmnLibs.cpp" />
+    <ClCompile Include="..\cmn\fltCmnLibs_base.cpp" />
+    <ClCompile Include="..\cmn\fltCmnLibs_path.cpp" />
+    <ClCompile Include="..\cmn\fltCmnLibs_string.cpp" />
     <ClCompile Include="..\cmn\W32API.cpp" />
     <ClCompile Include="callbacks\callbacks.cpp" />
+    <ClCompile Include="callbacks\fltInstance.cpp" />
     <ClCompile Include="deviceCntl.cpp" />
     <ClCompile Include="deviceMgmt.cpp" />
+    <ClCompile Include="privateFCBMgr.cpp" />
     <ClCompile Include="utilities\bufferMgr.cpp" />
     <ClCompile Include="utilities\contextMgr.cpp" />
     <ClCompile Include="utilities\osInfoMgr.cpp" />
+    <ClCompile Include="utilities\procNameMgr.cpp" />
     <ClCompile Include="WinIOIsolation.cpp" />
     <ClCompile Include="WinIOIsolation_Filter.cpp" />
   </ItemGroup>

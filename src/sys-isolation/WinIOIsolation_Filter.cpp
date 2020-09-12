@@ -159,10 +159,10 @@ const nsW32API::FLT_REGISTRATION_XP FilterRegistrationXP = {
 
     MiniFilterUnload,
 
-    NULLPTR,
-    NULLPTR,
-    NULLPTR,
-    NULLPTR
+    InstanceSetup,
+    InstanceQueryTeardown,
+    InstanceTeardownStart,
+    InstanceTeardownComplete
 };
 
 const nsW32API::FLT_REGISTRATION_VISTA FilterRegistrationVista = {
@@ -175,10 +175,10 @@ const nsW32API::FLT_REGISTRATION_VISTA FilterRegistrationVista = {
 
     MiniFilterUnload,
 
-    NULLPTR,
-    NULLPTR,
-    NULLPTR,
-    NULLPTR,
+    InstanceSetup,
+    InstanceQueryTeardown,
+    InstanceTeardownStart,
+    InstanceTeardownComplete,
 
     NULL,
     NULL,

@@ -78,6 +78,30 @@
     <ClInclude Include="deviceCntl.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="callbacks\fltInstance.hpp">
+      <Filter>callbacks</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cmn\fltCmnLibs.hpp">
+      <Filter>common files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cmn\fltCmnLibs_string.hpp">
+      <Filter>common files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cmn\fltCmnLibs_base.hpp">
+      <Filter>common files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cmn\fltCmnLibs_path.hpp">
+      <Filter>common files</Filter>
+    </ClInclude>
+    <ClInclude Include="privateFCBMgr.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="privateFCBMgr_Defs.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="utilities\procNameMgr.hpp">
+      <Filter>utilities</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="WinIOIsolation.cpp">
@@ -106,6 +130,27 @@
     </ClCompile>
     <ClCompile Include="deviceCntl.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="callbacks\fltInstance.cpp">
+      <Filter>callbacks</Filter>
+    </ClCompile>
+    <ClCompile Include="..\cmn\fltCmnLibs.cpp">
+      <Filter>common files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\cmn\fltCmnLibs_string.cpp">
+      <Filter>common files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\cmn\fltCmnLibs_base.cpp">
+      <Filter>common files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\cmn\fltCmnLibs_path.cpp">
+      <Filter>common files</Filter>
+    </ClCompile>
+    <ClCompile Include="privateFCBMgr.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="utilities\procNameMgr.cpp">
+      <Filter>utilities</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

@@ -13,6 +13,15 @@
 
 namespace nsW32API
 {
+    /**
+     * @brief The FltIsVolumeWritable routine determines whether the disk device that corresponds to a volume or minifilter driver instance is writable. 
+     * @param FltObject  Volume or Instance Object
+     * @param IsWritable 
+     * @return
+     *
+     * Support WinXP
+    */
+    NTSTATUS IsVolumeWritable( __in PVOID FltObject, __out PBOOLEAN IsWritable );
 
 } // nsW32API
 

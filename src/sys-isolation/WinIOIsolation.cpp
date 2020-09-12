@@ -3,6 +3,7 @@
 #include "deviceCntl.hpp"
 #include "deviceMgmt.hpp"
 #include "WinIOIsolation_Filter.hpp"
+#include "utilities/procNameMgr.hpp"
 #include "utilities/bufferMgr.hpp"
 
 #include "utilities/osInfoMgr.hpp"
@@ -71,6 +72,8 @@ void DriverUnload( PDRIVER_OBJECT DriverObject )
     if( GlobalContext.Filter != NULLPTR )
         MiniFilterUnload( 0 );
 
+    StopProcessNotify();
+
     RemoveControlDevice( GlobalContext );
 
     ExDeleteNPagedLookasideList( &GlobalContext.FileNameLookasideList );
@@ -126,7 +129,8 @@ NTSTATUS InitializeFeatures( CTX_GLOBAL_DATA* GlobalContext )
 
     do
     {
-        Status = STATUS_SUCCESS;
+        IF_FAILED_BREAK( Status, StartProcessNotify() );
+
     } while( false );
 
     KdPrint( ( "[WinIOMon] %s Line=%d Status=0x%08x\n", __FUNCTION__, __LINE__, Status ) );
