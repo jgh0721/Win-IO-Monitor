@@ -234,7 +234,7 @@ NTSTATUS InitializeMiniFilter( CTX_GLOBAL_DATA* GlobalContext )
                          __FUNCTION__, "FltStartFiltering FAILED", Status ) );
             break;
         }
-
+        
     } while( false );
 
     if( !NT_SUCCESS( Status ) )

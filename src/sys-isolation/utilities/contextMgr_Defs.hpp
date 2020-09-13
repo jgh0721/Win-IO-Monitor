@@ -16,6 +16,8 @@ typedef struct _CTX_GLOBAL_DATA
     PDEVICE_OBJECT                  DeviceObject;       // Control Device Object
     PFLT_FILTER                     Filter;
 
+    CACHE_MANAGER_CALLBACKS         CacheMgrCallbacks;
+
     PFLT_PORT                       ServerPort;
     PFLT_PORT                       ClientPort;
 

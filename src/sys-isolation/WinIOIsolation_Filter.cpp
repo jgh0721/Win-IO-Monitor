@@ -230,6 +230,11 @@ NTSTATUS InitializeMiniFilter( CTX_GLOBAL_DATA* GlobalContext )
             break;
         }
 
+        GlobalContext->CacheMgrCallbacks.AcquireForLazyWrite    = CcAcquireForLazyWrite;
+        GlobalContext->CacheMgrCallbacks.ReleaseFromLazyWrite   = CcReleaseFromLazyWrite;
+        GlobalContext->CacheMgrCallbacks.AcquireForReadAhead    = CcAcquireForReadAhead;
+        GlobalContext->CacheMgrCallbacks.ReleaseFromReadAhead   = CcReleaseFromReadAhead;
+
     } while( false );
 
     if( !NT_SUCCESS( Status ) )

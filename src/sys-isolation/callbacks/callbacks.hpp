@@ -7,6 +7,7 @@
 
 #include "fltInstance.hpp"
 #include "generateFileName.hpp"
+#include "cacheManagerCallbacks.hpp"
 
 #include "fltCreateFile.hpp"
 #include "fltRead.hpp"

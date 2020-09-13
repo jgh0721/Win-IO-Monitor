@@ -28,6 +28,7 @@
     <ClInclude Include="..\cmn\W32API_FltMgr.hpp" />
     <ClInclude Include="..\cmn\W32API_LibMgr.hpp" />
     <ClInclude Include="..\cmn\W32API_NtOsKrnl.hpp" />
+    <ClInclude Include="callbacks\cacheManagerCallbacks.hpp" />
     <ClInclude Include="callbacks\callbacks.hpp" />
     <ClInclude Include="callbacks\fltCleanup.hpp" />
     <ClInclude Include="callbacks\fltClose.hpp" />
@@ -65,6 +66,7 @@
     <ClCompile Include="..\cmn\fltCmnLibs_path.cpp" />
     <ClCompile Include="..\cmn\fltCmnLibs_string.cpp" />
     <ClCompile Include="..\cmn\W32API.cpp" />
+    <ClCompile Include="callbacks\cacheManagerCallbacks.cpp" />
     <ClCompile Include="callbacks\callbacks.cpp" />
     <ClCompile Include="callbacks\fltCleanup.cpp" />
     <ClCompile Include="callbacks\fltClose.cpp" />
