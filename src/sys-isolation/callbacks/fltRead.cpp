@@ -1,5 +1,7 @@
 ﻿#include "fltRead.hpp"
 
+#include "privateFCBMgr.hpp"
+
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
 #endif
@@ -11,6 +13,17 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreRead( PFLT_CALLBACK_DATA Data, PCFLT_R
 
     __try
     {
+        if( IsOwnFileObject( FltObjects->FileObject ) == false )
+            __leave;
+
+        if( FLT_IS_FASTIO_OPERATION( Data ) )
+        {
+            FltStatus = FLT_PREOP_DISALLOW_FASTIO;
+            __leave;
+        }
+
+        if( FLT_IS_IRP_OPERATION( Data ) == false )
+            __leave;
 
     }
     __finally
