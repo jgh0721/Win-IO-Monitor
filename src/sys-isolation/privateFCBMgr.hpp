@@ -19,4 +19,6 @@ FCB* Vcb_SearchFCB( __in CTX_INSTANCE_CONTEXT* InstanceContext, __in const WCHAR
 VOID Vcb_InsertFCB( __in CTX_INSTANCE_CONTEXT* InstanceContext, __in FCB* Fcb );
 VOID Vcb_DeleteFCB( __in CTX_INSTANCE_CONTEXT* InstanceContext, __in FCB* Fcb );
 
+bool IsOwnFileObject( __in FILE_OBJECT* FileObject );
+
 #endif // HDR_PRIVATE_FCB_MGR

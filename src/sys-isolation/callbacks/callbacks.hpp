@@ -6,6 +6,8 @@
 #include "utilities/contextMgr_Defs.hpp"
 
 #include "fltInstance.hpp"
+#include "generateFileName.hpp"
+
 #include "fltCreateFile.hpp"
 #include "fltRead.hpp"
 #include "fltWrite.hpp"

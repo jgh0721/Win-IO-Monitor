@@ -162,7 +162,11 @@ const nsW32API::FLT_REGISTRATION_XP FilterRegistrationXP = {
     InstanceSetup,
     InstanceQueryTeardown,
     InstanceTeardownStart,
-    InstanceTeardownComplete
+    InstanceTeardownComplete,
+
+    FilterGenerateFileName,
+    FilterNormalizeNameComponent,
+    FilterNormalizeContextCleanup
 };
 
 const nsW32API::FLT_REGISTRATION_VISTA FilterRegistrationVista = {
@@ -180,12 +184,12 @@ const nsW32API::FLT_REGISTRATION_VISTA FilterRegistrationVista = {
     InstanceTeardownStart,
     InstanceTeardownComplete,
 
-    NULL,
-    NULL,
-    NULL,
+    FilterGenerateFileName,
+    FilterNormalizeNameComponent,
+    FilterNormalizeContextCleanup,
 
     (nsW32API::PFLT_TRANSACTION_NOTIFICATION_CALLBACK)FilterTransactionNotificationCallback,
-    NULL
+    FilterNormalizeNameComponentEx
 };
 
 NTSTATUS InitializeMiniFilter( CTX_GLOBAL_DATA* GlobalContext )

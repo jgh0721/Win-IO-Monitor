@@ -72,3 +72,20 @@ NTSTATUS UninitializeFCB( FCB* Fcb )
 
     return Status;
 }
+
+bool IsOwnFileObject( FILE_OBJECT* FileObject )
+{
+    if( FileObject == NULLPTR )
+        return false;
+
+    if( FileObject->FsContext == NULLPTR )
+        return false;
+
+    auto Fcb = ( PFCB )FileObject->FsContext;
+
+    if( Fcb->NodeTag != FCB_NODE_TYPE_TAG ||
+        Fcb->NodeSize != sizeof( FCB ) )
+        return false;
+
+    return true;
+}

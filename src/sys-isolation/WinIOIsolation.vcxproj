@@ -39,6 +39,7 @@
     <ClInclude Include="callbacks\fltRead.hpp" />
     <ClInclude Include="callbacks\fltSetInformation.hpp" />
     <ClInclude Include="callbacks\fltWrite.hpp" />
+    <ClInclude Include="callbacks\generateFileName.hpp" />
     <ClInclude Include="deviceCntl.hpp" />
     <ClInclude Include="deviceMgmt.hpp" />
     <ClInclude Include="fltBase.hpp" />
@@ -74,6 +75,7 @@
     <ClCompile Include="callbacks\fltRead.cpp" />
     <ClCompile Include="callbacks\fltSetInformation.cpp" />
     <ClCompile Include="callbacks\fltWrite.cpp" />
+    <ClCompile Include="callbacks\generateFileName.cpp" />
     <ClCompile Include="deviceCntl.cpp" />
     <ClCompile Include="deviceMgmt.cpp" />
     <ClCompile Include="irpContext.cpp" />
