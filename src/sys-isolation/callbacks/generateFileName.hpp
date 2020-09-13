@@ -11,6 +11,11 @@
  * 격리 필터는 마치 상위 필터 드라이버의 입장에서 보면 파일시스템과 같이 동작해야하므로,
  * 격리된 파일에 대해 파일이름을 제공해야한다. 만약, 그렇지 않으면 격리 필터가 소유한 SFO( Shadow File Object ) 가
  * 실제 파일시스템까지 전달되고, BSOD 가 발생하게된다
+ *
+ *
+ * http://fsfilters.blogspot.com/2011/03/names-in-minifilters-implementing-name.html
+ * http://fsfilters.blogspot.com/2012/03/name-provider-changes.html
+ * http://fsfilters.blogspot.com/2011/12/name-normalization-in-win8.html
  */
 
 EXTERN_C_BEGIN
