@@ -7,6 +7,7 @@
 
 #define POOL_MAIN_TAG       'isTG'
 
+#define POOL_IRPCONTEXT_TAG 'irTG'
 #define POOL_FILENAME_TAG   'fnTG'
 #define POOL_PROCNAME_TAG   'pnTG'
 #define POOL_MSG_SEND_TAG   'snTG'

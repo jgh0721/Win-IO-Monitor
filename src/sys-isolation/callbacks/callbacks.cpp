@@ -7,12 +7,21 @@
 FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreOperationPassThrough( PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects,
                                                                 PVOID* CompletionContext )
 {
+    UNREFERENCED_PARAMETER( Data );
+    UNREFERENCED_PARAMETER( FltObjects );
+    UNREFERENCED_PARAMETER( CompletionContext );
+
     return FLT_PREOP_SUCCESS_NO_CALLBACK;
 }
 
 FLT_POSTOP_CALLBACK_STATUS FLTAPI FilterPostOperationPassThrough( PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects,
                                                                   PVOID CompletionContext, FLT_POST_OPERATION_FLAGS Flags )
 {
+    UNREFERENCED_PARAMETER( Data );
+    UNREFERENCED_PARAMETER( FltObjects );
+    UNREFERENCED_PARAMETER( CompletionContext );
+    UNREFERENCED_PARAMETER( Flags );
+
     return FLT_POSTOP_FINISHED_PROCESSING;
 }
 

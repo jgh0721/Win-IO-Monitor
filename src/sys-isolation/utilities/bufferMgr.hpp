@@ -4,6 +4,7 @@
 #include "fltBase.hpp"
 #include "bufferMgr_Defs.hpp"
 #include "contextMgr_Defs.hpp"
+#include "irpContext_Defs.hpp"
 
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
@@ -31,6 +32,11 @@ TyGenericBuffer<T> AllocateBuffer( TyEnBufferType eBufferType, ULONG uRequiredSi
 
     switch( eBufferType )
     {
+        case BUFFER_IRPCONTEXT: {
+            AllocateGenericBuffer( ( TyGenericBuffer<VOID>* ) & tyGenericBuffer, uRequiredSize,
+                                   &GlobalContext.IrpContextLookasideList,
+                                   sizeof( IRP_CONTEXT ), POOL_IRPCONTEXT_TAG );
+        } break;
         case BUFFER_FILENAME: {
             AllocateGenericBuffer( (TyGenericBuffer<VOID>*)&tyGenericBuffer, uRequiredSize, 
                                    &GlobalContext.FileNameLookasideList, 
@@ -55,6 +61,9 @@ void DeallocateBuffer( TyGenericBuffer<T>* tyGenericBuffer )
 
     switch( tyGenericBuffer->BufferType )
     {
+        case BUFFER_IRPCONTEXT: {
+            DeallocateGenericBuffer( ( TyGenericBuffer<VOID>* )tyGenericBuffer, &GlobalContext.IrpContextLookasideList );
+        } break;
         case BUFFER_FILENAME: {
             DeallocateGenericBuffer( ( TyGenericBuffer<VOID>* )tyGenericBuffer, &GlobalContext.FileNameLookasideList );
         } break;

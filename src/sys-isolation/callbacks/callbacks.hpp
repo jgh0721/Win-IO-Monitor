@@ -6,6 +6,15 @@
 #include "utilities/contextMgr_Defs.hpp"
 
 #include "fltInstance.hpp"
+#include "fltCreateFile.hpp"
+#include "fltRead.hpp"
+#include "fltWrite.hpp"
+#include "fltFlushBuffers.hpp"
+#include "fltDirectoryControl.hpp"
+#include "fltQueryInformation.hpp"
+#include "fltSetInformation.hpp"
+#include "fltCleanup.hpp"
+#include "fltClose.hpp"
 
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )

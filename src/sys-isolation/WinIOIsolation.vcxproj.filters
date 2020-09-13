@@ -102,6 +102,39 @@
     <ClInclude Include="utilities\procNameMgr.hpp">
       <Filter>utilities</Filter>
     </ClInclude>
+    <ClInclude Include="callbacks\fltCreateFile.hpp">
+      <Filter>callbacks</Filter>
+    </ClInclude>
+    <ClInclude Include="irpContext.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="irpContext_Defs.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="callbacks\fltCleanup.hpp">
+      <Filter>callbacks</Filter>
+    </ClInclude>
+    <ClInclude Include="callbacks\fltClose.hpp">
+      <Filter>callbacks</Filter>
+    </ClInclude>
+    <ClInclude Include="callbacks\fltDirectoryControl.hpp">
+      <Filter>callbacks</Filter>
+    </ClInclude>
+    <ClInclude Include="callbacks\fltFlushBuffers.hpp">
+      <Filter>callbacks</Filter>
+    </ClInclude>
+    <ClInclude Include="callbacks\fltQueryInformation.hpp">
+      <Filter>callbacks</Filter>
+    </ClInclude>
+    <ClInclude Include="callbacks\fltRead.hpp">
+      <Filter>callbacks</Filter>
+    </ClInclude>
+    <ClInclude Include="callbacks\fltSetInformation.hpp">
+      <Filter>callbacks</Filter>
+    </ClInclude>
+    <ClInclude Include="callbacks\fltWrite.hpp">
+      <Filter>callbacks</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="WinIOIsolation.cpp">
@@ -151,6 +184,36 @@
     </ClCompile>
     <ClCompile Include="utilities\procNameMgr.cpp">
       <Filter>utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="callbacks\fltCreateFile.cpp">
+      <Filter>callbacks</Filter>
+    </ClCompile>
+    <ClCompile Include="irpContext.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="callbacks\fltCleanup.cpp">
+      <Filter>callbacks</Filter>
+    </ClCompile>
+    <ClCompile Include="callbacks\fltClose.cpp">
+      <Filter>callbacks</Filter>
+    </ClCompile>
+    <ClCompile Include="callbacks\fltDirectoryControl.cpp">
+      <Filter>callbacks</Filter>
+    </ClCompile>
+    <ClCompile Include="callbacks\fltFlushBuffers.cpp">
+      <Filter>callbacks</Filter>
+    </ClCompile>
+    <ClCompile Include="callbacks\fltQueryInformation.cpp">
+      <Filter>callbacks</Filter>
+    </ClCompile>
+    <ClCompile Include="callbacks\fltRead.cpp">
+      <Filter>callbacks</Filter>
+    </ClCompile>
+    <ClCompile Include="callbacks\fltSetInformation.cpp">
+      <Filter>callbacks</Filter>
+    </ClCompile>
+    <ClCompile Include="callbacks\fltWrite.cpp">
+      <Filter>callbacks</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

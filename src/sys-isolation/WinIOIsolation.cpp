@@ -3,6 +3,7 @@
 #include "deviceCntl.hpp"
 #include "deviceMgmt.hpp"
 #include "WinIOIsolation_Filter.hpp"
+#include "irpContext_Defs.hpp"
 #include "utilities/procNameMgr.hpp"
 #include "utilities/bufferMgr.hpp"
 
@@ -76,6 +77,7 @@ void DriverUnload( PDRIVER_OBJECT DriverObject )
 
     RemoveControlDevice( GlobalContext );
 
+    ExDeleteNPagedLookasideList( &GlobalContext.IrpContextLookasideList );
     ExDeleteNPagedLookasideList( &GlobalContext.FileNameLookasideList );
     ExDeleteNPagedLookasideList( &GlobalContext.ProcNameLookasideList );
     ExDeleteNPagedLookasideList( &GlobalContext.SendPacketLookasideList );
@@ -96,6 +98,10 @@ NTSTATUS InitializeGlobalContext( PDRIVER_OBJECT DriverObject )
         GlobalContext.TimeOutMs.QuadPart = RELATIVE( MILLISECONDS( 3000 ) );
 
         IF_FAILED_BREAK( Status, CreateControlDevice( GlobalContext ) );
+
+        ExInitializeNPagedLookasideList( &GlobalContext.IrpContextLookasideList,
+                                         NULL, NULL, 0,
+                                         sizeof(IRP_CONTEXT), POOL_IRPCONTEXT_TAG, 0 );
 
         ExInitializeNPagedLookasideList( &GlobalContext.FileNameLookasideList,
                                          NULL, NULL, 0,

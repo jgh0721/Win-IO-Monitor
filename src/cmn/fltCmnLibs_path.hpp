@@ -2,6 +2,8 @@
 #define HDR_FLT_CMNLIBS_PATH
 
 #include "fltBase.hpp"
+#include "utilities/contextMgr_Defs.hpp"
+#include "utilities/bufferMgr_Defs.hpp"
 
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
@@ -17,7 +19,9 @@ namespace nsUtils
         IRQL = PASSIVE_LEVEL
     */
     BOOLEAN                                 FindDriveLetterByDeviceName( __in UNICODE_STRING* uniDeviceName, __out WCHAR* wchDriveLetter );
-    
+
+    TyGenericBuffer< WCHAR >                ExtractFileFullPath( __in PFILE_OBJECT FileObject, __in_opt CTX_INSTANCE_CONTEXT* InstanceContext, __in bool IsInCreate );
+
 } // nsUtils
 
 #endif // HDR_FLT_CMNLIBS_PATH

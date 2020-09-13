@@ -10,6 +10,8 @@
 enum TyEnBufferType
 {
     BUFFER_UNKNOWN,
+    BUFFER_IRPCONTEXT,
+
     BUFFER_FILENAME,
     BUFFER_PROCNAME,
 

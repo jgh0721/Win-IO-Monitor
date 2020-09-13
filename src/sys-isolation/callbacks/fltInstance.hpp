@@ -1,5 +1,5 @@
-﻿#ifndef HDR_WINIOMONITOR_INSTANCE
-#define HDR_WINIOMONITOR_INSTANCE
+﻿#ifndef HDR_ISOLATION_INSTANCE
+#define HDR_ISOLATION_INSTANCE
 
 #include "fltBase.hpp"
 
@@ -122,4 +122,4 @@ NTSTATUS CreateInstanceContext( PCFLT_RELATED_OBJECTS FltObjects,
 
 NTSTATUS CloseInstanceContext();
 
-#endif // HDR_WINIOMONITOR_INSTANCE
+#endif // HDR_ISOLATION_INSTANCE

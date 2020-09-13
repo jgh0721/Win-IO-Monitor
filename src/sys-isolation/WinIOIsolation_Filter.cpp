@@ -17,31 +17,31 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 CONST FLT_OPERATION_REGISTRATION FilterCallbacks[] = {
-    { IRP_MJ_CREATE,                        0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
+    { IRP_MJ_CREATE,                        0,      FilterPreCreate,                    FilterPostCreate    },
 
     { IRP_MJ_CREATE_NAMED_PIPE,             0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
 
-    { IRP_MJ_CLOSE,                         0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
+    { IRP_MJ_CLOSE,                         0,      FilterPreClose,                     FilterPostClose    },
 
-    { IRP_MJ_READ,                          0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
+    { IRP_MJ_READ,                          0,      FilterPreRead,                      FilterPostRead    },
 
-    { IRP_MJ_WRITE,                         0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
+    { IRP_MJ_WRITE,                         0,      FilterPreWrite,                     FilterPostWrite    },
 
-    { IRP_MJ_QUERY_INFORMATION,             0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
+    { IRP_MJ_QUERY_INFORMATION,             0,      FilterPreQueryInformation,          FilterPostQueryInformation    },
 
-    { IRP_MJ_SET_INFORMATION,               0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
+    { IRP_MJ_SET_INFORMATION,               0,      FilterPreSetInformation,            FilterPostSetInformation    },
 
     { IRP_MJ_QUERY_EA,                      0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
 
     { IRP_MJ_SET_EA,                        0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
 
-    { IRP_MJ_FLUSH_BUFFERS,                 0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
+    { IRP_MJ_FLUSH_BUFFERS,                 0,      FilterPreFlushBuffers,              FilterPostFlushBuffers    },
 
     { IRP_MJ_QUERY_VOLUME_INFORMATION,      0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
 
     { IRP_MJ_SET_VOLUME_INFORMATION,        0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
 
-    { IRP_MJ_DIRECTORY_CONTROL,             0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
+    { IRP_MJ_DIRECTORY_CONTROL,             0,      FilterPreDirectoryControl,          FilterPostDirectoryControl    },
 
     { IRP_MJ_FILE_SYSTEM_CONTROL,           0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
 
@@ -53,7 +53,7 @@ CONST FLT_OPERATION_REGISTRATION FilterCallbacks[] = {
 
     { IRP_MJ_LOCK_CONTROL,                  0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
 
-    { IRP_MJ_CLEANUP,                       0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
+    { IRP_MJ_CLEANUP,                       0,      FilterPreCleanup,                   FilterPostCleanup    },
 
     { IRP_MJ_CREATE_MAILSLOT,               0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
 
