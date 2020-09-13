@@ -35,6 +35,7 @@
     <ClInclude Include="callbacks\fltDirectoryControl.hpp" />
     <ClInclude Include="callbacks\fltFlushBuffers.hpp" />
     <ClInclude Include="callbacks\fltInstance.hpp" />
+    <ClInclude Include="callbacks\fltNetworkQueryOpen.hpp" />
     <ClInclude Include="callbacks\fltQueryInformation.hpp" />
     <ClInclude Include="callbacks\fltRead.hpp" />
     <ClInclude Include="callbacks\fltSetInformation.hpp" />
@@ -71,6 +72,7 @@
     <ClCompile Include="callbacks\fltDirectoryControl.cpp" />
     <ClCompile Include="callbacks\fltFlushBuffers.cpp" />
     <ClCompile Include="callbacks\fltInstance.cpp" />
+    <ClCompile Include="callbacks\fltNetworkQueryOpen.cpp" />
     <ClCompile Include="callbacks\fltQueryInformation.cpp" />
     <ClCompile Include="callbacks\fltRead.cpp" />
     <ClCompile Include="callbacks\fltSetInformation.cpp" />

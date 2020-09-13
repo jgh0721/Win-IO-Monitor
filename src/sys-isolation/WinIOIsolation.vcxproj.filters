@@ -138,6 +138,9 @@
     <ClInclude Include="callbacks\generateFileName.hpp">
       <Filter>callbacks</Filter>
     </ClInclude>
+    <ClInclude Include="callbacks\fltNetworkQueryOpen.hpp">
+      <Filter>callbacks</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="WinIOIsolation.cpp">
@@ -219,6 +222,9 @@
       <Filter>callbacks</Filter>
     </ClCompile>
     <ClCompile Include="callbacks\generateFileName.cpp">
+      <Filter>callbacks</Filter>
+    </ClCompile>
+    <ClCompile Include="callbacks\fltNetworkQueryOpen.cpp">
       <Filter>callbacks</Filter>
     </ClCompile>
   </ItemGroup>

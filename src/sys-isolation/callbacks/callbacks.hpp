@@ -15,6 +15,7 @@
 #include "fltDirectoryControl.hpp"
 #include "fltQueryInformation.hpp"
 #include "fltSetInformation.hpp"
+#include "fltNetworkQueryOpen.hpp"
 #include "fltCleanup.hpp"
 #include "fltClose.hpp"
 

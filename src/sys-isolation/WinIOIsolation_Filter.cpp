@@ -80,8 +80,8 @@ CONST FLT_OPERATION_REGISTRATION FilterCallbacks[] = {
     { IRP_MJ_RELEASE_FOR_CC_FLUSH,                      0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
 
     { IRP_MJ_FAST_IO_CHECK_IF_POSSIBLE,                 0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
-
-    { IRP_MJ_NETWORK_QUERY_OPEN,                        0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
+    // This Always Fast I/O
+    { IRP_MJ_NETWORK_QUERY_OPEN,                        0,      FilterPreNetworkQueryOpen,          FilterPostNetworkQueryOpen    },
 
     { IRP_MJ_MDL_READ,                                  0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
 
@@ -90,7 +90,8 @@ CONST FLT_OPERATION_REGISTRATION FilterCallbacks[] = {
     { IRP_MJ_PREPARE_MDL_WRITE,                         0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
 
     { IRP_MJ_MDL_WRITE_COMPLETE,                        0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
-
+    // IRP_MJ_VOLUME_MOUNT is the equivalent of IRP_MJ_FILE_SYSTEM_CONTROL.IRP_MN_MOUNT_VOLUME
+    // IRP_MJ_VOLUME_MOUNT Is Fast I/O
     { IRP_MJ_VOLUME_MOUNT,                              0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
 
     { IRP_MJ_VOLUME_DISMOUNT,                           0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
