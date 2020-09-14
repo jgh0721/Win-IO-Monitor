@@ -42,12 +42,15 @@ typedef struct _FCB
 
 } FCB, * PFCB;
 
+// Free on IRP_MJ_CLEANUP
 typedef struct _HANDLE_CONTEXT
 {
     ULONG                                       ProcessId;
 
     WCHAR*                                      ProcessName;            // ProcessFileFullPath 에 대한 포인터, 직접 해제하지 말 것!!!
     TyGenericBuffer<WCHAR>                      ProcessFileFullPath;
+
+    TyGenericBuffer<WCHAR>                      SrcFileFullPath;
 
 } HANDLE_CONTEXT, *PHANDLE_CONTEXT;
 

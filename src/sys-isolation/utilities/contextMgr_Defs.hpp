@@ -105,6 +105,10 @@ typedef struct _CTX_STREAMHANDLE_CONTEXT
 {
     UNICODE_STRING          FileName;
 
+    ULONG                   ProcessId;
+    TyGenericBuffer<WCHAR>  ProcessFileFullPath;
+    WCHAR*                  ProcessName;
+
 } CTX_STREAMHANDLE_CONTEXT, * PCTX_STREAMHANDLE_CONTEXT;
 
 #define CTX_STREAMHANDLE_CONTEXT_SIZE sizeof( CTX_STREAMHANDLE_CONTEXT )
