@@ -183,6 +183,310 @@ namespace nsW32API
         sizeof((FID).FileId128)             \
     )
 
+#ifdef __cplusplus
+    typedef struct _FSRTL_ADVANCED_FCB_HEADER_XP : FSRTL_COMMON_FCB_HEADER
+    {
+#else   // __cplusplus
+
+    typedef struct _FSRTL_ADVANCED_FCB_HEADER_XP
+    {
+
+        //
+        //  Put in the standard FsRtl header fields
+        //
+
+        FSRTL_COMMON_FCB_HEADER DUMMYSTRUCTNAME;
+
+#endif  // __cplusplus
+
+        //
+        //  The following two fields are supported only if
+        //  Flags2 contains FSRTL_FLAG2_SUPPORTS_FILTER_CONTEXTS
+        //
+
+        //
+        //  This is a pointer to a Fast Mutex which may be used to
+        //  properly synchronize access to the FsRtl header.  The
+        //  Fast Mutex must be nonpaged.
+        //
+
+        PFAST_MUTEX FastMutex;
+
+        //
+        // This is a pointer to a list of stream context structures belonging to
+        // filesystem filter drivers that are linked above the filesystem.
+        // Each structure is headed by FSRTL_FILTER_CONTEXT.
+        //
+
+        LIST_ENTRY FilterContexts;
+
+    } FSRTL_ADVANCED_FCB_HEADER_XP, *PFSRTL_ADVANCED_FCB_HEADER_XP;
+
+#ifdef __cplusplus
+    typedef struct _FSRTL_ADVANCED_FCB_HEADER_VISTA : FSRTL_COMMON_FCB_HEADER
+    {
+#else   // __cplusplus
+
+    typedef struct _FSRTL_ADVANCED_FCB_HEADER_VISTA
+    {
+
+        //
+        //  Put in the standard FsRtl header fields
+        //
+
+        FSRTL_COMMON_FCB_HEADER DUMMYSTRUCTNAME;
+
+#endif  // __cplusplus
+
+        //
+        //  The following two fields are supported only if
+        //  Flags2 contains FSRTL_FLAG2_SUPPORTS_FILTER_CONTEXTS
+        //
+
+        //
+        //  This is a pointer to a Fast Mutex which may be used to
+        //  properly synchronize access to the FsRtl header.  The
+        //  Fast Mutex must be nonpaged.
+        //
+
+        PFAST_MUTEX FastMutex;
+
+        //
+        // This is a pointer to a list of stream context structures belonging to
+        // filesystem filter drivers that are linked above the filesystem.
+        // Each structure is headed by FSRTL_FILTER_CONTEXT.
+        //
+
+        LIST_ENTRY FilterContexts;
+
+        //
+        //  The following fields are valid only if the Version
+        //  field in the FSRTL_COMMON_FCB_HEADER is greater than
+        //  or equal to FSRTL_FCB_HEADER_V1
+        //  These fields are present in VISTA and beyond
+        //
+
+        //
+        //  This is a pushlock which is used to properly synchronize access
+        //  to the list of stream contexts
+        //
+
+        EX_PUSH_LOCK PushLock;
+
+        //
+        //  This is a pointer to a blob of information that is
+        //  associated with the opened file in the filesystem
+        //  corresponding to the structure containing this
+        //  FSRTL_ADVANCED_FCB_HEADER.
+        //
+
+        PVOID* FileContextSupportPointer;
+
+    } FSRTL_ADVANCED_FCB_HEADER_VISTA, * PFSRTL_ADVANCED_FCB_HEADER_VISTA;
+
+#ifdef __cplusplus
+    typedef struct _FSRTL_ADVANCED_FCB_HEADER_WIN8 : FSRTL_COMMON_FCB_HEADER
+    {
+#else   // __cplusplus
+
+    typedef struct _FSRTL_ADVANCED_FCB_HEADER_WIN8
+    {
+
+        //
+        //  Put in the standard FsRtl header fields
+        //
+
+        FSRTL_COMMON_FCB_HEADER DUMMYSTRUCTNAME;
+
+#endif  // __cplusplus
+
+        //
+        //  The following two fields are supported only if
+        //  Flags2 contains FSRTL_FLAG2_SUPPORTS_FILTER_CONTEXTS
+        //
+
+        //
+        //  This is a pointer to a Fast Mutex which may be used to
+        //  properly synchronize access to the FsRtl header.  The
+        //  Fast Mutex must be nonpaged.
+        //
+
+        PFAST_MUTEX FastMutex;
+
+        //
+        // This is a pointer to a list of stream context structures belonging to
+        // filesystem filter drivers that are linked above the filesystem.
+        // Each structure is headed by FSRTL_FILTER_CONTEXT.
+        //
+
+        LIST_ENTRY FilterContexts;
+
+        //
+        //  The following fields are valid only if the Version
+        //  field in the FSRTL_COMMON_FCB_HEADER is greater than
+        //  or equal to FSRTL_FCB_HEADER_V1
+        //  These fields are present in VISTA and beyond
+        //
+
+        //
+        //  This is a pushlock which is used to properly synchronize access
+        //  to the list of stream contexts
+        //
+
+        EX_PUSH_LOCK PushLock;
+
+        //
+        //  This is a pointer to a blob of information that is
+        //  associated with the opened file in the filesystem
+        //  corresponding to the structure containing this
+        //  FSRTL_ADVANCED_FCB_HEADER.
+        //
+
+        PVOID* FileContextSupportPointer;
+
+        //
+        //  The following fields are valid only if the Version
+        //  field in the FSRTL_COMMON_FCB_HEADER is greater than
+        //  or equal to FSRTL_FCB_HEADER_V2.  These fields are
+        //  present in Windows 8 and beyond.
+        //
+
+        //
+        //  For local file system this is the oplock field used
+        //  by the oplock package to maintain current information
+        //  about opportunistic locks on this file/directory.
+        //
+        //  For remote file systems this field is reserved.
+        //
+
+        union
+        {
+
+            OPLOCK Oplock;
+            PVOID ReservedForRemote;
+
+        };
+
+    } FSRTL_ADVANCED_FCB_HEADER_WIN8, * PFSRTL_ADVANCED_FCB_HEADER_WIN8;
+
+#ifdef __cplusplus
+    typedef struct _FSRTL_ADVANCED_FCB_HEADER_WIN10 : FSRTL_COMMON_FCB_HEADER
+    {
+#else   // __cplusplus
+
+    typedef struct _FSRTL_ADVANCED_FCB_HEADER_WIN10
+    {
+
+        //
+        //  Put in the standard FsRtl header fields
+        //
+
+        FSRTL_COMMON_FCB_HEADER DUMMYSTRUCTNAME;
+
+#endif  // __cplusplus
+
+        //
+        //  The following two fields are supported only if
+        //  Flags2 contains FSRTL_FLAG2_SUPPORTS_FILTER_CONTEXTS
+        //
+
+        //
+        //  This is a pointer to a Fast Mutex which may be used to
+        //  properly synchronize access to the FsRtl header.  The
+        //  Fast Mutex must be nonpaged.
+        //
+
+        PFAST_MUTEX FastMutex;
+
+        //
+        // This is a pointer to a list of stream context structures belonging to
+        // filesystem filter drivers that are linked above the filesystem.
+        // Each structure is headed by FSRTL_FILTER_CONTEXT.
+        //
+
+        LIST_ENTRY FilterContexts;
+
+        //
+        //  The following fields are valid only if the Version
+        //  field in the FSRTL_COMMON_FCB_HEADER is greater than
+        //  or equal to FSRTL_FCB_HEADER_V1
+        //  These fields are present in VISTA and beyond
+        //
+
+        //
+        //  This is a pushlock which is used to properly synchronize access
+        //  to the list of stream contexts
+        //
+
+        EX_PUSH_LOCK PushLock;
+
+        //
+        //  This is a pointer to a blob of information that is
+        //  associated with the opened file in the filesystem
+        //  corresponding to the structure containing this
+        //  FSRTL_ADVANCED_FCB_HEADER.
+        //
+
+        PVOID* FileContextSupportPointer;
+
+        //
+        //  The following fields are valid only if the Version
+        //  field in the FSRTL_COMMON_FCB_HEADER is greater than
+        //  or equal to FSRTL_FCB_HEADER_V2.  These fields are
+        //  present in Windows 8 and beyond.
+        //
+
+        //
+        //  For local file system this is the oplock field used
+        //  by the oplock package to maintain current information
+        //  about opportunistic locks on this file/directory.
+        //
+        //  For remote file systems this field is reserved.
+        //
+
+        union
+        {
+
+            OPLOCK Oplock;
+            PVOID ReservedForRemote;
+
+        };
+
+        //
+        //  This field is used internally by the FSRTL to assist in context lookup.
+        //
+
+        PVOID ReservedContext;
+        
+    } FSRTL_ADVANCED_FCB_HEADER_WIN10, * PFSRTL_ADVANCED_FCB_HEADER_WIN10;
+    
+        // Win8~
+#define FSRTL_FCB_HEADER_V2             (0x02)
+        // Win10~
+#define FSRTL_FCB_HEADER_V3             (0x03)
+
+    //
+    //  This will properly initialize the advanced header so that it can be
+    //  used with PerStream contexts and PerFile contexts.
+    //  Note:  A fast mutex must be placed in an advanced header.  It is the
+    //         caller's responsibility to properly create and initialize this
+    //         mutex before calling this macro.  The mutex field is only set
+    //         if a non-NULL value is passed in.
+    //  If the file system supports filter file contexts then it must
+    //  initialize the FileContextSupportPointer field to point to a PVOID
+    //  embedded in its per-file structure (FCB). If a NULL is passed in,
+    //  then the macro assumes that the file system does not support filter
+    //  file contexts
+    //
+
+    #define FsRtlSetupAdvancedHeaderEx( _advhdr, _fmutx, _fctxptr )                     \
+    {                                                                                   \
+        FsRtlSetupAdvancedHeader( _advhdr, _fmutx );                                    \
+        if ((_fctxptr) != NULL) {                                                       \
+            (_advhdr)->FileContextSupportPointer = (_fctxptr);                          \
+        }                                                                               \
+    }
+
 } // nsW32API
 
 #endif // HDR_W32API_BASE
