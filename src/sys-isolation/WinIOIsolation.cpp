@@ -4,6 +4,7 @@
 #include "deviceMgmt.hpp"
 #include "WinIOIsolation_Filter.hpp"
 #include "irpContext_Defs.hpp"
+#include "privateFCBMgr_Defs.hpp"
 #include "utilities/procNameMgr.hpp"
 #include "utilities/bufferMgr.hpp"
 
@@ -82,6 +83,7 @@ void DriverUnload( PDRIVER_OBJECT DriverObject )
     ExDeleteNPagedLookasideList( &GlobalContext.ProcNameLookasideList );
     ExDeleteNPagedLookasideList( &GlobalContext.SendPacketLookasideList );
     ExDeleteNPagedLookasideList( &GlobalContext.ReplyPacketLookasideList );
+    ExDeleteNPagedLookasideList( &GlobalContext.FcbLookasideList );
 
     if( DriverObject->FastIoDispatch != NULLPTR )
         ExFreePool( DriverObject->FastIoDispatch );
@@ -118,6 +120,10 @@ NTSTATUS InitializeGlobalContext( PDRIVER_OBJECT DriverObject )
         ExInitializeNPagedLookasideList( &GlobalContext.ReplyPacketLookasideList,
                                          NULL, NULL, 0,
                                          POOL_MSG_REPLY_SIZE, POOL_MSG_REPLY_TAG, 0 );
+
+        ExInitializeNPagedLookasideList( &GlobalContext.FcbLookasideList,
+                                         NULL, NULL, 0,
+                                         sizeof( FCB ), POOL_FCB_TAG, 0 );
 
         AllocateBuffer<WCHAR>( BUFFER_FILENAME );
 

@@ -4,7 +4,7 @@
 #include "utilities/contextMgr.hpp"
 #include "utilities/contextMgr_Defs.hpp"
 
-#include "fltCmnLibs_path.hpp"
+#include "fltCmnLibs.hpp"
 
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
@@ -57,8 +57,45 @@ PIRP_CONTEXT CreateIrpContext( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_
         IrpContext->ProcessId       = FltGetRequestorProcessId( Data );
         SearchProcessInfo( IrpContext->ProcessId, &IrpContext->ProcessFullPath, &IrpContext->ProcessFileName );
 
+        if( MajorFunction == IRP_MJ_CREATE && IsPreIO == true )
+        {
+            /*!
+                MSDN 의 권고문에는 InstanceSetupCallback 에서 수행하는 것을 권장하지만,
+                몇몇 USB 장치의 볼륨에 대한 정보를 가져올 때 OS 가 응답없음에 빠지는 경우가 존재하여
+                이곳에서 값을 가져옴
+            */
+            if( InstanceContext->IsVolumePropertySet == FALSE && FltObjects->Volume != NULL )
+            {
+                ULONG                      nReturnedLength = 0;
+
+                FltGetVolumeProperties( FltObjects->Volume,
+                                        &InstanceContext->VolumeProperties,
+                                        sizeof( UCHAR ) * _countof( InstanceContext->Data ),
+                                        &nReturnedLength );
+
+                KeMemoryBarrier();
+
+                InstanceContext->IsVolumePropertySet = TRUE;
+            }
+        }
+
         IrpContext->SrcFileFullPath = nsUtils::ExtractFileFullPath( FltObjects->FileObject, InstanceContext,
                                                                     ( MajorFunction == IRP_MJ_CREATE ) && ( IsPreIO == true ) );
+
+        if( IrpContext->SrcFileFullPath.Buffer != NULLPTR )
+        {
+            if( IrpContext->SrcFileFullPath.Buffer[ 1 ] == L':' )
+                IrpContext->SrcFileFullPathWOVolume = &IrpContext->SrcFileFullPath.Buffer[ 2 ];
+            else
+            {
+                auto cchDeviceName = nsUtils::strlength( InstanceContext->DeviceNameBuffer );
+                if( cchDeviceName > 0 )
+                    IrpContext->SrcFileFullPathWOVolume = &IrpContext->SrcFileFullPath.Buffer[ cchDeviceName ];
+            }
+
+            if( IrpContext->SrcFileFullPathWOVolume == NULLPTR )
+                IrpContext->SrcFileFullPathWOVolume = IrpContext->SrcFileFullPath.Buffer;
+        }
 
         switch( MajorFunction )
         {
@@ -123,5 +160,12 @@ PIRP_CONTEXT CreateIrpContext( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_
 
 VOID CloseIrpContext( __in PIRP_CONTEXT IrpContext )
 {
-    
+    if( IrpContext == NULLPTR )
+        return;
+
+    DeallocateBuffer( &IrpContext->ProcessFullPath );
+    DeallocateBuffer( &IrpContext->SrcFileFullPath );
+    DeallocateBuffer( &IrpContext->DstFileFullPath );
+
+    CtxReleaseContext( IrpContext->InstanceContext );
 }

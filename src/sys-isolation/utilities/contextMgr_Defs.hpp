@@ -28,6 +28,7 @@ typedef struct _CTX_GLOBAL_DATA
     NPAGED_LOOKASIDE_LIST           ProcNameLookasideList;
     NPAGED_LOOKASIDE_LIST           SendPacketLookasideList;
     NPAGED_LOOKASIDE_LIST           ReplyPacketLookasideList;
+    NPAGED_LOOKASIDE_LIST           FcbLookasideList;
 
     PVOID                           ProcessFilter;
 
@@ -49,10 +50,23 @@ typedef struct _CTX_INSTANCE_CONTEXT
     UNICODE_STRING                  VolumeGUIDName;
     WCHAR                           VolumeGUIDNameBuffer[ 64 ];
     FLT_FILESYSTEM_TYPE             VolumeFileSystemType;
+    union
+    {
+        FLT_VOLUME_PROPERTIES       VolumeProperties;
+        UCHAR                       Data[ 256 ];
+    };
+    BOOLEAN                         IsVolumePropertySet;
 
     WCHAR                           DriveLetter;
 
     BOOLEAN                         IsWritable;
+
+    ///
+    /// Fcb Management
+    ///
+
+    ERESOURCE                       VcbLock;
+    LIST_ENTRY                      FcbListHead;                // 해당 인스턴스에서 관리 중인 FCB 객체들의 목록
 
 } CTX_INSTANCE_CONTEXT, *PCTX_INSTANCE_CONTEXT;
 

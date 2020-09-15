@@ -12,6 +12,7 @@
 #define POOL_PROCNAME_TAG   'pnTG'
 #define POOL_MSG_SEND_TAG   'snTG'
 #define POOL_MSG_REPLY_TAG  'rpTG'
+#define POOL_FCB_TAG        'fbTG'
 
 #define CTX_STRING_TAG                          'tSxC'
 #define CTX_RESOURCE_TAG                        'cRxC'

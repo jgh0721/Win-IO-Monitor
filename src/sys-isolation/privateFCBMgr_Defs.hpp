@@ -28,17 +28,27 @@ typedef struct _FCB
     OPLOCK                                      FileOplock;
 
     // IRP_MJ_CREATE 1 증가, IRP_MJ_CLEANUP 에서 1 감소
-    LONG                                        OpnCount;
+    LONG volatile                               OpnCount;
     // IRP_MJ_CREATE 1 증가, IRP_MJ_CLEANUP 에서 1 감소
-    LONG                                        ClnCount;
+    LONG volatile                               ClnCount;
     // IRP_MJ_CREATE 1 증가, IRP_MJ_CLOSE 에서 1 감소
-    LONG                                        RefCount;
+    LONG volatile                               RefCount;
 
     ///////////////////////////////////////////////////////////////////////////
 
     // 실제 파일시스템에 연결된 객체
     PFILE_OBJECT                                LowerFileObject;
     HANDLE                                      LowerFileHandle;
+    SHARE_ACCESS                                LowerShareAccess;
+
+    // 드라이브 문자, 디바이스 이름 등을 제외한 경로 및 이름( \ 시작 )
+    TyGenericBuffer<WCHAR>                      FileFullPath;
+    // FileFullPath 에서 마지막 이름 부분만 가르킴, 직접 해제하지 말 것
+    WCHAR*                                      FileName;
+
+    ///////////////////////////////////////////////////////////////////////////
+
+    LIST_ENTRY                                  ListEntry;
 
 } FCB, * PFCB;
 

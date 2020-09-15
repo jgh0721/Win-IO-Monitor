@@ -15,6 +15,10 @@
 #define MILLISECONDS(milli)     (((signed __int64)(milli)) * MICROSECONDS(1000L))
 #define SECONDS(seconds)        (((signed __int64)(seconds)) * MILLISECONDS(1000L))
 
+#ifndef INVALID_HANDLE_VALUE
+#define INVALID_HANDLE_VALUE ((HANDLE) -1)
+#endif
+
 namespace nsW32API
 {
     enum TyEnOsBuildNumber

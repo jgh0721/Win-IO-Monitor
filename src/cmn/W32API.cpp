@@ -83,3 +83,156 @@ NTSTATUS nsW32API::IsVolumeWritable( PVOID FltObject, PBOOLEAN IsWritable )
 
     return Status;
 }
+
+NTSTATUS nsW32API::FltCreateFileEx( PFLT_FILTER Filter, PFLT_INSTANCE Instance, PHANDLE FileHandle, PFILE_OBJECT* FileObject, ACCESS_MASK DesiredAccess, POBJECT_ATTRIBUTES ObjectAttributes, PIO_STATUS_BLOCK IoStatusBlock, PLARGE_INTEGER AllocationSize, ULONG FileAttributes, ULONG ShareAccess, ULONG CreateDisposition, ULONG CreateOptions, PVOID EaBuffer, ULONG EaLength, ULONG Flags )
+{
+    if( GlobalFltMgr.Is_FltCreateFileEx() == true )
+        return GlobalFltMgr.FltCreateFileEx( Filter, Instance, FileHandle, FileObject, DesiredAccess, ObjectAttributes, IoStatusBlock, AllocationSize, FileAttributes, ShareAccess, CreateDisposition, CreateOptions, EaBuffer, EaLength, Flags );
+
+    NTSTATUS Status = FltCreateFile( Filter, Instance, 
+                                     FileHandle, DesiredAccess, ObjectAttributes, IoStatusBlock, 
+                                     AllocationSize, FileAttributes, ShareAccess, 
+                                     CreateDisposition, CreateOptions, 
+                                     EaBuffer, EaLength, Flags );
+
+    do
+    {
+        if( !NT_SUCCESS( Status ) )
+            break;
+
+        ASSERT( *FileHandle != INVALID_HANDLE_VALUE && *FileHandle != NULL );
+
+        if( ARGUMENT_PRESENT( FileObject ) )
+        {
+            //
+            //  If the user provided an output FileObject parameter,
+            //  then we need to get a reference to the fileobject and return it.
+            //
+
+            Status = ObReferenceObjectByHandle( *FileHandle,
+                                                DesiredAccess,
+                                                *IoFileObjectType,
+                                                KernelMode,
+                                                ( PVOID* )FileObject,
+                                                NULL );
+
+            if( !NT_SUCCESS( Status ) )
+                break;
+        }
+
+    } while( false );
+
+    return Status;
+}
+
+NTSTATUS nsW32API::FltCreateFileEx2( PFLT_FILTER Filter, PFLT_INSTANCE Instance, PHANDLE FileHandle, PFILE_OBJECT* FileObject, ACCESS_MASK DesiredAccess, POBJECT_ATTRIBUTES ObjectAttributes, PIO_STATUS_BLOCK IoStatusBlock, PLARGE_INTEGER AllocationSize, ULONG FileAttributes, ULONG ShareAccess, ULONG CreateDisposition, ULONG CreateOptions, PVOID EaBuffer, ULONG EaLength, ULONG Flags, PIO_DRIVER_CREATE_CONTEXT DriverContext )
+{
+    if( GlobalFltMgr.Is_FltCreateFileEx2() == true )
+        return GlobalFltMgr.FltCreateFileEx2( Filter, Instance, FileHandle, FileObject, DesiredAccess, ObjectAttributes, IoStatusBlock, AllocationSize, FileAttributes, ShareAccess, CreateDisposition, CreateOptions, EaBuffer, EaLength, Flags, DriverContext );
+
+    NTSTATUS Status;
+
+    //  If we are here, FltCreateFileEx2 does not exist.  We
+    //  cannot open files within the context of a transaction
+    //  from here.  If Txf exists, so should FltCreateFileEx2.
+
+    UNREFERENCED_PARAMETER( DriverContext );
+    ASSERT( DriverContext == NULL );
+
+    //  Zero out output parameters.
+
+    *FileHandle = INVALID_HANDLE_VALUE;
+
+    if( ARGUMENT_PRESENT( FileObject ) )
+    {
+        *FileObject = NULL;
+    }
+
+    do
+    {
+        if( GlobalFltMgr.Is_FltCreateFileEx() == true )
+        {
+            //  If the system has FltCreateFileEx, we call that.
+
+            Status = GlobalFltMgr.FltCreateFileEx( Filter,
+                                                   Instance,
+                                                   FileHandle,
+                                                   FileObject,
+                                                   DesiredAccess,
+                                                   ObjectAttributes,
+                                                   IoStatusBlock,
+                                                   AllocationSize,
+                                                   FileAttributes,
+                                                   ShareAccess,
+                                                   CreateDisposition,
+                                                   CreateOptions,
+                                                   EaBuffer,
+                                                   EaLength,
+                                                   Flags );
+        }
+        else
+        {
+
+            //
+            //  Attempt the open.
+            //
+
+            Status = FltCreateFile( Filter,
+                                    Instance,
+                                    FileHandle,
+                                    DesiredAccess,
+                                    ObjectAttributes,
+                                    IoStatusBlock,
+                                    AllocationSize,
+                                    FileAttributes,
+                                    ShareAccess,
+                                    CreateDisposition,
+                                    CreateOptions,
+                                    EaBuffer,
+                                    EaLength,
+                                    Flags );
+
+            if( !NT_SUCCESS( Status ) )
+                break;
+
+            ASSERT( *FileHandle != INVALID_HANDLE_VALUE && *FileHandle != NULL );
+
+            if( ARGUMENT_PRESENT( FileObject ) )
+            {
+                //
+                //  If the user provided an output FileObject parameter,
+                //  then we need to get a reference to the fileobject and return it.
+                //
+
+                Status = ObReferenceObjectByHandle( *FileHandle,
+                                                    DesiredAccess,
+                                                    *IoFileObjectType,
+                                                    KernelMode,
+                                                    (PVOID*)FileObject,
+                                                    NULL );
+
+                if( !NT_SUCCESS( Status ) )
+                    break;
+            }
+        }
+
+    } while( false );
+
+    if( !NT_SUCCESS( Status ) )
+    {
+        if( *FileHandle != INVALID_HANDLE_VALUE )
+        {
+            FltClose( *FileHandle );
+        }
+
+        if( ARGUMENT_PRESENT( FileObject ) )
+        {
+            if( *FileObject != NULLPTR )
+            {
+                ObDereferenceObject( *FileObject );
+            }
+        }
+    }
+
+    return Status;
+}

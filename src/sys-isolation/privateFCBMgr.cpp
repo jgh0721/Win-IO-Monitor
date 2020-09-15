@@ -6,6 +6,15 @@
 
 #define FCB_NODE_TYPE_TAG 'TzFB'
 
+FCB* AllocateFcb()
+{
+    auto Fcb = (FCB*)ExAllocateFromNPagedLookasideList( &GlobalContext.FcbLookasideList );
+    if( Fcb != NULLPTR )
+        RtlZeroMemory( Fcb, sizeof( FCB ) );
+
+    return Fcb;
+}
+
 NTSTATUS InitializeFCB( FCB* Fcb )
 {
     NTSTATUS Status = STATUS_UNSUCCESSFUL;
@@ -71,6 +80,37 @@ NTSTATUS UninitializeFCB( FCB* Fcb )
     } while( false );
 
     return Status;
+}
+
+FCB* Vcb_SearchFCB( CTX_INSTANCE_CONTEXT* InstanceContext, const WCHAR* wszFileName )
+{
+    FCB*            Fcb = NULLPTR;
+    PLIST_ENTRY     ListHead = &InstanceContext->FcbListHead;
+    PLIST_ENTRY     Current = NULLPTR;
+
+    for( Current = ListHead->Flink; Current != ListHead; Current = Current->Flink )
+    {
+        auto item = CONTAINING_RECORD( Current, FCB, ListEntry );
+
+        if( _wcsicmp( wszFileName, item->FileFullPath.Buffer ) != 0 )
+            continue;
+
+        Fcb = item;
+        break;
+    }
+
+    return Fcb;
+}
+
+void Vcb_InsertFCB( CTX_INSTANCE_CONTEXT* InstanceContext, FCB* Fcb )
+{
+    InsertTailList( &InstanceContext->FcbListHead, &Fcb->ListEntry );
+}
+
+void Vcb_DeleteFCB( CTX_INSTANCE_CONTEXT* InstanceContext, FCB* Fcb )
+{
+    UNREFERENCED_PARAMETER( InstanceContext );
+    RemoveEntryList( &Fcb->ListEntry );
 }
 
 bool IsOwnFileObject( FILE_OBJECT* FileObject )

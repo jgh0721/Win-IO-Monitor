@@ -10,8 +10,8 @@
 #   pragma execution_character_set( "utf-8" )
 #endif
 
-NTSTATUS InstanceSetup( PCFLT_RELATED_OBJECTS FltObjects, FLT_INSTANCE_SETUP_FLAGS Flags, ULONG VolumeDeviceType,
-                        FLT_FILESYSTEM_TYPE VolumeFilesystemType )
+NTSTATUS FLTAPI InstanceSetup( PCFLT_RELATED_OBJECTS FltObjects, FLT_INSTANCE_SETUP_FLAGS Flags, ULONG VolumeDeviceType,
+                               FLT_FILESYSTEM_TYPE VolumeFilesystemType )
 {
     NTSTATUS Status = STATUS_SUCCESS;
 
@@ -31,17 +31,24 @@ NTSTATUS InstanceSetup( PCFLT_RELATED_OBJECTS FltObjects, FLT_INSTANCE_SETUP_FLA
     return Status;
 }
 
-NTSTATUS InstanceQueryTeardown( PCFLT_RELATED_OBJECTS FltObjects, FLT_INSTANCE_QUERY_TEARDOWN_FLAGS Flags )
+NTSTATUS FLTAPI InstanceQueryTeardown( PCFLT_RELATED_OBJECTS FltObjects, FLT_INSTANCE_QUERY_TEARDOWN_FLAGS Flags )
 {
+    UNREFERENCED_PARAMETER( FltObjects );
+    UNREFERENCED_PARAMETER( Flags );
+
     return STATUS_SUCCESS;
 }
 
-void InstanceTeardownStart( PCFLT_RELATED_OBJECTS FltObjects, FLT_INSTANCE_TEARDOWN_FLAGS Flags )
+void FLTAPI InstanceTeardownStart( PCFLT_RELATED_OBJECTS FltObjects, FLT_INSTANCE_TEARDOWN_FLAGS Flags )
 {
+    UNREFERENCED_PARAMETER( FltObjects );
+    UNREFERENCED_PARAMETER( Flags );
 }
 
-void InstanceTeardownComplete( PCFLT_RELATED_OBJECTS FltObjects, FLT_INSTANCE_TEARDOWN_FLAGS Flags )
+void FLTAPI InstanceTeardownComplete( PCFLT_RELATED_OBJECTS FltObjects, FLT_INSTANCE_TEARDOWN_FLAGS Flags )
 {
+    UNREFERENCED_PARAMETER( FltObjects );
+    UNREFERENCED_PARAMETER( Flags );
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -57,7 +64,7 @@ NTSTATUS CreateInstanceContext( PCFLT_RELATED_OBJECTS FltObjects, FLT_INSTANCE_S
         Status = CtxAllocateContext( FltObjects->Filter, FLT_INSTANCE_CONTEXT, ( PFLT_CONTEXT* )&InstanceContext );
         if( !NT_SUCCESS( Status ) )
         {
-            KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_ERROR_LEVEL, "[WinIOMon] %s %s Status=0x%08x\n", 
+            KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_ERROR_LEVEL, "[WinIOMon] %s %s Status=0x%08x\n",
                          __FUNCTION__, "CtxAllocateContext FAILED", Status ) );
             break;
         }
@@ -74,7 +81,7 @@ NTSTATUS CreateInstanceContext( PCFLT_RELATED_OBJECTS FltObjects, FLT_INSTANCE_S
         InstanceContext->Instance = FltObjects->Instance;
         InstanceContext->Volume = FltObjects->Volume;
 
-        RtlInitEmptyUnicodeString( &InstanceContext->DeviceName, InstanceContext->DeviceNameBuffer, 
+        RtlInitEmptyUnicodeString( &InstanceContext->DeviceName, InstanceContext->DeviceNameBuffer,
                                    sizeof( WCHAR ) * _countof( InstanceContext->DeviceNameBuffer ) );
 
         Status = FltGetVolumeName( FltObjects->Volume, &InstanceContext->DeviceName, NULL );
@@ -99,6 +106,9 @@ NTSTATUS CreateInstanceContext( PCFLT_RELATED_OBJECTS FltObjects, FLT_INSTANCE_S
         }
 
         nsW32API::IsVolumeWritable( FltObjects->Volume, &InstanceContext->IsWritable );
+
+        ExInitializeResourceLite( &InstanceContext->VcbLock );
+        InitializeListHead( &InstanceContext->FcbListHead );
 
         KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_INFO_LEVEL, "[WinIOMon] %s DeviceName=%wZ DriveLetter=%wc\n",
                      __FUNCTION__, &InstanceContext->DeviceName, InstanceContext->DriveLetter ) );
