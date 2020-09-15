@@ -21,8 +21,25 @@ typedef struct _FCB
 
     ULONG                                       Flags;
 
+    /*!
+     * 파일시스템 드라이버와 네트워크 리다이렉터가 캐시관리자와 상호작용할 때 사용하는 읽기/쓰기 락
+     *
+     * 캐시관리자는 파일시스템 드라이버 또는 네트워크 리다이렉터가 모든 쓰기 동작에 대해 MainResource 를 Exclusively 하게 획득할 것을 기대한다
+     * 캐시관리자는 파일시스템 드라이버 또는 네트워크 리다이렉터가 모든 읽기 동작에 대해 MainResource 를 Shared 하게 획득할 것을 기대한다
+     */
     ERESOURCE                                   MainResource;
+    /*!
+     * 캐시관리자의 Modified Page Writer(MPW) 스레드에서 획득한다
+     */
     ERESOURCE                                   PagingIoResource;
+
+    /*!
+     * AllocationSize : 파일시스템 드라이버 또는 네트워크 리다이렉터에 의해 초기화되며
+     *                  해당 값이 변경되면 반드시 캐시관리자에게 변경된 값을 알려야한다
+     *
+     * ValidDataLength : 실제 파일시스템의 지원여부와 관계없이 캐시관리자는 파일시스템 드라이버 또는 네트워크 리다이렉터가 이 값을 초기화하리랴 예상한다
+     */
+
 
     FILE_LOCK                                   FileLock;
     OPLOCK                                      FileOplock;
