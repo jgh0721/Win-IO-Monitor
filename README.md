@@ -26,3 +26,8 @@ Build Environments
         Visual Studio 2017 
         Qt 5.14.2 
         QtitanDataGrid, but because this module is commercial sw, it's source code were note included. 
+
+
+External Open Source Modules
+
+    * https://github.com/ned14/ntkernel-error-category

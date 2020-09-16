@@ -674,6 +674,12 @@ namespace nsW32API
     const char* ConvertFileInformationClassTo( __in const FILE_INFORMATION_CLASS FileInformationClass );
 
     const char* ConvertIRPMajorFunction( __in UCHAR MajorFunction );
+    const char* ConvertIRPMinorFunction( __in UCHAR MajorFunction, __in UCHAR MinorFunction );
+
+    void PrintOutIrpFlags( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in ULONG ShareAccess );
+    void PrintOutOperationFlags( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in ULONG ShareAccess );
+    void PrintOutCreateShareAccess( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in ULONG ShareAccess );
+    void PrintOutCreateDisposition( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in ULONG ShareAccess );
 
     const char* ConvertCreateShareAccess( __in ULONG ShareAccess );
     const char* ConvertCreateDisposition( __in ULONG CreateDisposition );

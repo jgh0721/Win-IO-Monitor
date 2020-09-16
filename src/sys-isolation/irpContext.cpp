@@ -179,3 +179,52 @@ VOID CloseIrpContext( __in PIRP_CONTEXT IrpContext )
 
     CtxReleaseContext( IrpContext->InstanceContext );
 }
+
+VOID PrintIrpContext( __in PIRP_CONTEXT IrpContext )
+{
+    if( IrpContext == NULLPTR ) return;
+
+    const auto& IsPreIO = BooleanFlagOn( IrpContext->Data->Flags, FLTFL_CALLBACK_DATA_POST_OPERATION ) == FALSE;
+    const auto& MajorFunction = IrpContext->Data->Iopb->MajorFunction;
+    const auto& MinorFunction = IrpContext->Data->Iopb->MinorFunction;
+
+    switch( MajorFunction )
+    {
+        case IRP_MJ_CREATE: {
+            KdPrint( ( "[WinIOSol] EvtID=%09d IRP=%s Proc=%06d,%ws Src=%ws\n"
+                       , IrpContext->EvtID
+                       , FltGetIrpName( MajorFunction )
+                       , IrpContext->ProcessId, IrpContext->ProcessFileName == NULLPTR ? L"(null)" : IrpContext->ProcessFileName
+                       , IrpContext->SrcFileFullPath.Buffer
+                       ) );
+
+        } break;
+        case IRP_MJ_CREATE_NAMED_PIPE: {} break;
+        case IRP_MJ_CLOSE: {} break;
+        case IRP_MJ_READ: {} break;
+        case IRP_MJ_WRITE: {} break;
+        case IRP_MJ_QUERY_INFORMATION: {} break;
+        case IRP_MJ_SET_INFORMATION: {} break;
+        case IRP_MJ_QUERY_EA: {} break;
+        case IRP_MJ_SET_EA: {} break;
+        case IRP_MJ_FLUSH_BUFFERS: {} break;
+        case IRP_MJ_QUERY_VOLUME_INFORMATION: {} break;
+        case IRP_MJ_SET_VOLUME_INFORMATION: {} break;
+        case IRP_MJ_DIRECTORY_CONTROL: {} break;
+        case IRP_MJ_FILE_SYSTEM_CONTROL: {} break;
+        case IRP_MJ_DEVICE_CONTROL: {} break;
+        case IRP_MJ_INTERNAL_DEVICE_CONTROL: {} break;
+        case IRP_MJ_SHUTDOWN: {} break;
+        case IRP_MJ_LOCK_CONTROL: {} break;
+        case IRP_MJ_CREATE_MAILSLOT: {} break;
+        case IRP_MJ_QUERY_SECURITY: {} break;
+        case IRP_MJ_SET_SECURITY: {} break;
+        case IRP_MJ_POWER: {} break;
+        case IRP_MJ_SYSTEM_CONTROL: {} break;
+        case IRP_MJ_DEVICE_CHANGE: {} break;
+        case IRP_MJ_QUERY_QUOTA: {} break;
+        case IRP_MJ_SET_QUOTA: {} break;
+        case IRP_MJ_PNP: {} break;
+    }
+        
+}

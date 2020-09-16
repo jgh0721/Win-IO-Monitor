@@ -10,6 +10,7 @@
 #include "W32API_Base.hpp"
 #include "W32API_NtOsKrnl.hpp"
 #include "W32API_FltMgr.hpp"
+#include "W32API_NTSTATUS.hpp"
 
 namespace nsW32API
 {
@@ -75,6 +76,11 @@ namespace nsW32API
     const char* ConvertCreateResultInformation( __in NTSTATUS Status, __in ULONG_PTR Information );
 
     const char* ConvertFileInformationClassTo( __in const FILE_INFORMATION_CLASS FileInformationClass );
+
+    void PrintOutIrpFlags( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in ULONG ShareAccess );
+    void PrintOutOperationFlags( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in ULONG ShareAccess );
+    void PrintOutCreateShareAccess( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in ULONG ShareAccess );
+    void PrintOutCreateDisposition( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in ULONG ShareAccess );
 
 } // nsW32API
 

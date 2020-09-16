@@ -107,15 +107,40 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
                                    IO_FORCE_ACCESS_CHECK
                                    );
 
-        if( !NT_SUCCESS( CreateResult.IoStatus.Status ) )
-        {
-            KdBreakPoint();
-            __leave;
-        }
-
         FltAcquireResourceExclusive( &IrpContext->InstanceContext->VcbLock );
         CreateArgs.Fcb = Vcb_SearchFCB( IrpContext->InstanceContext, IrpContext->SrcFileFullPathWOVolume );
         SetFlag( CreateResult.CompleteStatus, COMPLETE_FREE_INST_RSRC );
+
+        switch( CreateArgs.CreateDisposition )
+        {
+            case FILE_SUPERSEDE:
+            {
+                ProcessPreCreate_SUPERSEDE( IrpContext, &CreateResult );
+            } break;
+            case FILE_OPEN:
+            {
+                ProcessPreCreate_OPEN( IrpContext, &CreateResult );
+            } break;
+            case FILE_CREATE:
+            {
+                ProcessPreCreate_CREATE( IrpContext, &CreateResult );
+            } break;
+            case FILE_OPEN_IF:
+            {
+                ProcessPreCreate_OPEN_IF( IrpContext, &CreateResult );
+            } break;
+            case FILE_OVERWRITE:
+            {
+                ProcessPreCreate_OVERWRITE( IrpContext, &CreateResult );
+            } break;
+            case FILE_OVERWRITE_IF:
+            {
+                ProcessPreCreate_OVERWRITE_IF( IrpContext, &CreateResult );
+            } break;
+        } // switch CreateDisposition
+
+        if( BooleanFlagOn( CreateResult.CompleteStatus, COMPLETE_DONT_CONTINUE_PROCESS ) )
+            __leave;
 
         if( CreateArgs.Fcb == NULLPTR )
         {
@@ -164,27 +189,6 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
         //else
         //    SetFlag( CreateResult.CompleteStatus, COMPLETE_FREE_INST_RSRC );
 
-        //switch( CreateArgs.CreateDisposition )
-        //{
-        //    case FILE_SUPERSEDE: {
-        //        ProcessPreCreate_SUPERSEDE( IrpContext, &CreateResult );
-        //    } break;
-        //    case FILE_OPEN: {
-        //        ProcessPreCreate_OPEN( IrpContext, &CreateResult );
-        //    } break;
-        //    case FILE_CREATE: {
-        //        ProcessPreCreate_CREATE( IrpContext, &CreateResult );
-        //    } break;
-        //    case FILE_OPEN_IF: {
-        //        ProcessPreCreate_OPEN_IF( IrpContext, &CreateResult );
-        //    } break;
-        //    case FILE_OVERWRITE: {
-        //        ProcessPreCreate_OVERWRITE( IrpContext, &CreateResult );
-        //    } break;
-        //    case FILE_OVERWRITE_IF: {
-        //        ProcessPreCreate_OVERWRITE_IF( IrpContext, &CreateResult );
-        //    } break;
-        //} // switch CreateDisposition
 
         //if( BooleanFlagOn( CreateResult.CompleteStatus, COMPLETE_ALLOCATE_FCB ) )
         //{
@@ -414,7 +418,10 @@ NTSTATUS ProcessPreCreate_OPEN_NEW( IRP_CONTEXT* Args, CREATE_RESULT* Result )
         if( !BooleanFlagOn( CreateArgs->FileStatus, FILE_ALREADY_EXISTS ) )
         {
             Result->IoStatus.Status = STATUS_OBJECT_NAME_NOT_FOUND;
+            Result->IoStatus.Information = 0;
             Result->FltStatus = FLT_PREOP_COMPLETE;
+
+            SetFlag( Result->CompleteStatus, COMPLETE_DONT_CONTINUE_PROCESS );
             __leave;
         }
 

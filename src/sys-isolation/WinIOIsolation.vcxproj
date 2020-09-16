@@ -28,6 +28,7 @@
     <ClInclude Include="..\cmn\W32API_FltMgr.hpp" />
     <ClInclude Include="..\cmn\W32API_LibMgr.hpp" />
     <ClInclude Include="..\cmn\W32API_NtOsKrnl.hpp" />
+    <ClInclude Include="..\cmn\W32API_NTSTATUS.hpp" />
     <ClInclude Include="callbacks\cacheManagerCallbacks.hpp" />
     <ClInclude Include="callbacks\callbacks.hpp" />
     <ClInclude Include="callbacks\fltCleanup.hpp" />

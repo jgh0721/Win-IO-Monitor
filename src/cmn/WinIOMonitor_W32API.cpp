@@ -133,6 +133,40 @@ const char* nsW32API::ConvertIRPMajorFunction( UCHAR MajorFunction )
     return "Unk";
 }
 
+const char* nsW32API::ConvertIRPMinorFunction( UCHAR MajorFunction, UCHAR MinorFunction )
+{
+    switch( MajorFunction )
+    {
+        case IRP_MJ_READ:
+        case IRP_MJ_WRITE: {
+            switch( MinorFunction )
+            {
+                case IRP_MN_NORMAL: return "NORMAL";
+                case IRP_MN_DPC: return "DPC";
+                case IRP_MN_MDL: return "MDL";
+                case IRP_MN_COMPLETE: return "COMPLETE";
+                case IRP_MN_COMPRESSED: return "COMPRESSED";
+                
+                case IRP_MN_MDL_DPC: return "MDL_DPC";
+                case IRP_MN_COMPLETE_MDL: return "COMPLETE_MDL";
+                case IRP_MN_COMPLETE_MDL_DPC: return "COMPLETE_MDL_DPC";
+
+                case IRP_MN_QUERY_LEGACY_BUS_INFORMATION: return "QUERY_LEGACY_BUS";
+            }
+        } break;
+
+        case IRP_MJ_DIRECTORY_CONTROL: {
+            switch( MinorFunction )
+            {
+                case IRP_MN_QUERY_DIRECTORY: return "QUERY_DIRECTORY";
+                case IRP_MN_NOTIFY_CHANGE_DIRECTORY: return "NOTIFY_CHANGE_DIRECTORY";
+            }
+        } break;
+    }
+
+    return "None";
+}
+
 const char* nsW32API::ConvertCreateShareAccess( ULONG ShareAccess )
 {
     if( ShareAccess & ( FILE_SHARE_READ ) )

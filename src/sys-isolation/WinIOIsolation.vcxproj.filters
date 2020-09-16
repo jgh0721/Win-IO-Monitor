@@ -144,6 +144,9 @@
     <ClInclude Include="callbacks\cacheManagerCallbacks.hpp">
       <Filter>callbacks</Filter>
     </ClInclude>
+    <ClInclude Include="..\cmn\W32API_NTSTATUS.hpp">
+      <Filter>common files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="WinIOIsolation.cpp">

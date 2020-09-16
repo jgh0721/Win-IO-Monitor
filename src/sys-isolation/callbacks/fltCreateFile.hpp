@@ -75,10 +75,12 @@ typedef struct _CREATE_ARGS
 
 enum TyEnCompleteStatus
 {
-    COMPLETE_FREE_MAIN_RSRC     = 0x1,      // Fcb 내의 MainResource
-    COMPLETE_FREE_INST_RSRC     = 0x2,      // InstanceContext 내의 Lock
-    COMPLETE_ALLOCATE_FCB       = 0x4,      // FCB 를 새로 할당해야함 
-    COMPLETE_INIT_FCB           = 0x8       // FCB 를 초기화 해야함
+    COMPLETE_FREE_MAIN_RSRC             = 0x1,      // Fcb 내의 MainResource
+    COMPLETE_FREE_INST_RSRC             = 0x2,      // InstanceContext 내의 Lock
+    COMPLETE_ALLOCATE_FCB               = 0x4,      // FCB 를 새로 할당해야함 
+    COMPLETE_INIT_FCB                   = 0x8,      // FCB 를 초기화 해야함
+
+    COMPLETE_DONT_CONTINUE_PROCESS      = 0x100     // 외부 함수 수행 후에 즉시 종료
 };
 
 typedef struct _RESULT
