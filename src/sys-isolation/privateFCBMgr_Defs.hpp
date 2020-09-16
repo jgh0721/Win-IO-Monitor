@@ -4,10 +4,16 @@
 #include "fltBase.hpp"
 
 #include "utilities/bufferMgr_Defs.hpp"
+#include "utilities/contextMgr_Defs.hpp"
 
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
 #endif
+
+typedef struct _FCB_CUSTOM
+{
+
+} FCB_CUSTOM, *PFCB_CUSTOM;
 
 typedef struct _FCB
 {
@@ -58,10 +64,13 @@ typedef struct _FCB
     HANDLE                                      LowerFileHandle;
     SHARE_ACCESS                                LowerShareAccess;
 
-    // 드라이브 문자, 디바이스 이름 등을 제외한 경로 및 이름( \ 시작 )
     TyGenericBuffer<WCHAR>                      FileFullPath;
+    // SrcFileFullPath 에서 드라이브 문자 또는 디바이스 이름등을 제외한 순수한 경로 및 이름( \ 로 시작한다 )
+    WCHAR*                                      FileFullPathWOVolume;
     // FileFullPath 에서 마지막 이름 부분만 가르킴, 직접 해제하지 말 것
     WCHAR*                                      FileName;
+
+    CTX_INSTANCE_CONTEXT*                       InstanceContext;
 
     ///////////////////////////////////////////////////////////////////////////
 

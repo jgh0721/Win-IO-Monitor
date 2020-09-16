@@ -1,6 +1,7 @@
 ﻿#include "fltSetInformation.hpp"
 
 #include "privateFCBMgr.hpp"
+#include "irpContext.hpp"
 
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
@@ -10,6 +11,7 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreSetInformation( PFLT_CALLBACK_DATA Dat
                                                           PVOID* CompletionContext )
 {
     FLT_PREOP_CALLBACK_STATUS                   FltStatus = FLT_PREOP_SUCCESS_NO_CALLBACK;
+    IRP_CONTEXT*                                IrpContext = NULLPTR;
 
     __try
     {
@@ -24,6 +26,14 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreSetInformation( PFLT_CALLBACK_DATA Dat
 
         FILE_OBJECT* FileObject = FltObjects->FileObject;
         FCB* Fcb = (FCB*)FileObject->FsContext;
+        IrpContext = CreateIrpContext( Data, FltObjects );
+        const auto& FileInformationClass = ( nsW32API::FILE_INFORMATION_CLASS )IrpContext->Data->Iopb->Parameters.QueryFileInformation.FileInformationClass;
+
+        KdPrint( ( "[WinIOSol] EvtID=%09d %s CLASS=%-45s Name=%ws\n",
+                   IrpContext->EvtID, __FUNCTION__
+                   , nsW32API::ConvertFileInformationClassTo( FileInformationClass )
+                   , IrpContext->SrcFileFullPath.Buffer
+                   ) );
 
         Data->IoStatus.Status = FltSetInformationFile( FltObjects->Instance, Fcb->LowerFileObject, Data->Iopb->Parameters.SetFileInformation.InfoBuffer,
                                                        Data->Iopb->Parameters.SetFileInformation.Length,
@@ -33,7 +43,7 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreSetInformation( PFLT_CALLBACK_DATA Dat
     }
     __finally
     {
-
+        CloseIrpContext( IrpContext );
     }
 
     return FltStatus;

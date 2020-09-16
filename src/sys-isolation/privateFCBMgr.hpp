@@ -3,6 +3,7 @@
 
 #include "fltBase.hpp"
 #include "privateFCBMgr_Defs.hpp"
+#include "irpContext_Defs.hpp"
 
 #include "utilities/contextMgr_Defs.hpp"
 
@@ -11,7 +12,7 @@
 #endif
 
 FCB* AllocateFcb();
-NTSTATUS InitializeFCB( __in FCB* Fcb );
+NTSTATUS InitializeFCB( __in FCB* Fcb, __in IRP_CONTEXT* IrpContext );
 NTSTATUS UninitializeFCB( __in FCB* Fcb );
 
 // VCB = Volume Control Block,

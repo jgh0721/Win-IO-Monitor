@@ -1,5 +1,8 @@
 ﻿#include "privateFCBMgr.hpp"
 
+#include "utilities/bufferMgr.hpp"
+#include "fltCmnLibs.hpp"
+
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
 #endif
@@ -15,7 +18,7 @@ FCB* AllocateFcb()
     return Fcb;
 }
 
-NTSTATUS InitializeFCB( FCB* Fcb )
+NTSTATUS InitializeFCB( FCB* Fcb, __in IRP_CONTEXT* IrpContext )
 {
     NTSTATUS Status = STATUS_UNSUCCESSFUL;
 
@@ -39,8 +42,34 @@ NTSTATUS InitializeFCB( FCB* Fcb )
         FltInitializeFileLock( &Fcb->FileLock );
         FsRtlInitializeOplock( &Fcb->FileOplock );
 
+        InterlockedIncrement( &Fcb->OpnCount );
+        InterlockedIncrement( &Fcb->ClnCount );
+        InterlockedIncrement( &Fcb->RefCount );
+
         ///////////////////////////////////////////////////////////////////////
-        
+
+        Fcb->FileFullPath = AllocateBuffer<WCHAR>( BUFFER_FILENAME, IrpContext->SrcFileFullPath.BufferSize );
+        RtlCopyMemory( Fcb->FileFullPath.Buffer, IrpContext->SrcFileFullPath.Buffer, Fcb->FileFullPath.BufferSize );
+        Fcb->FileName = nsUtils::ReverseFindW( Fcb->FileFullPath.Buffer, L'\\' );
+
+        if( Fcb->FileFullPath.Buffer != NULLPTR )
+        {
+            if( Fcb->FileFullPath.Buffer[ 1 ] == L':' )
+                Fcb->FileFullPathWOVolume = &Fcb->FileFullPath.Buffer[ 2 ];
+            else
+            {
+                auto cchDeviceName = nsUtils::strlength( IrpContext->InstanceContext->DeviceNameBuffer );
+                if( cchDeviceName > 0 )
+                    Fcb->FileFullPathWOVolume = &Fcb->FileFullPath.Buffer[ cchDeviceName ];
+            }
+
+            if( Fcb->FileFullPathWOVolume == NULLPTR )
+                Fcb->FileFullPathWOVolume = Fcb->FileFullPath.Buffer;
+        }
+
+        Fcb->InstanceContext = IrpContext->InstanceContext;
+        FltReferenceContext( Fcb->InstanceContext );
+
         ///////////////////////////////////////////////////////////////////////
 
         Status = STATUS_SUCCESS;
@@ -58,6 +87,19 @@ NTSTATUS UninitializeFCB( FCB* Fcb )
         ASSERT( Fcb != NULLPTR );
         if( Fcb == NULLPTR )
             break;
+
+        if( BooleanFlagOn( Fcb->Flags, FILE_DELETE_ON_CLOSE ) )
+        {
+            FILE_DISPOSITION_INFORMATION fdi;
+            fdi.DeleteFile = TRUE;
+
+            FltSetInformationFile( Fcb->InstanceContext->Instance,
+                                   Fcb->LowerFileObject,
+                                   &fdi, sizeof( fdi ),
+                                   (FILE_INFORMATION_CLASS)nsW32API::FileDispositionInformation );
+        }
+
+        FltReleaseContext( Fcb->InstanceContext );
 
         FltClose( Fcb->LowerFileHandle );
         Fcb->LowerFileHandle = NULLPTR;

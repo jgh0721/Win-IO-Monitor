@@ -5,6 +5,7 @@
 #include "utilities/contextMgr_Defs.hpp"
 
 #include "fltCmnLibs.hpp"
+#include "privateFCBMgr.hpp"
 
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
@@ -49,10 +50,17 @@ PIRP_CONTEXT CreateIrpContext( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_
 
         IrpContext->Data            = Data;
         IrpContext->FltObjects      = FltObjects;
+        IrpContext->DebugText       = (CHAR*)ExAllocateFromNPagedLookasideList( &GlobalContext.DebugLookasideList );
+        RtlZeroMemory( IrpContext->DebugText, 1024 * sizeof( CHAR ) );
 
         IrpContext->EvtID           = CreateEvtID();
         IrpContext->InstanceContext = InstanceContext;
         FltReferenceContext( IrpContext->InstanceContext );
+
+        if( IsOwnFileObject( FltObjects->FileObject ) == true )
+        {
+            
+        }
 
         IrpContext->ProcessId       = FltGetRequestorProcessId( Data );
         SearchProcessInfo( IrpContext->ProcessId, &IrpContext->ProcessFullPath, &IrpContext->ProcessFileName );
@@ -162,6 +170,8 @@ VOID CloseIrpContext( __in PIRP_CONTEXT IrpContext )
 {
     if( IrpContext == NULLPTR )
         return;
+
+    ExFreeToNPagedLookasideList( &GlobalContext.DebugLookasideList, IrpContext->DebugText );
 
     DeallocateBuffer( &IrpContext->ProcessFullPath );
     DeallocateBuffer( &IrpContext->SrcFileFullPath );

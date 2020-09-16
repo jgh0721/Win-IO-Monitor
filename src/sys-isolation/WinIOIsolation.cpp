@@ -78,6 +78,8 @@ void DriverUnload( PDRIVER_OBJECT DriverObject )
 
     RemoveControlDevice( GlobalContext );
 
+    ExDeleteNPagedLookasideList( &GlobalContext.DebugLookasideList );
+
     ExDeleteNPagedLookasideList( &GlobalContext.IrpContextLookasideList );
     ExDeleteNPagedLookasideList( &GlobalContext.FileNameLookasideList );
     ExDeleteNPagedLookasideList( &GlobalContext.ProcNameLookasideList );
@@ -100,6 +102,10 @@ NTSTATUS InitializeGlobalContext( PDRIVER_OBJECT DriverObject )
         GlobalContext.TimeOutMs.QuadPart = RELATIVE( MILLISECONDS( 3000 ) );
 
         IF_FAILED_BREAK( Status, CreateControlDevice( GlobalContext ) );
+
+        ExInitializeNPagedLookasideList( &GlobalContext.DebugLookasideList,
+                                         NULL, NULL, 0,
+                                         1024, POOL_IRPCONTEXT_TAG, 0 );
 
         ExInitializeNPagedLookasideList( &GlobalContext.IrpContextLookasideList,
                                          NULL, NULL, 0,

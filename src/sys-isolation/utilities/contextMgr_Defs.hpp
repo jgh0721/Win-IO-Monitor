@@ -22,6 +22,7 @@ typedef struct _CTX_GLOBAL_DATA
     PFLT_PORT                       ClientPort;
 
     ULONG                           DebugLevel;
+    NPAGED_LOOKASIDE_LIST           DebugLookasideList;
 
     NPAGED_LOOKASIDE_LIST           IrpContextLookasideList;
     NPAGED_LOOKASIDE_LIST           FileNameLookasideList;
@@ -29,7 +30,7 @@ typedef struct _CTX_GLOBAL_DATA
     NPAGED_LOOKASIDE_LIST           SendPacketLookasideList;
     NPAGED_LOOKASIDE_LIST           ReplyPacketLookasideList;
     NPAGED_LOOKASIDE_LIST           FcbLookasideList;
-
+    
     PVOID                           ProcessFilter;
 
     LARGE_INTEGER                   TimeOutMs;

@@ -1,6 +1,7 @@
 ﻿#include "fltCleanup.hpp"
 
 #include "privateFCBMgr.hpp"
+#include "irpContext.hpp"
 
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
@@ -11,6 +12,11 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCleanup( PFLT_CALLBACK_DATA Data, PCFL
                                                   PVOID* CompletionContext )
 {
     FLT_PREOP_CALLBACK_STATUS                   FltStatus = FLT_PREOP_SUCCESS_NO_CALLBACK;
+    IRP_CONTEXT*                                IrpContext = NULLPTR;
+    FCB*                                        Fcb = NULLPTR;
+    FILE_OBJECT*                                FileObject = NULLPTR;
+    bool                                        IsReleaseVcbLock = false;
+    bool                                        IsFreeFcbMainResource = false;
 
     __try
     {
@@ -26,10 +32,56 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCleanup( PFLT_CALLBACK_DATA Data, PCFL
         if( FLT_IS_IRP_OPERATION( Data ) == false )
             __leave;
 
+        FileObject = FltObjects->FileObject;
+        Fcb = ( FCB* )FileObject->FsContext;
+        IrpContext = CreateIrpContext( Data, FltObjects );
+
+        KdPrint( ( "[WinIOSol] EvtID=%09d %s Open=%d Clean=%d Ref=%d Name=%ws\n"
+                   , IrpContext->EvtID, __FUNCTION__
+                   , Fcb->OpnCount, Fcb->ClnCount, Fcb->RefCount
+                   , IrpContext->SrcFileFullPath.Buffer
+                   ) );
+
+        FltAcquireResourceExclusive( &IrpContext->InstanceContext->VcbLock );
+        IsReleaseVcbLock = true;
+
+        FltAcquireResourceExclusive( &Fcb->MainResource );
+        IsFreeFcbMainResource = true;
+
+        LONG UncleanCount = InterlockedDecrement( &Fcb->ClnCount );
+        if( UncleanCount < 0 )
+        {
+            // TODO: debug it!!
+            KdBreakPoint();
+            UncleanCount = 0;
+        }
+
+        if( UncleanCount == 0 )
+        {
+            
+        }
+
+        IoRemoveShareAccess( FileObject, &Fcb->LowerShareAccess );
+
+        SetFlag( FileObject->Flags, FO_CLEANUP_COMPLETE );
+
+        Data->IoStatus.Status = STATUS_SUCCESS;
+        Data->IoStatus.Information = 0;
+
+        FltStatus = FLT_PREOP_COMPLETE;
     }
     __finally
     {
+        if( IrpContext != NULLPTR )
+        {
+            if( IsFreeFcbMainResource == true )
+                FltReleaseResource( &Fcb->MainResource );
 
+            if( IsReleaseVcbLock == true )
+                FltReleaseResource( &IrpContext->InstanceContext->VcbLock );
+        }
+
+        CloseIrpContext( IrpContext );
     }
 
     return FltStatus;

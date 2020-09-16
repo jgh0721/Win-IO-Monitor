@@ -16,6 +16,7 @@ typedef struct _IRP_CONTEXT
 {
     PFLT_CALLBACK_DATA                  Data;
     PCFLT_RELATED_OBJECTS               FltObjects;
+    CHAR*                               DebugText;
 
     LONG                                EvtID;
     CTX_INSTANCE_CONTEXT*               InstanceContext;        // 반드시 CtxReleaseContext 를 호출해야한다

@@ -79,6 +79,13 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
             CreateDisposition 에 따라 분기 처리를 한다
         */
 
+        KdPrint( ( "[WinIOSol] EVTID=%09d %s ShareAccess=%s Disposition=%s DoC=%d Name=%ws\n", 
+                   IrpContext->EvtID, __FUNCTION__
+                   , nsW32API::ConvertCreateShareAccess( Data->Iopb->Parameters.Create.ShareAccess )
+                   , nsW32API::ConvertCreateDisposition( CreateArgs.CreateDisposition )
+                   , BooleanFlagOn( CreateArgs.CreateOptions, FILE_DELETE_ON_CLOSE )
+                   , IrpContext->SrcFileFullPath.Buffer ) );
+
         CreateArgs.CreateFileName = AllocateBuffer<WCHAR>( BUFFER_FILENAME, IrpContext->SrcFileFullPath.BufferSize + _countof( IrpContext->InstanceContext->DeviceNameBuffer ) );
 
         RtlStringCbCatW( CreateArgs.CreateFileName.Buffer, CreateArgs.CreateFileName.BufferSize, IrpContext->InstanceContext->DeviceNameBuffer );
@@ -113,7 +120,7 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
         if( CreateArgs.Fcb == NULLPTR )
         {
             CreateArgs.Fcb = AllocateFcb();
-            InitializeFCB( CreateArgs.Fcb );
+            InitializeFCB( CreateArgs.Fcb, IrpContext );
 
             CreateArgs.FileObject->FsContext = CreateArgs.Fcb;
             CreateArgs.FileObject->FsContext2 = NULLPTR;
@@ -125,6 +132,9 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
             CreateArgs.FileObject->PrivateCacheMap = NULLPTR;               // 파일에 접근할 때 캐시를 초기화한다
             CreateArgs.FileObject->Vpb = CreateArgs.LowerFileObject->Vpb;
 
+            CreateArgs.Fcb->LowerFileObject = CreateArgs.LowerFileObject;
+            CreateArgs.Fcb->LowerFileHandle = CreateArgs.LowerFileHandle;
+
             Vcb_InsertFCB( IrpContext->InstanceContext, CreateArgs.Fcb );
         }
         else
@@ -132,7 +142,16 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
             InterlockedIncrement( &CreateArgs.Fcb->OpnCount );
             InterlockedIncrement( &CreateArgs.Fcb->ClnCount );
             InterlockedIncrement( &CreateArgs.Fcb->RefCount );
+
+            // 최초에 LowerFileObject/Handle 을 설정했다면 추가로 설정할 필요 없음
+            FltClose( CreateArgs.LowerFileHandle );
+            ObDereferenceObject( CreateArgs.LowerFileObject );
         }
+
+        if( BooleanFlagOn( CreateArgs.CreateOptions, FILE_DELETE_ON_CLOSE ) )
+            SetFlag( CreateArgs.Fcb->Flags, FILE_DELETE_ON_CLOSE );
+
+        CreateResult.FltStatus = FLT_PREOP_COMPLETE;
 
         //CreateResult.IoStatus.Status = OpenLowerFileObject( IrpContext );
 
@@ -191,9 +210,10 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
         {
             if( IrpContext->IsAudit == true )
             {
-                KdPrintEx( ( DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, "[WinIOSol] EvtID=%09d %s Status=0x%08x Name=%ws\n",
-                             IrpContext->EvtID, __FUNCTION__,
-                             CreateResult.IoStatus.Status, IrpContext->SrcFileFullPath.Buffer ) );
+                KdPrint( ( "[WinIOSol] EvtID=%09d %s Status=0x%08x Information=%s Name=%ws\n",
+                           IrpContext->EvtID, __FUNCTION__
+                           , CreateResult.IoStatus.Status, nsW32API::ConvertCreateResultInformation( CreateResult.IoStatus.Status, CreateResult.IoStatus.Information )
+                           , IrpContext->SrcFileFullPath.Buffer ) );
 
 
                 if( BooleanFlagOn( CreateResult.CompleteStatus, COMPLETE_FREE_INST_RSRC ) )

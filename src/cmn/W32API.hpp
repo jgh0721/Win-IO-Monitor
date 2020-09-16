@@ -66,6 +66,16 @@ namespace nsW32API
                                __in_opt PIO_DRIVER_CREATE_CONTEXT DriverContext
     );
 
+    ///////////////////////////////////////////////////////////////////////////
+    /// Debug Helper
+
+    const char* ConvertCreateShareAccess( __in ULONG ShareAccess );
+    const char* ConvertCreateDisposition( __in ULONG CreateDisposition );
+
+    const char* ConvertCreateResultInformation( __in NTSTATUS Status, __in ULONG_PTR Information );
+
+    const char* ConvertFileInformationClassTo( __in const FILE_INFORMATION_CLASS FileInformationClass );
+
 } // nsW32API
 
 #endif // HDR_W32API
