@@ -107,6 +107,11 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
                                    IO_FORCE_ACCESS_CHECK
                                    );
 
+        if( NT_SUCCESS( CreateResult.IoStatus.Status ) )
+        {
+            SetFlag( CreateArgs.FileStatus, FILE_ALREADY_EXISTS );
+        }
+
         FltAcquireResourceExclusive( &IrpContext->InstanceContext->VcbLock );
         CreateArgs.Fcb = Vcb_SearchFCB( IrpContext->InstanceContext, IrpContext->SrcFileFullPathWOVolume );
         SetFlag( CreateResult.CompleteStatus, COMPLETE_FREE_INST_RSRC );
