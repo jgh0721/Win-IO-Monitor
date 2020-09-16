@@ -191,11 +191,28 @@ VOID PrintIrpContext( __in PIRP_CONTEXT IrpContext )
     switch( MajorFunction )
     {
         case IRP_MJ_CREATE: {
+            auto CreateOptions = IrpContext->Data->Iopb->Parameters.Create.Options & 0x00FFFFFF;
+            auto Disposition = ( IrpContext->Data->Iopb->Parameters.Create.Options >> 24 ) & 0x000000ff;
+
             KdPrint( ( "[WinIOSol] EvtID=%09d IRP=%s Proc=%06d,%ws Src=%ws\n"
                        , IrpContext->EvtID
                        , FltGetIrpName( MajorFunction )
                        , IrpContext->ProcessId, IrpContext->ProcessFileName == NULLPTR ? L"(null)" : IrpContext->ProcessFileName
                        , IrpContext->SrcFileFullPath.Buffer
+                       ) );
+
+            RtlStringCbCatA( IrpContext->DebugText, 1024, "OpFlags=" );
+            nsW32API::PrintOutOperationFlags( IrpContext->DebugText, 1024, IrpContext->Data->Iopb->OperationFlags );
+            RtlStringCbCatA( IrpContext->DebugText, 1024, " " );
+
+            RtlStringCbCatA( IrpContext->DebugText, 1024, "CreateOptions=" );
+            nsW32API::PrintOutCreateOptions( IrpContext->DebugText, 1024, CreateOptions );
+
+            KdPrint( ( "[WinIOSol] EvtID=%09d       >> %s ShareAccess=%s Disposition=%s\n"
+                       , IrpContext->EvtID
+                       , IrpContext->DebugText
+                       , nsW32API::ConvertCreateShareAccess( IrpContext->Data->Iopb->Parameters.Create.ShareAccess )
+                       , nsW32API::ConvertCreateDisposition( Disposition )
                        ) );
 
         } break;

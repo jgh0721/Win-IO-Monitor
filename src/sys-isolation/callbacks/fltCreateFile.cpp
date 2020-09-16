@@ -79,12 +79,7 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
             CreateDisposition 에 따라 분기 처리를 한다
         */
 
-        KdPrint( ( "[WinIOSol] EVTID=%09d %s ShareAccess=%s Disposition=%s DoC=%d Name=%ws\n", 
-                   IrpContext->EvtID, __FUNCTION__
-                   , nsW32API::ConvertCreateShareAccess( Data->Iopb->Parameters.Create.ShareAccess )
-                   , nsW32API::ConvertCreateDisposition( CreateArgs.CreateDisposition )
-                   , BooleanFlagOn( CreateArgs.CreateOptions, FILE_DELETE_ON_CLOSE )
-                   , IrpContext->SrcFileFullPath.Buffer ) );
+        PrintIrpContext( IrpContext );
 
         CreateArgs.CreateFileName = AllocateBuffer<WCHAR>( BUFFER_FILENAME, IrpContext->SrcFileFullPath.BufferSize + _countof( IrpContext->InstanceContext->DeviceNameBuffer ) );
 

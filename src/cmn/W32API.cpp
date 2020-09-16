@@ -400,3 +400,146 @@ const char* nsW32API::ConvertFileInformationClassTo( const FILE_INFORMATION_CLAS
 
     return "Unknown FileInformationClass";
 }
+
+void nsW32API::PrintOutIrpFlags( char* PrintBuffer, ULONG BufferSize, ULONG IrpFlags )
+{
+    if( PrintBuffer == NULLPTR || BufferSize == 0 ) return;
+
+    if( BooleanFlagOn( IrpFlags, IRP_BUFFERED_IO ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "IRP_BUFFERED_IO|" );
+
+    if( BooleanFlagOn( IrpFlags, IRP_CLOSE_OPERATION ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "IRP_CLOSE_OPERATION|" );
+
+    if( BooleanFlagOn( IrpFlags, IRP_DEALLOCATE_BUFFER ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "IRP_DEALLOCATE_BUFFER|" );
+
+    if( BooleanFlagOn( IrpFlags, IRP_INPUT_OPERATION ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "IRP_INPUT_OPERATION|" );
+
+    if( BooleanFlagOn( IrpFlags, IRP_NOCACHE ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "IRP_NOCACHE|" );
+
+    if( BooleanFlagOn( IrpFlags, IRP_PAGING_IO ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "IRP_PAGING_IO|" );
+
+    if( BooleanFlagOn( IrpFlags, IRP_SYNCHRONOUS_API ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "IRP_SYNCHRONOUS_API|" );
+
+    if( BooleanFlagOn( IrpFlags, IRP_SYNCHRONOUS_PAGING_IO ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "IRP_SYNCHRONOUS_PAGING_IO|" );
+
+    //if( BooleanFlagOn( IrpFlags, IRP_MOUNT_COMPLETION ) )
+    //    RtlStringCbCatA( PrintBuffer, BufferSize, "IRP_MOUNT_COMPLETION|" );
+
+    if( BooleanFlagOn( IrpFlags, IRP_CREATE_OPERATION ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "IRP_CREATE_OPERATION|" );
+
+    if( BooleanFlagOn( IrpFlags, IRP_READ_OPERATION ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "IRP_READ_OPERATION|" );
+
+    if( BooleanFlagOn( IrpFlags, IRP_WRITE_OPERATION ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "IRP_WRITE_OPERATION|" );
+
+    if( BooleanFlagOn( IrpFlags, IRP_DEFER_IO_COMPLETION ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "IRP_DEFER_IO_COMPLETION|" );
+
+    if( BooleanFlagOn( IrpFlags, IRP_ASSOCIATED_IRP ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "IRP_ASSOCIATED_IRP|" );
+
+    if( BooleanFlagOn( IrpFlags, IRP_OB_QUERY_NAME ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "IRP_OB_QUERY_NAME|" );
+
+    if( BooleanFlagOn( IrpFlags, IRP_HOLD_DEVICE_QUEUE ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "IRP_HOLD_DEVICE_QUEUE|" );
+
+    if( BooleanFlagOn( IrpFlags, IRP_UM_DRIVER_INITIATED_IO ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "IRP_UM_DRIVER_INITIATED_IO|" );
+}
+
+void nsW32API::PrintOutOperationFlags( char* PrintBuffer, ULONG BufferSize, ULONG OperationFlags )
+{
+    if( PrintBuffer == NULLPTR || BufferSize == 0 ) return;
+    
+    if( BooleanFlagOn( OperationFlags, SL_CASE_SENSITIVE ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "SL_CASE_SENSITIVE|" );
+    if( BooleanFlagOn( OperationFlags, SL_EXCLUSIVE_LOCK ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "SL_EXCLUSIVE_LOCK|" );
+    if( BooleanFlagOn( OperationFlags, SL_FAIL_IMMEDIATELY ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "SL_FAIL_IMMEDIATELY|" );
+    if( BooleanFlagOn( OperationFlags, SL_FORCE_ACCESS_CHECK ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "SL_FORCE_ACCESS_CHECK|" );
+    if( BooleanFlagOn( OperationFlags, SL_FORCE_DIRECT_WRITE ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "SL_FORCE_DIRECT_WRITE|" );
+    if( BooleanFlagOn( OperationFlags, SL_INDEX_SPECIFIED ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "SL_INDEX_SPECIFIED|" );
+    if( BooleanFlagOn( OperationFlags, SL_OPEN_PAGING_FILE ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "SL_OPEN_PAGING_FILE|" );
+    if( BooleanFlagOn( OperationFlags, SL_OPEN_TARGET_DIRECTORY ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "SL_OPEN_TARGET_DIRECTORY|" );
+    if( BooleanFlagOn( OperationFlags, SL_OVERRIDE_VERIFY_VOLUME ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "SL_OVERRIDE_VERIFY_VOLUME|" );
+    if( BooleanFlagOn( OperationFlags, SL_RESTART_SCAN ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "SL_RESTART_SCAN|" );
+    if( BooleanFlagOn( OperationFlags, SL_RETURN_SINGLE_ENTRY ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "SL_RETURN_SINGLE_ENTRY|" );
+    if( BooleanFlagOn( OperationFlags, SL_WATCH_TREE ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "SL_WATCH_TREE|" );
+    if( BooleanFlagOn( OperationFlags, SL_WRITE_THROUGH ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "SL_WRITE_THROUGH|" );
+}
+
+void nsW32API::PrintOutCreateOptions( char* PrintBuffer, ULONG BufferSize, ULONG CreateOptions )
+{
+    if( PrintBuffer == NULLPTR || BufferSize == 0 ) return;
+
+    if( BooleanFlagOn( CreateOptions, FILE_DIRECTORY_FILE ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "FILE_DIRECTORY_FILE|" );
+    if( BooleanFlagOn( CreateOptions, FILE_WRITE_THROUGH ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "FILE_WRITE_THROUGH|" );
+    if( BooleanFlagOn( CreateOptions, FILE_SEQUENTIAL_ONLY ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "FILE_SEQUENTIAL_ONLY|" );
+    if( BooleanFlagOn( CreateOptions, FILE_NO_INTERMEDIATE_BUFFERING ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "FILE_NO_INTERMEDIATE_BUFFERING|" );
+
+    if( BooleanFlagOn( CreateOptions, FILE_SYNCHRONOUS_IO_ALERT ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "FILE_SYNCHRONOUS_IO_ALERT|" );
+    if( BooleanFlagOn( CreateOptions, FILE_SYNCHRONOUS_IO_NONALERT ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "FILE_SYNCHRONOUS_IO_NONALERT|" );
+    if( BooleanFlagOn( CreateOptions, FILE_NON_DIRECTORY_FILE ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "FILE_NON_DIRECTORY_FILE|" );
+    if( BooleanFlagOn( CreateOptions, FILE_CREATE_TREE_CONNECTION ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "FILE_CREATE_TREE_CONNECTION|" );
+
+    if( BooleanFlagOn( CreateOptions, FILE_COMPLETE_IF_OPLOCKED ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "FILE_COMPLETE_IF_OPLOCKED|" );
+    if( BooleanFlagOn( CreateOptions, FILE_NO_EA_KNOWLEDGE ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "FILE_NO_EA_KNOWLEDGE|" );
+    if( BooleanFlagOn( CreateOptions, FILE_OPEN_REMOTE_INSTANCE ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "FILE_OPEN_REMOTE_INSTANCE|" );
+    if( BooleanFlagOn( CreateOptions, FILE_RANDOM_ACCESS ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "FILE_RANDOM_ACCESS|" );
+
+    if( BooleanFlagOn( CreateOptions, FILE_DELETE_ON_CLOSE ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "FILE_DELETE_ON_CLOSE|" );
+    if( BooleanFlagOn( CreateOptions, FILE_OPEN_BY_FILE_ID ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "FILE_OPEN_BY_FILE_ID|" );
+    if( BooleanFlagOn( CreateOptions, FILE_OPEN_FOR_BACKUP_INTENT ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "FILE_OPEN_FOR_BACKUP_INTENT|" );
+    if( BooleanFlagOn( CreateOptions, FILE_NO_COMPRESSION ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "FILE_NO_COMPRESSION|" );
+
+    if( BooleanFlagOn( CreateOptions, FILE_OPEN_REQUIRING_OPLOCK ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "FILE_OPEN_REQUIRING_OPLOCK|" );
+    if( BooleanFlagOn( CreateOptions, FILE_DISALLOW_EXCLUSIVE ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "FILE_DISALLOW_EXCLUSIVE|" );
+
+    if( BooleanFlagOn( CreateOptions, FILE_RESERVE_OPFILTER ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "FILE_RESERVE_OPFILTER|" );
+    if( BooleanFlagOn( CreateOptions, FILE_OPEN_REPARSE_POINT ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "FILE_OPEN_REPARSE_POINT|" );
+    if( BooleanFlagOn( CreateOptions, FILE_OPEN_NO_RECALL ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "FILE_OPEN_NO_RECALL|" );
+    if( BooleanFlagOn( CreateOptions, FILE_OPEN_FOR_FREE_SPACE_QUERY ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "FILE_OPEN_FOR_FREE_SPACE_QUERY|" );
+}

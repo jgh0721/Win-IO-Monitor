@@ -19,6 +19,11 @@
 #define INVALID_HANDLE_VALUE ((HANDLE) -1)
 #endif
 
+#define IRP_UM_DRIVER_INITIATED_IO 0x00400000
+
+#define FILE_OPEN_REQUIRING_OPLOCK              0x00010000
+#define FILE_DISALLOW_EXCLUSIVE                 0x00020000
+
 namespace nsW32API
 {
     enum TyEnOsBuildNumber

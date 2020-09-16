@@ -77,8 +77,9 @@ namespace nsW32API
 
     const char* ConvertFileInformationClassTo( __in const FILE_INFORMATION_CLASS FileInformationClass );
 
-    void PrintOutIrpFlags( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in ULONG ShareAccess );
-    void PrintOutOperationFlags( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in ULONG ShareAccess );
+    void PrintOutIrpFlags( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in ULONG IrpFlags );
+    void PrintOutOperationFlags( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in ULONG OperationFlags );
+    void PrintOutCreateOptions( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in ULONG CreateOptions );
     void PrintOutCreateShareAccess( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in ULONG ShareAccess );
     void PrintOutCreateDisposition( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in ULONG ShareAccess );
 
