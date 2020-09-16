@@ -59,7 +59,8 @@ PIRP_CONTEXT CreateIrpContext( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_
 
         if( IsOwnFileObject( FltObjects->FileObject ) == true )
         {
-            
+            auto Fcb = (FCB*)FltObjects->FileObject->FsContext;
+            IrpContext->SrcFileFullPath = CloneBuffer( &Fcb->FileFullPath );
         }
 
         IrpContext->ProcessId       = FltGetRequestorProcessId( Data );
@@ -87,8 +88,11 @@ PIRP_CONTEXT CreateIrpContext( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_
             }
         }
 
-        IrpContext->SrcFileFullPath = nsUtils::ExtractFileFullPath( FltObjects->FileObject, InstanceContext,
-                                                                    ( MajorFunction == IRP_MJ_CREATE ) && ( IsPreIO == true ) );
+        if( IrpContext->SrcFileFullPath.Buffer == NULLPTR )
+        {
+            IrpContext->SrcFileFullPath = nsUtils::ExtractFileFullPath( FltObjects->FileObject, InstanceContext,
+                                                                        ( MajorFunction == IRP_MJ_CREATE ) && ( IsPreIO == true ) );
+        }
 
         if( IrpContext->SrcFileFullPath.Buffer != NULLPTR )
         {
@@ -219,7 +223,30 @@ VOID PrintIrpContext( __in PIRP_CONTEXT IrpContext )
         case IRP_MJ_CREATE_NAMED_PIPE: {} break;
         case IRP_MJ_CLOSE: {} break;
         case IRP_MJ_READ: {} break;
-        case IRP_MJ_WRITE: {} break;
+        case IRP_MJ_WRITE: {
+
+            KdPrint( ( "[WinIOSol] EvtID=%09d IRP=%s Proc=%06d,%ws Src=%ws\n"
+                       , IrpContext->EvtID
+                       , FltGetIrpName( MajorFunction )
+                       , IrpContext->ProcessId, IrpContext->ProcessFileName == NULLPTR ? L"(null)" : IrpContext->ProcessFileName
+                       , IrpContext->SrcFileFullPath.Buffer
+                       ) );
+
+            RtlStringCbCatA( IrpContext->DebugText, 1024, "IrpFlags=" );
+            nsW32API::PrintOutIrpFlags( IrpContext->DebugText, 1024, IrpContext->Data->Iopb->IrpFlags );
+            RtlStringCbCatA( IrpContext->DebugText, 1024, " " );
+
+            RtlStringCbCatA( IrpContext->DebugText, 1024, "OpFlags=" );
+            nsW32API::PrintOutOperationFlags( IrpContext->DebugText, 1024, IrpContext->Data->Iopb->OperationFlags );
+            RtlStringCbCatA( IrpContext->DebugText, 1024, " " );
+
+            KdPrint( ( "[WinIOSol] EvtID=%09d       >> %s Key=%d Length=%d ByteOffset=%I64d\n"
+                       , IrpContext->EvtID 
+                       , IrpContext->DebugText
+                       , IrpContext->Data->Iopb->Parameters.Write.Key, IrpContext->Data->Iopb->Parameters.Write.Length, IrpContext->Data->Iopb->Parameters.Write.ByteOffset.QuadPart
+                       ) );
+
+        } break;
         case IRP_MJ_QUERY_INFORMATION: {} break;
         case IRP_MJ_SET_INFORMATION: {} break;
         case IRP_MJ_QUERY_EA: {} break;

@@ -73,4 +73,22 @@ void DeallocateBuffer( TyGenericBuffer<T>* tyGenericBuffer )
     }
 }
 
+template< typename T >
+TyGenericBuffer<T> CloneBuffer( TyGenericBuffer<T>* tyGenericBuffer )
+{
+    TyGenericBuffer<T> ret;
+    RtlZeroMemory( &ret, sizeof( TyGenericBuffer<T> ) );
+
+    if( tyGenericBuffer == NULLPTR )
+        return ret;
+
+    ret = AllocateBuffer<T>( tyGenericBuffer->BufferType, tyGenericBuffer->BufferSize );
+    if( ret.Buffer == NULLPTR )
+        return ret;
+
+    RtlCopyMemory( ret.Buffer, tyGenericBuffer->Buffer, ret.BufferSize );
+
+    return ret;
+}
+
 #endif // HDR_WINIOMONITOR_BUFFERMGR

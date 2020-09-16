@@ -1,5 +1,6 @@
 ﻿#include "fltWrite.hpp"
 
+#include "irpContext.hpp"
 #include "privateFCBMgr.hpp"
 
 #if defined(_MSC_VER)
@@ -10,6 +11,7 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreWrite( PFLT_CALLBACK_DATA Data, PCFLT_
                                                  PVOID* CompletionContext )
 {
     FLT_PREOP_CALLBACK_STATUS                   FltStatus = FLT_PREOP_SUCCESS_NO_CALLBACK;
+    IRP_CONTEXT*                                IrpContext = NULLPTR;
 
     __try
     {
@@ -25,10 +27,14 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreWrite( PFLT_CALLBACK_DATA Data, PCFLT_
         if( FLT_IS_IRP_OPERATION( Data ) == false )
             __leave;
 
+        IrpContext = CreateIrpContext( Data, FltObjects );
+
+        if( IrpContext != NULLPTR )
+            PrintIrpContext( IrpContext );
     }
     __finally
     {
-
+        CloseIrpContext( IrpContext );
     }
 
     return FltStatus;
