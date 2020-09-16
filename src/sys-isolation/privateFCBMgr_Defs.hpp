@@ -44,8 +44,10 @@ typedef struct _FCB
      *                  해당 값이 변경되면 반드시 캐시관리자에게 변경된 값을 알려야한다
      *
      * ValidDataLength : 실제 파일시스템의 지원여부와 관계없이 캐시관리자는 파일시스템 드라이버 또는 네트워크 리다이렉터가 이 값을 초기화하리랴 예상한다
+     *
+     * 파일 크기 변경을 캐시관리자에게 통지하려면, 먼저 MainResource 와 PagingIoResource 를 Exclusively 하게 획득한 후 CcSetFileSizes 를 호출한다
      */
-
+    
 
     FILE_LOCK                                   FileLock;
     OPLOCK                                      FileOplock;
