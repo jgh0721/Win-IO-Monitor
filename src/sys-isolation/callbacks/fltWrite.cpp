@@ -31,6 +31,17 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreWrite( PFLT_CALLBACK_DATA Data, PCFLT_
 
         if( IrpContext != NULLPTR )
             PrintIrpContext( IrpContext );
+
+        auto Fcb = ( FCB* )FltObjects->FileObject->FsContext;
+        auto& Params = Data->Iopb->Parameters.Write;
+        ULONG BytesWritten = 0;
+
+        Data->IoStatus.Status = FltWriteFile( FltObjects->Instance, Fcb->LowerFileObject, &Params.ByteOffset, Params.Length,
+                                              Params.WriteBuffer, FLTFL_IO_OPERATION_NON_CACHED, &BytesWritten, NULLPTR, NULLPTR );
+
+        Data->IoStatus.Information = BytesWritten;
+
+        FltStatus = FLT_PREOP_COMPLETE;
     }
     __finally
     {
