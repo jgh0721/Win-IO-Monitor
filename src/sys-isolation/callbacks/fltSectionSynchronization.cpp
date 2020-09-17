@@ -27,6 +27,8 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreAcquireSectionSynchronization( PFLT_CA
                    , Fcb->FileFullPath.Buffer ) );
 
         FltAcquireResourceExclusive( &Fcb->MainResource );
+        Data->IoStatus.Status = STATUS_SUCCESS;
+        Data->IoStatus.Information = 0;
         FltStatus = FLT_PREOP_COMPLETE;
     }
     __finally
@@ -70,6 +72,8 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreReleaseSectionSynchronization( PFLT_CA
                    , Fcb->FileFullPath.Buffer ) );
 
         FltReleaseResource( &Fcb->MainResource );
+        Data->IoStatus.Status = STATUS_SUCCESS;
+        Data->IoStatus.Information = 0;
         FltStatus = FLT_PREOP_COMPLETE;
     }
     __finally

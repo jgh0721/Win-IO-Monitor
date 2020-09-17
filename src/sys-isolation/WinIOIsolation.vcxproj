@@ -39,6 +39,7 @@
     <ClInclude Include="callbacks\fltInstance.hpp" />
     <ClInclude Include="callbacks\fltNetworkQueryOpen.hpp" />
     <ClInclude Include="callbacks\fltQueryInformation.hpp" />
+    <ClInclude Include="callbacks\fltQueryVolumeInformation.hpp" />
     <ClInclude Include="callbacks\fltRead.hpp" />
     <ClInclude Include="callbacks\fltSectionSynchronization.hpp" />
     <ClInclude Include="callbacks\fltSetInformation.hpp" />
@@ -78,6 +79,7 @@
     <ClCompile Include="callbacks\fltInstance.cpp" />
     <ClCompile Include="callbacks\fltNetworkQueryOpen.cpp" />
     <ClCompile Include="callbacks\fltQueryInformation.cpp" />
+    <ClCompile Include="callbacks\fltQueryVolumeInformation.cpp" />
     <ClCompile Include="callbacks\fltRead.cpp" />
     <ClCompile Include="callbacks\fltSectionSynchronization.cpp" />
     <ClCompile Include="callbacks\fltSetInformation.cpp" />

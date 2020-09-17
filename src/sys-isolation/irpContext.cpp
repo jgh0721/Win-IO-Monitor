@@ -252,7 +252,18 @@ VOID PrintIrpContext( __in PIRP_CONTEXT IrpContext )
         case IRP_MJ_QUERY_EA: {} break;
         case IRP_MJ_SET_EA: {} break;
         case IRP_MJ_FLUSH_BUFFERS: {} break;
-        case IRP_MJ_QUERY_VOLUME_INFORMATION: {} break;
+        case IRP_MJ_QUERY_VOLUME_INFORMATION: {
+            auto FsInformationClass = ( nsW32API::FS_INFORMATION_CLASS )IrpContext->Data->Iopb->Parameters.QueryVolumeInformation.FsInformationClass;
+
+            KdPrint( ( "[WinIOSol] EvtID=%09d IRP=%s Class=%s Proc=%06d,%ws Src=%ws\n"
+                       , IrpContext->EvtID
+                       , FltGetIrpName( MajorFunction )
+                       , nsW32API::ConvertFsInformationClassTo( FsInformationClass )
+                       , IrpContext->ProcessId, IrpContext->ProcessFileName == NULLPTR ? L"(null)" : IrpContext->ProcessFileName
+                       , IrpContext->SrcFileFullPath.Buffer
+                       ) );
+
+        } break;
         case IRP_MJ_SET_VOLUME_INFORMATION: {} break;
         case IRP_MJ_DIRECTORY_CONTROL: {} break;
         case IRP_MJ_FILE_SYSTEM_CONTROL: {} break;

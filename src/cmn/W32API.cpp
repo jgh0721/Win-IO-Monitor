@@ -401,6 +401,29 @@ const char* nsW32API::ConvertFileInformationClassTo( const FILE_INFORMATION_CLAS
     return "Unknown FileInformationClass";
 }
 
+const char* nsW32API::ConvertFsInformationClassTo( const FS_INFORMATION_CLASS FsInformationClass )
+{
+    switch( FsInformationClass )
+    {
+        case FileFsVolumeInformation: { return "FileFsVolumeInformation"; } break;
+        case FileFsLabelInformation: { return "FileFsLabelInformation"; } break;
+        case FileFsSizeInformation: { return "FileFsSizeInformation"; } break;
+        case FileFsDeviceInformation: { return "FileFsDeviceInformation"; } break;
+        case FileFsAttributeInformation: { return "FileFsAttributeInformation"; } break;
+        case FileFsControlInformation: { return "FileFsControlInformation"; } break;
+        case FileFsFullSizeInformation: { return "FileFsFullSizeInformation"; } break;
+        case FileFsObjectIdInformation: { return "FileFsObjectIdInformation"; } break;
+        case FileFsDriverPathInformation: { return "FileFsDriverPathInformation"; } break;
+        case FileFsVolumeFlagsInformation: { return "FileFsVolumeFlagsInformation"; } break;
+        case FileFsSectorSizeInformation: { return "FileFsSectorSizeInformation"; } break;
+        case FileFsDataCopyInformation: { return "FileFsDataCopyInformation"; } break;
+        case FileFsMetadataSizeInformation: { return "FileFsMetadataSizeInformation"; } break;
+        case FileFsFullSizeInformationEx: { return "FileFsFullSizeInformationEx"; } break;
+    }
+
+    return "Unknown FsInformationClass";
+}
+
 void nsW32API::PrintOutIrpFlags( char* PrintBuffer, ULONG BufferSize, ULONG IrpFlags )
 {
     if( PrintBuffer == NULLPTR || BufferSize == 0 ) return;

@@ -41,7 +41,6 @@ namespace nsW32API
         WIN10_BUILD_20H2_2009 = 19042,
     };
 
-
     typedef enum _FILE_INFORMATION_CLASS
     {
         FileDirectoryInformation = 1,
@@ -123,6 +122,25 @@ namespace nsW32API
 
     } FILE_INFORMATION_CLASS;
 
+    typedef enum _FSINFOCLASS
+    {
+        FileFsVolumeInformation = 1,
+        FileFsLabelInformation,
+        FileFsSizeInformation,
+        FileFsDeviceInformation,
+        FileFsAttributeInformation,
+        FileFsControlInformation,
+        FileFsFullSizeInformation,
+        FileFsObjectIdInformation,
+        FileFsDriverPathInformation,
+        FileFsVolumeFlagsInformation,
+        FileFsSectorSizeInformation,
+        FileFsDataCopyInformation,
+        FileFsMetadataSizeInformation,
+        FileFsFullSizeInformationEx,
+        FileFsMaximumInformation
+    } FS_INFORMATION_CLASS, * PFS_INFORMATION_CLASS;
+
     typedef struct _FILE_RENAME_INFORMATION
     {
         BOOLEAN ReplaceIfExists;
@@ -191,6 +209,23 @@ namespace nsW32API
         sizeof((FID).FileId64.Value)    :   \
         sizeof((FID).FileId128)             \
     )
+
+    typedef struct _FILE_FS_FULL_SIZE_INFORMATION_EX
+    {
+        ULONGLONG ActualTotalAllocationUnits;
+        ULONGLONG ActualAvailableAllocationUnits;
+        ULONGLONG ActualPoolUnavailableAllocationUnits;
+        ULONGLONG CallerTotalAllocationUnits;
+        ULONGLONG CallerAvailableAllocationUnits;
+        ULONGLONG CallerPoolUnavailableAllocationUnits;
+        ULONGLONG UsedAllocationUnits;
+        ULONGLONG TotalReservedAllocationUnits;
+        ULONGLONG VolumeStorageReserveAllocationUnits;
+        ULONGLONG AvailableCommittedAllocationUnits;
+        ULONGLONG PoolAvailableAllocationUnits;
+        ULONG     SectorsPerAllocationUnit;
+        ULONG     BytesPerSector;
+    } FILE_FS_FULL_SIZE_INFORMATION_EX, * PFILE_FS_FULL_SIZE_INFORMATION_EX;
 
 #ifdef __cplusplus
     typedef struct _FSRTL_ADVANCED_FCB_HEADER_XP : FSRTL_COMMON_FCB_HEADER

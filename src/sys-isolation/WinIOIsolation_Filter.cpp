@@ -37,7 +37,7 @@ CONST FLT_OPERATION_REGISTRATION FilterCallbacks[] = {
 
     { IRP_MJ_FLUSH_BUFFERS,                 0,      FilterPreFlushBuffers,              FilterPostFlushBuffers    },
 
-    { IRP_MJ_QUERY_VOLUME_INFORMATION,      0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
+    { IRP_MJ_QUERY_VOLUME_INFORMATION,      0,      FilterPreQueryVolumeInformation,    FilterPostQueryVolumeInformation    },
 
     { IRP_MJ_SET_VOLUME_INFORMATION,        0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
 
