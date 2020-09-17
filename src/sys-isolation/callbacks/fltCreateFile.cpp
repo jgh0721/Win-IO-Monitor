@@ -196,13 +196,12 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
             SetFlag( CreateResult.CompleteStatus, COMPLETE_CLOSE_LOWER_FILE );
         }
 
+        CreateArgs.FileObject->Vpb = CreateArgs.LowerFileObject->Vpb;
         CreateArgs.FileObject->FsContext = CreateArgs.Fcb;
         CreateArgs.FileObject->FsContext2 = NULLPTR;
-        CreateArgs.FileObject->Vpb = CreateArgs.LowerFileObject->Vpb;
         CreateArgs.FileObject->SectionObjectPointer = &CreateArgs.Fcb->SectionObjects;
-
-        CreateArgs.FileObject->Flags |= FO_CACHE_SUPPORTED;
         CreateArgs.FileObject->PrivateCacheMap = NULLPTR;               // 파일에 접근할 때 캐시를 초기화한다
+        CreateArgs.FileObject->Flags |= FO_CACHE_SUPPORTED;
 
         if( BooleanFlagOn( CreateArgs.CreateOptions, FILE_DELETE_ON_CLOSE ) )
             SetFlag( CreateArgs.Fcb->Flags, FILE_DELETE_ON_CLOSE );

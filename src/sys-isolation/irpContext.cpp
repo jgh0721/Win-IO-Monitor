@@ -222,7 +222,7 @@ VOID PrintIrpContext( __in PIRP_CONTEXT IrpContext )
         } break;
         case IRP_MJ_CREATE_NAMED_PIPE: {} break;
         case IRP_MJ_CLOSE: {} break;
-        case IRP_MJ_READ: {} break;
+        case IRP_MJ_READ: 
         case IRP_MJ_WRITE: {
 
             KdPrint( ( "[WinIOSol] EvtID=%09d IRP=%s Proc=%06d,%ws Src=%ws\n"
