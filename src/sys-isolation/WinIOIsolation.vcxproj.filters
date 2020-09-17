@@ -147,6 +147,9 @@
     <ClInclude Include="..\cmn\W32API_NTSTATUS.hpp">
       <Filter>common files</Filter>
     </ClInclude>
+    <ClInclude Include="callbacks\fltSectionSynchronization.hpp">
+      <Filter>callbacks</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="WinIOIsolation.cpp">
@@ -234,6 +237,9 @@
       <Filter>callbacks</Filter>
     </ClCompile>
     <ClCompile Include="callbacks\cacheManagerCallbacks.cpp">
+      <Filter>callbacks</Filter>
+    </ClCompile>
+    <ClCompile Include="callbacks\fltSectionSynchronization.cpp">
       <Filter>callbacks</Filter>
     </ClCompile>
   </ItemGroup>

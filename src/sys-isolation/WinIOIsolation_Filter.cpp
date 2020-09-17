@@ -67,9 +67,9 @@ CONST FLT_OPERATION_REGISTRATION FilterCallbacks[] = {
 
     { IRP_MJ_PNP,                           0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
 
-    { IRP_MJ_ACQUIRE_FOR_SECTION_SYNCHRONIZATION,       0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
+    { IRP_MJ_ACQUIRE_FOR_SECTION_SYNCHRONIZATION,       0,      FilterPreAcquireSectionSynchronization,      FilterPostAcquireSectionSynchronization    },
 
-    { IRP_MJ_RELEASE_FOR_SECTION_SYNCHRONIZATION,       0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
+    { IRP_MJ_RELEASE_FOR_SECTION_SYNCHRONIZATION,       0,      FilterPreReleaseSectionSynchronization,      FilterPostReleaseSectionSynchronization    },
 
     { IRP_MJ_ACQUIRE_FOR_MOD_WRITE,                     0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
 
