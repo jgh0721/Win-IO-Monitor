@@ -31,7 +31,8 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreRead( PFLT_CALLBACK_DATA Data, PCFLT_R
         if( IrpContext != NULLPTR )
             PrintIrpContext( IrpContext );
 
-        auto Fcb = ( FCB* )FltObjects->FileObject->FsContext;
+        auto FileObject = FltObjects->FileObject;
+        auto Fcb = ( FCB* )FileObject->FsContext;
         auto& Params = Data->Iopb->Parameters.Read;
         ULONG BytesReturned = 0;
 
@@ -43,6 +44,10 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreRead( PFLT_CALLBACK_DATA Data, PCFLT_R
         );
 
         Data->IoStatus.Information = BytesReturned;
+        FileObject->CurrentByteOffset.QuadPart = Params.ByteOffset.QuadPart + BytesReturned;
+        if( FileObject->CurrentByteOffset.QuadPart > Fcb->AdvFcbHeader.FileSize.QuadPart )
+            FileObject->CurrentByteOffset.QuadPart = Fcb->AdvFcbHeader.FileSize.QuadPart;
+
         FltStatus = FLT_PREOP_COMPLETE;
     }
     __finally
