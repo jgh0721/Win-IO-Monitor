@@ -99,6 +99,11 @@ FLT_POSTOP_CALLBACK_STATUS FLTAPI FilterPostQueryVolumeInformation( PFLT_CALLBAC
 {
     FLT_POSTOP_CALLBACK_STATUS                  FltStatus = FLT_POSTOP_FINISHED_PROCESSING;
 
+    UNREFERENCED_PARAMETER( Data );
+    UNREFERENCED_PARAMETER( FltObjects );
+    UNREFERENCED_PARAMETER( CompletionContext );
+    UNREFERENCED_PARAMETER( Flags );
+
     return FltStatus;
 }
 
@@ -140,7 +145,7 @@ NTSTATUS ProcessFileFsVolumeInformation( IRP_CONTEXT* IrpContext )
 
 NTSTATUS ProcessFileFsLabelInformation( IRP_CONTEXT* IrpContext )
 {
-    NTSTATUS Status = STATUS_UNSUCCESSFUL;
+    auto& IoStatus = IrpContext->Data->IoStatus;
 
     __try
     {
@@ -151,7 +156,7 @@ NTSTATUS ProcessFileFsLabelInformation( IRP_CONTEXT* IrpContext )
 
     }
 
-    return Status;
+    return IoStatus.Status;
 }
 
 NTSTATUS ProcessFileFsSizeInformation( IRP_CONTEXT* IrpContext )
