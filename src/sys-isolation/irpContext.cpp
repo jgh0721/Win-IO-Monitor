@@ -247,7 +247,19 @@ VOID PrintIrpContext( __in PIRP_CONTEXT IrpContext )
                        ) );
 
         } break;
-        case IRP_MJ_QUERY_INFORMATION: {} break;
+        case IRP_MJ_QUERY_INFORMATION: {
+            auto FileInformationClass = ( nsW32API::FILE_INFORMATION_CLASS )IrpContext->Data->Iopb->Parameters.QueryFileInformation.FileInformationClass;
+
+            KdPrint( ( "[WinIOSol] EvtID=%09d IRP=%s Class=%s Length=%d Proc=%06d,%ws Src=%ws\n"
+                       , IrpContext->EvtID
+                       , FltGetIrpName( MajorFunction )
+                       , nsW32API::ConvertFileInformationClassTo( FileInformationClass )
+                       , IrpContext->Data->Iopb->Parameters.QueryFileInformation.Length
+                       , IrpContext->ProcessId, IrpContext->ProcessFileName == NULLPTR ? L"(null)" : IrpContext->ProcessFileName
+                       , IrpContext->SrcFileFullPath.Buffer
+                       ) );
+
+        } break;
         case IRP_MJ_SET_INFORMATION: {} break;
         case IRP_MJ_QUERY_EA: {} break;
         case IRP_MJ_SET_EA: {} break;

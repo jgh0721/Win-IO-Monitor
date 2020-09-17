@@ -1,5 +1,6 @@
 ﻿#include "fltQueryInformation.hpp"
 
+#include "irpContext.hpp"
 #include "privateFCBMgr.hpp"
 
 #if defined(_MSC_VER)
@@ -10,6 +11,7 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreQueryInformation( PFLT_CALLBACK_DATA D
                                                             PVOID* CompletionContext )
 {
     FLT_PREOP_CALLBACK_STATUS                   FltStatus = FLT_PREOP_SUCCESS_NO_CALLBACK;
+    IRP_CONTEXT*                                IrpContext = NULLPTR;
 
     __try
     {
@@ -24,6 +26,9 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreQueryInformation( PFLT_CALLBACK_DATA D
 
         FILE_OBJECT* FileObject = FltObjects->FileObject;
         FCB* Fcb = ( FCB* )FileObject->FsContext;
+        IrpContext = CreateIrpContext( Data, FltObjects );
+        if( IrpContext != NULLPTR )
+            PrintIrpContext( IrpContext );
 
         PVOID InputBuffer = Data->Iopb->Parameters.QueryFileInformation.InfoBuffer;
         ULONG Length = Data->Iopb->Parameters.QueryFileInformation.Length;
@@ -38,7 +43,7 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreQueryInformation( PFLT_CALLBACK_DATA D
     }
     __finally
     {
-
+        CloseIrpContext( IrpContext );
     }
 
     return FltStatus;
