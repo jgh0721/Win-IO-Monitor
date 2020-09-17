@@ -3,6 +3,7 @@
 
 #include "fltBase.hpp"
 
+#include "privateFCBMgr_Defs.hpp"
 #include "utilities/bufferMgr_Defs.hpp"
 #include "utilities/contextMgr_Defs.hpp"
 
@@ -16,6 +17,7 @@ typedef struct _IRP_CONTEXT
 {
     PFLT_CALLBACK_DATA                  Data;
     PCFLT_RELATED_OBJECTS               FltObjects;
+    FCB*                                Fcb;
     CHAR*                               DebugText;
 
     LONG                                EvtID;

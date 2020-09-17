@@ -38,38 +38,38 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreQueryInformation( PFLT_CALLBACK_DATA D
 
         switch( FileInformationClass )
         {
+            case FileBasicInformation: {
+                ProcessFileBasicInformation( IrpContext );
+            } break;
+            case FileStandardInformation: {
+                ProcessFileStandardInformation( IrpContext );
+            } break;
+            case FileInternalInformation: {
+                ProcessFileInternalInformation( IrpContext );
+            } break;
+            case FileEaInformation: {
+                ProcessFileEaInformation( IrpContext );
+            } break;
+            case FileNameInformation: {
+                ProcessFileNameInformation( IrpContext );
+            } break;
+            case FilePositionInformation: {
+                ProcessFilePositionInformation( IrpContext );
+            } break;
             case FileAllInformation: {
                 ProcessFileAllInformation( IrpContext );
             } break;
             case FileAttributeTagInformation: {
                 ProcessFileAttributeTagInformation( IrpContext );
             } break;
-            case FileBasicInformation: {
-                ProcessFileBasicInformation( IrpContext );
-            } break;
             case FileCompressionInformation: {
                 ProcessFileCompressionInformation( IrpContext );
-            } break;
-            case FileEaInformation: {
-                ProcessFileEaInformation( IrpContext );
-            } break;
-            case FileInternalInformation: {
-                ProcessFileInternalInformation( IrpContext );
             } break;
             case FileMoveClusterInformation: {
                 ProcessFileMoveClusterInformation( IrpContext );
             } break;
-            case FileNameInformation: {
-                ProcessFileNameInformation( IrpContext );
-            } break;
             case FileNetworkOpenInformation: {
                 ProcessFileNetworkOpenInformation( IrpContext );
-            } break;
-            case FilePositionInformation: {
-                ProcessFilePositionInformation( IrpContext );
-            } break;
-            case FileStandardInformation: {
-                ProcessFileStandardInformation( IrpContext );
             } break;
             case FileStreamInformation: {
                 ProcessFileStreamInformation( IrpContext );
@@ -114,6 +114,55 @@ FLT_POSTOP_CALLBACK_STATUS FLTAPI FilterPostQueryInformation( PFLT_CALLBACK_DATA
 
 ///////////////////////////////////////////////////////////////////////////////
 
+NTSTATUS ProcessFileBasicInformation( IRP_CONTEXT* IrpContext )
+{
+    auto& IoStatus = IrpContext->Data->IoStatus;
+
+    auto FileInformationClass = ( nsW32API::FILE_INFORMATION_CLASS )IrpContext->Data->Iopb->Parameters.QueryFileInformation.FileInformationClass;
+    auto InputBuffer = IrpContext->Data->Iopb->Parameters.QueryFileInformation.InfoBuffer;
+    auto Length = IrpContext->Data->Iopb->Parameters.QueryFileInformation.Length;
+
+    __try
+    {
+        if( Length < sizeof( FILE_BASIC_INFORMATION ) )
+        {
+            IoStatus.Status = STATUS_BUFFER_TOO_SMALL;
+            __leave;
+        }
+
+        FILE_BASIC_INFORMATION fbi;
+        ULONG LengthReturned = 0;
+        
+        RtlZeroMemory( &fbi, sizeof( fbi ) );
+        IoStatus.Status = FltQueryInformationFile( IrpContext->FltObjects->Instance,
+                                                   IrpContext->Fcb->LowerFileObject,
+                                                   &fbi,
+                                                   sizeof( FILE_BASIC_INFORMATION ),
+                                                   FileBasicInformation,
+                                                   &LengthReturned );
+
+        if( !NT_SUCCESS( IoStatus.Status ) )
+        {
+            KdPrint( ( "[iMonFSD] EvtID=%09d %s %s Line=%d Status=0x%08x,%s Src=%ws\n",
+                       IrpContext->EvtID, __FUNCTION__, "FltQueryInformationFile FAILED", __LINE__ 
+                       , IoStatus.Status, ntkernel_error_category::find_ntstatus( IoStatus.Status )->message
+                       , IrpContext->SrcFileFullPath.Buffer ) );
+
+            IoStatus.Information = 0;
+            __leave;
+        }
+
+        RtlCopyMemory( InputBuffer, &fbi, LengthReturned );
+        IoStatus.Information = LengthReturned;
+    }
+    __finally
+    {
+
+    }
+
+    return IoStatus.Status;
+}
+
 NTSTATUS ProcessFileAllInformation( IRP_CONTEXT* IrpContext )
 {
     auto& IoStatus = IrpContext->Data->IoStatus;
@@ -131,22 +180,6 @@ NTSTATUS ProcessFileAllInformation( IRP_CONTEXT* IrpContext )
 }
 
 NTSTATUS ProcessFileAttributeTagInformation( IRP_CONTEXT* IrpContext )
-{
-    auto& IoStatus = IrpContext->Data->IoStatus;
-
-    __try
-    {
-
-    }
-    __finally
-    {
-
-    }
-
-    return IoStatus.Status;
-}
-
-NTSTATUS ProcessFileBasicInformation( IRP_CONTEXT* IrpContext )
 {
     auto& IoStatus = IrpContext->Data->IoStatus;
 
