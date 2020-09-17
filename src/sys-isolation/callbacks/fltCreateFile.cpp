@@ -43,6 +43,9 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
         RtlZeroMemory( &CreateArgs, sizeof( CREATE_ARGS ) );
         RtlZeroMemory( &CreateResult, sizeof( CREATE_RESULT ) );
 
+        CreateArgs.LowerFileHandle = INVALID_HANDLE_VALUE;
+        CreateResult.FltStatus = FLT_PREOP_SUCCESS_NO_CALLBACK;
+
         ///////////////////////////////////////////////////////////////////////
         /// Validate Input
 
@@ -105,6 +108,34 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
         if( NT_SUCCESS( CreateResult.IoStatus.Status ) )
         {
             SetFlag( CreateArgs.FileStatus, FILE_ALREADY_EXISTS );
+
+            ULONG BytesReturned = 0;
+            FILE_STANDARD_INFORMATION fsi;
+            RtlZeroMemory( &fsi, sizeof( fsi ) );
+
+            NTSTATUS Status = FltQueryInformationFile( FltObjects->Instance, CreateArgs.LowerFileObject,
+                                                       &fsi, sizeof( fsi ), FileStandardInformation, &BytesReturned );
+
+            if( NT_SUCCESS( Status ) )
+            {
+                CreateArgs.FileSize = fsi.EndOfFile;
+                CreateArgs.FileAllocationSize = fsi.AllocationSize;
+
+                // 만약 성공했는데, 해당 객체가 디렉토리라면 무시한다
+                if( fsi.Directory != FALSE )
+                {
+                    SetFlag( CreateResult.CompleteStatus, COMPLETE_CLOSE_LOWER_FILE );
+                    CreateResult.FltStatus = FLT_PREOP_SUCCESS_NO_CALLBACK;
+                    __leave;
+                }
+            }
+            else
+            {
+                KdPrint( ( "[WinIOSol] EvtID=%09d %s Status=0x%08x,%s\n"
+                           , IrpContext->EvtID, __FUNCTION__
+                           , Status, ntkernel_error_category::find_ntstatus( Status )->message ) );
+            }
+
         }
 
         FltAcquireResourceExclusive( &IrpContext->InstanceContext->VcbLock );
@@ -147,15 +178,8 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
             CreateArgs.Fcb = AllocateFcb();
             InitializeFCB( CreateArgs.Fcb, IrpContext );
 
-            CreateArgs.FileObject->FsContext = CreateArgs.Fcb;
-            CreateArgs.FileObject->FsContext2 = NULLPTR;
-
             IoSetShareAccess( CreateArgs.CreateDesiredAccess, Data->Iopb->Parameters.Create.ShareAccess,
                               CreateArgs.FileObject, &CreateArgs.Fcb->LowerShareAccess );
-
-            CreateArgs.FileObject->Flags |= FO_CACHE_SUPPORTED;
-            CreateArgs.FileObject->PrivateCacheMap = NULLPTR;               // 파일에 접근할 때 캐시를 초기화한다
-            CreateArgs.FileObject->Vpb = CreateArgs.LowerFileObject->Vpb;
 
             CreateArgs.Fcb->LowerFileObject = CreateArgs.LowerFileObject;
             CreateArgs.Fcb->LowerFileHandle = CreateArgs.LowerFileHandle;
@@ -169,9 +193,16 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
             InterlockedIncrement( &CreateArgs.Fcb->RefCount );
 
             // 최초에 LowerFileObject/Handle 을 설정했다면 추가로 설정할 필요 없음
-            FltClose( CreateArgs.LowerFileHandle );
-            ObDereferenceObject( CreateArgs.LowerFileObject );
+            SetFlag( CreateResult.CompleteStatus, COMPLETE_CLOSE_LOWER_FILE );
         }
+
+        CreateArgs.FileObject->FsContext = CreateArgs.Fcb;
+        CreateArgs.FileObject->FsContext2 = NULLPTR;
+        CreateArgs.FileObject->Vpb = CreateArgs.LowerFileObject->Vpb;
+        CreateArgs.FileObject->SectionObjectPointer = &CreateArgs.Fcb->SectionObjects;
+
+        CreateArgs.FileObject->Flags |= FO_CACHE_SUPPORTED;
+        CreateArgs.FileObject->PrivateCacheMap = NULLPTR;               // 파일에 접근할 때 캐시를 초기화한다
 
         if( BooleanFlagOn( CreateArgs.CreateOptions, FILE_DELETE_ON_CLOSE ) )
             SetFlag( CreateArgs.Fcb->Flags, FILE_DELETE_ON_CLOSE );
@@ -209,6 +240,15 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
     {
         FltStatus = CreateResult.FltStatus;
         Data->IoStatus = CreateResult.IoStatus;
+
+        if( BooleanFlagOn( CreateResult.CompleteStatus, COMPLETE_CLOSE_LOWER_FILE ) )
+        {
+            if( CreateArgs.LowerFileHandle != INVALID_HANDLE_VALUE )
+                FltClose( CreateArgs.LowerFileHandle );
+
+            if( CreateArgs.LowerFileObject != NULLPTR )
+                ObDereferenceObject( CreateArgs.LowerFileObject );
+        }
 
         if( IrpContext != NULLPTR )
         {

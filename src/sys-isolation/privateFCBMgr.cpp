@@ -2,6 +2,7 @@
 
 #include "utilities/bufferMgr.hpp"
 #include "fltCmnLibs.hpp"
+#include "callbacks/fltCreateFile.hpp"
 
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
@@ -30,8 +31,8 @@ NTSTATUS InitializeFCB( FCB* Fcb, __in IRP_CONTEXT* IrpContext )
 
         RtlZeroMemory( Fcb, sizeof( FCB ) );
 
-        FsRtlSetupAdvancedHeader( &Fcb->AdvFcbHeader, &Fcb->FastMutex );
         ExInitializeFastMutex( &Fcb->FastMutex );
+        FsRtlSetupAdvancedHeader( &Fcb->AdvFcbHeader, &Fcb->FastMutex );
 
         Fcb->NodeTag = FCB_NODE_TYPE_TAG;
         Fcb->NodeSize = sizeof( FCB );
@@ -45,6 +46,21 @@ NTSTATUS InitializeFCB( FCB* Fcb, __in IRP_CONTEXT* IrpContext )
         InterlockedIncrement( &Fcb->OpnCount );
         InterlockedIncrement( &Fcb->ClnCount );
         InterlockedIncrement( &Fcb->RefCount );
+
+        /// AdvFcbHeader 설정
+
+        Fcb->AdvFcbHeader.NodeTypeCode = Fcb->NodeTag;
+        Fcb->AdvFcbHeader.NodeByteSize = Fcb->NodeSize;
+
+        // TODO: 향후 Fast IO 를 지원할 때 변경한다
+        Fcb->AdvFcbHeader.IsFastIoPossible = FastIoIsNotPossible;
+
+        Fcb->AdvFcbHeader.Resource = &Fcb->MainResource;
+        Fcb->AdvFcbHeader.PagingIoResource = &Fcb->PagingIoResource;
+
+        Fcb->AdvFcbHeader.AllocationSize    = ( ( CREATE_ARGS* )IrpContext->Params )->FileAllocationSize;
+        Fcb->AdvFcbHeader.FileSize          = ( ( CREATE_ARGS* )IrpContext->Params )->FileSize;
+        Fcb->AdvFcbHeader.ValidDataLength   = ( ( CREATE_ARGS* )IrpContext->Params )->FileSize;
 
         ///////////////////////////////////////////////////////////////////////
 

@@ -57,6 +57,7 @@ enum TyEnFileStatus
 typedef struct _CREATE_ARGS
 {
     LARGE_INTEGER           FileSize;
+    LARGE_INTEGER           FileAllocationSize;
     ULONG                   FileStatus;         // TyEnFileStatus
     FILE_OBJECT*            FileObject;         // IRP 를 통해 전달받은 상위 FileObject
 
@@ -70,7 +71,7 @@ typedef struct _CREATE_ARGS
     FCB*                    Fcb;
     FILE_OBJECT*            LowerFileObject;
     HANDLE                  LowerFileHandle;
-
+    
 } CREATE_ARGS, * PCREATE_ARGS;
 
 enum TyEnCompleteStatus
@@ -80,7 +81,8 @@ enum TyEnCompleteStatus
     COMPLETE_ALLOCATE_FCB               = 0x4,      // FCB 를 새로 할당해야함 
     COMPLETE_INIT_FCB                   = 0x8,      // FCB 를 초기화 해야함
 
-    COMPLETE_DONT_CONTINUE_PROCESS      = 0x100     // 외부 함수 수행 후에 즉시 종료
+    COMPLETE_DONT_CONTINUE_PROCESS      = 0x100,    // 외부 함수 수행 후에 즉시 종료
+    COMPLETE_CLOSE_LOWER_FILE           = 0x200     // 해당 객체가 디렉토리이거나, 이미 FCB 에 객체가 설정되었거나 등의 이유로 Lower 객체가 필요하지 않음
 };
 
 typedef struct _RESULT
