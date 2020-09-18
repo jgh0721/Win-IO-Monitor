@@ -14,8 +14,6 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreClose( PFLT_CALLBACK_DATA Data, PCFLT_
     IRP_CONTEXT*                                IrpContext = NULLPTR;
     FCB*                                        Fcb = NULLPTR;
     FILE_OBJECT*                                FileObject = NULLPTR;
-    bool                                        IsReleaseVcbLock = false;
-    bool                                        IsFreeFcbMainResource = false;
     bool                                        IsUninitializeFcb = false;
 
     __try
@@ -42,11 +40,8 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreClose( PFLT_CALLBACK_DATA Data, PCFLT_
                    , IrpContext->SrcFileFullPath.Buffer
                    ) );
 
-        FltAcquireResourceExclusive( &IrpContext->InstanceContext->VcbLock );
-        IsReleaseVcbLock = true;
-
-        FltAcquireResourceExclusive( &Fcb->MainResource );
-        IsFreeFcbMainResource = true;
+        AcquireCmnResource( IrpContext, INST_EXCLUSIVE );
+        AcquireCmnResource( IrpContext, FCB_MAIN_EXCLUSIVE );
 
         InterlockedDecrement( &Fcb->OpnCount );
         LONG RefCount = InterlockedDecrement( &Fcb->RefCount );
@@ -66,10 +61,10 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreClose( PFLT_CALLBACK_DATA Data, PCFLT_
 
         if( IsUninitializeFcb == true )
         {
-            if( IsFreeFcbMainResource == true )
+            if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_FREE_MAIN_RSRC ) )
             {
                 FltReleaseResource( &Fcb->MainResource );
-                IsFreeFcbMainResource = false;
+                ClearFlag( IrpContext->CompleteStatus, COMPLETE_FREE_MAIN_RSRC );
             }
 
             UninitializeFCB( Fcb );
@@ -83,15 +78,6 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreClose( PFLT_CALLBACK_DATA Data, PCFLT_
     }
     __finally
     {
-        if( IrpContext != NULLPTR )
-        {
-            if( IsFreeFcbMainResource == true )
-                FltReleaseResource( &Fcb->MainResource );
-
-            if( IsReleaseVcbLock == true )
-                FltReleaseResource( &IrpContext->InstanceContext->VcbLock );
-        }
-
         CloseIrpContext( IrpContext );
     }
 

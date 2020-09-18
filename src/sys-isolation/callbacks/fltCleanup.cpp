@@ -15,8 +15,6 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCleanup( PFLT_CALLBACK_DATA Data, PCFL
     IRP_CONTEXT*                                IrpContext = NULLPTR;
     FCB*                                        Fcb = NULLPTR;
     FILE_OBJECT*                                FileObject = NULLPTR;
-    bool                                        IsReleaseVcbLock = false;
-    bool                                        IsFreeFcbMainResource = false;
 
     __try
     {
@@ -42,11 +40,8 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCleanup( PFLT_CALLBACK_DATA Data, PCFL
                    , IrpContext->SrcFileFullPath.Buffer
                    ) );
 
-        FltAcquireResourceExclusive( &IrpContext->InstanceContext->VcbLock );
-        IsReleaseVcbLock = true;
-
-        FltAcquireResourceExclusive( &Fcb->MainResource );
-        IsFreeFcbMainResource = true;
+        AcquireCmnResource( IrpContext, INST_EXCLUSIVE );
+        AcquireCmnResource( IrpContext, FCB_MAIN_EXCLUSIVE );
 
         LONG UncleanCount = InterlockedDecrement( &Fcb->ClnCount );
         if( UncleanCount < 0 )
@@ -72,15 +67,6 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCleanup( PFLT_CALLBACK_DATA Data, PCFL
     }
     __finally
     {
-        if( IrpContext != NULLPTR )
-        {
-            if( IsFreeFcbMainResource == true )
-                FltReleaseResource( &Fcb->MainResource );
-
-            if( IsReleaseVcbLock == true )
-                FltReleaseResource( &IrpContext->InstanceContext->VcbLock );
-        }
-
         CloseIrpContext( IrpContext );
     }
 

@@ -35,16 +35,14 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
     FLT_PREOP_CALLBACK_STATUS                   FltStatus = FLT_PREOP_SUCCESS_NO_CALLBACK;
     IRP_CONTEXT*                                IrpContext = NULLPTR;
     CREATE_ARGS                                 CreateArgs;
-    CREATE_RESULT                               CreateResult;
     auto&                                       IoStatus = Data->IoStatus;
 
     __try
     {
         RtlZeroMemory( &CreateArgs, sizeof( CREATE_ARGS ) );
-        RtlZeroMemory( &CreateResult, sizeof( CREATE_RESULT ) );
 
         CreateArgs.LowerFileHandle = INVALID_HANDLE_VALUE;
-        CreateResult.FltStatus = FLT_PREOP_SUCCESS_NO_CALLBACK;
+        CreateArgs.LowerFileObject = NULLPTR;
 
         ///////////////////////////////////////////////////////////////////////
         /// Validate Input
@@ -74,7 +72,6 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
 
         IrpContext->IsAudit = true;
         IrpContext->Params = &CreateArgs;
-        IrpContext->Result = &CreateResult;
 
         /*!
             해당 파일에 대한 Lower FileObject 를 획득한다.
@@ -92,20 +89,20 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
 
         InitializeObjectAttributes( &CreateArgs.CreateObjectAttributes, &CreateArgs.CreateFileNameUS, OBJ_CASE_INSENSITIVE | OBJ_KERNEL_HANDLE, NULL, NULL );
 
-        CreateResult.IoStatus.Status = 
-        nsW32API::FltCreateFileEx( GlobalContext.Filter,
-                                   FltObjects->Instance,
-                                   &CreateArgs.LowerFileHandle, &CreateArgs.LowerFileObject,
-                                   CreateArgs.CreateDesiredAccess, &CreateArgs.CreateObjectAttributes , &CreateResult.IoStatus,
-                                   &Data->Iopb->Parameters.Create.AllocationSize,
-                                   Data->Iopb->Parameters.Create.FileAttributes,
-                                   Data->Iopb->Parameters.Create.ShareAccess,
-                                   CreateArgs.CreateDisposition, CreateArgs.CreateOptions,
-                                   Data->Iopb->Parameters.Create.EaBuffer, Data->Iopb->Parameters.Create.EaLength,
-                                   IO_FORCE_ACCESS_CHECK
-                                   );
+        IO_STATUS_BLOCK IoStatus;
+        IrpContext->Status = nsW32API::FltCreateFileEx( GlobalContext.Filter,
+                                                        FltObjects->Instance,
+                                                        &CreateArgs.LowerFileHandle, &CreateArgs.LowerFileObject,
+                                                        CreateArgs.CreateDesiredAccess, &CreateArgs.CreateObjectAttributes, &IoStatus,
+                                                        &Data->Iopb->Parameters.Create.AllocationSize,
+                                                        Data->Iopb->Parameters.Create.FileAttributes,
+                                                        Data->Iopb->Parameters.Create.ShareAccess,
+                                                        CreateArgs.CreateDisposition, CreateArgs.CreateOptions,
+                                                        Data->Iopb->Parameters.Create.EaBuffer, Data->Iopb->Parameters.Create.EaLength,
+                                                        IO_FORCE_ACCESS_CHECK
+        );
 
-        if( NT_SUCCESS( CreateResult.IoStatus.Status ) )
+        if( NT_SUCCESS( IrpContext->Status ) )
         {
             SetFlag( CreateArgs.FileStatus, FILE_ALREADY_EXISTS );
 
@@ -124,54 +121,54 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
                 // 만약 성공했는데, 해당 객체가 디렉토리라면 무시한다
                 if( fsi.Directory != FALSE )
                 {
-                    SetFlag( CreateResult.CompleteStatus, COMPLETE_CLOSE_LOWER_FILE );
-                    CreateResult.FltStatus = FLT_PREOP_SUCCESS_NO_CALLBACK;
+                    SetFlag( IrpContext->CompleteStatus, COMPLETE_FREE_LOWER_FILEOBJECT );
+                    SetFlag( IrpContext->CompleteStatus, COMPLETE_RETURN_FLTSTATUS );
+
+                    IrpContext->PreFltStatus = FLT_PREOP_SUCCESS_NO_CALLBACK;
                     __leave;
                 }
             }
             else
             {
-                KdPrint( ( "[WinIOSol] EvtID=%09d %s Status=0x%08x,%s\n"
-                           , IrpContext->EvtID, __FUNCTION__
+                KdPrint( ( "[WinIOSol] EvtID=%09d %s %s Status=0x%08x,%s\n"
+                           , IrpContext->EvtID, __FUNCTION__, "FltQueryInformationFile FAILED"
                            , Status, ntkernel_error_category::find_ntstatus( Status )->message ) );
             }
 
         }
 
-        FltAcquireResourceExclusive( &IrpContext->InstanceContext->VcbLock );
+        AcquireCmnResource( IrpContext, INST_EXCLUSIVE );
         CreateArgs.Fcb = Vcb_SearchFCB( IrpContext->InstanceContext, IrpContext->SrcFileFullPathWOVolume );
-        SetFlag( CreateResult.CompleteStatus, COMPLETE_FREE_INST_RSRC );
 
         switch( CreateArgs.CreateDisposition )
         {
             case FILE_SUPERSEDE:
             {
-                ProcessPreCreate_SUPERSEDE( IrpContext, &CreateResult );
+                ProcessPreCreate_SUPERSEDE( IrpContext );
             } break;
             case FILE_OPEN:
             {
-                ProcessPreCreate_OPEN( IrpContext, &CreateResult );
+                ProcessPreCreate_OPEN( IrpContext );
             } break;
             case FILE_CREATE:
             {
-                ProcessPreCreate_CREATE( IrpContext, &CreateResult );
+                ProcessPreCreate_CREATE( IrpContext );
             } break;
             case FILE_OPEN_IF:
             {
-                ProcessPreCreate_OPEN_IF( IrpContext, &CreateResult );
+                ProcessPreCreate_OPEN_IF( IrpContext );
             } break;
             case FILE_OVERWRITE:
             {
-                ProcessPreCreate_OVERWRITE( IrpContext, &CreateResult );
+                ProcessPreCreate_OVERWRITE( IrpContext );
             } break;
             case FILE_OVERWRITE_IF:
             {
-                ProcessPreCreate_OVERWRITE_IF( IrpContext, &CreateResult );
+                ProcessPreCreate_OVERWRITE_IF( IrpContext );
             } break;
         } // switch CreateDisposition
 
-        if( BooleanFlagOn( CreateResult.CompleteStatus, COMPLETE_DONT_CONTINUE_PROCESS ) )
-            __leave;
+        IF_DONT_CONTINUE_PROCESS_LEAVE( IrpContext );
 
         if( CreateArgs.Fcb == NULLPTR )
         {
@@ -193,7 +190,7 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
             InterlockedIncrement( &CreateArgs.Fcb->RefCount );
 
             // 최초에 LowerFileObject/Handle 을 설정했다면 추가로 설정할 필요 없음
-            SetFlag( CreateResult.CompleteStatus, COMPLETE_CLOSE_LOWER_FILE );
+            SetFlag( IrpContext->CompleteStatus, COMPLETE_FREE_LOWER_FILEOBJECT );
         }
 
         CreateArgs.FileObject->Vpb = CreateArgs.LowerFileObject->Vpb;
@@ -206,7 +203,8 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
         if( BooleanFlagOn( CreateArgs.CreateOptions, FILE_DELETE_ON_CLOSE ) )
             SetFlag( CreateArgs.Fcb->Flags, FILE_DELETE_ON_CLOSE );
 
-        CreateResult.FltStatus = FLT_PREOP_COMPLETE;
+        IrpContext->PreFltStatus = FLT_PREOP_COMPLETE;
+        SetFlag( IrpContext->CompleteStatus, COMPLETE_RETURN_FLTSTATUS );
 
         //CreateResult.IoStatus.Status = OpenLowerFileObject( IrpContext );
 
@@ -237,10 +235,10 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
     }
     __finally
     {
-        FltStatus = CreateResult.FltStatus;
-        Data->IoStatus = CreateResult.IoStatus;
+        if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_RETURN_FLTSTATUS ) )
+            FltStatus = IrpContext->PreFltStatus;
 
-        if( BooleanFlagOn( CreateResult.CompleteStatus, COMPLETE_CLOSE_LOWER_FILE ) )
+        if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_FREE_LOWER_FILEOBJECT ) )
         {
             if( CreateArgs.LowerFileHandle != INVALID_HANDLE_VALUE )
                 FltClose( CreateArgs.LowerFileHandle );
@@ -255,12 +253,8 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
             {
                 KdPrint( ( "[WinIOSol] EvtID=%09d %s Status=0x%08x Information=%s Name=%ws\n",
                            IrpContext->EvtID, __FUNCTION__
-                           , CreateResult.IoStatus.Status, nsW32API::ConvertCreateResultInformation( CreateResult.IoStatus.Status, CreateResult.IoStatus.Information )
+                           , IrpContext->Status, nsW32API::ConvertCreateResultInformation( IrpContext->Status, IrpContext->Information )
                            , IrpContext->SrcFileFullPath.Buffer ) );
-
-
-                if( BooleanFlagOn( CreateResult.CompleteStatus, COMPLETE_FREE_INST_RSRC ) )
-                    FltReleaseResource( &IrpContext->InstanceContext->VcbLock );
             }
         }
 
@@ -287,10 +281,7 @@ NTSTATUS OpenLowerFileObject( PIRP_CONTEXT IrpContext )
         return STATUS_INVALID_PARAMETER;
 
     CREATE_ARGS* CreateArgs = ( CREATE_ARGS* )IrpContext->Params;
-    CREATE_RESULT* CreateResult = ( CREATE_RESULT* )IrpContext->Result;
-
-    NTSTATUS& Status = CreateResult->IoStatus.Status;
-
+    NTSTATUS& Status = IrpContext->Status;
 
     auto SecurityContext = IrpContext->Data->Iopb->Parameters.Create.SecurityContext;
     auto DesiredAccess = SecurityContext->DesiredAccess;
@@ -308,12 +299,16 @@ NTSTATUS OpenLowerFileObject( PIRP_CONTEXT IrpContext )
 
     __try
     {
+        IO_STATUS_BLOCK IoStatus;
+
         Status = nsW32API::FltCreateFileEx2( GlobalContext.Filter,
                                              IrpContext->FltObjects->Instance,
                                              &CreateArgs->LowerFileHandle, &CreateArgs->LowerFileObject,
-                                             DesiredAccess, &CreateArgs->CreateObjectAttributes, &CreateResult->IoStatus,
+                                             DesiredAccess, &CreateArgs->CreateObjectAttributes, &IoStatus,
                                              &AllocationSize, FileAttributes, FILE_SHARE_READ,
                                              CreateDisposition, 0, NULL, 0, IO_FORCE_ACCESS_CHECK, NULLPTR );
+
+        IrpContext->Information = IoStatus.Information;
 
         if( NT_SUCCESS( Status ) )
         {
@@ -326,7 +321,7 @@ NTSTATUS OpenLowerFileObject( PIRP_CONTEXT IrpContext )
     }
 
     KdPrintEx( ( DPFLTR_IHVDRIVER_ID, DPFLTR_TRACE_LEVEL, "[WinIOSol] %s Status=0x%08x Information=0x%08x Name=%wZ\n",
-                 __FUNCTION__, Status, CreateResult->IoStatus.Information, &CreateArgs->CreateFileNameUS ) );
+                 __FUNCTION__, Status, IrpContext->Information, &CreateArgs->CreateFileNameUS ) );
     return Status;
 }
 
@@ -384,15 +379,15 @@ ACCESS_MASK CreateDesiredAccess( PIRP_CONTEXT IrpContext )
     return CreatedDesiredAccess;
 }
 
-NTSTATUS ProcessPreCreate_SUPERSEDE( IRP_CONTEXT* Args, CREATE_RESULT* Result )
+NTSTATUS ProcessPreCreate_SUPERSEDE( IRP_CONTEXT* Args )
 {
     if( ( ( CREATE_ARGS* )Args->Params )->Fcb == NULLPTR )
-        return ProcessPreCreate_SUPERSEDE_NEW( Args, Result );
+        return ProcessPreCreate_SUPERSEDE_NEW( Args );
 
-    return ProcessPreCreate_SUPERSEDE_EXIST( Args, Result );
+    return ProcessPreCreate_SUPERSEDE_EXIST( Args );
 }
 
-NTSTATUS ProcessPreCreate_SUPERSEDE_NEW( IRP_CONTEXT* Args, CREATE_RESULT* Result )
+NTSTATUS ProcessPreCreate_SUPERSEDE_NEW( IRP_CONTEXT* Args )
 {
     auto CreateArgs = ( ( CREATE_ARGS* )Args->Params );
 
@@ -402,9 +397,9 @@ NTSTATUS ProcessPreCreate_SUPERSEDE_NEW( IRP_CONTEXT* Args, CREATE_RESULT* Resul
         {
             CreateArgs->FileSize.QuadPart = 0;
 
-            Result->IoStatus.Status = STATUS_SUCCESS;
-            Result->IoStatus.Information = FILE_SUPERSEDED;
-            Result->FltStatus = FLT_PREOP_COMPLETE;
+            AssignCmnResult( Args, STATUS_SUCCESS );
+            AssignCmnResultInfo( Args, FILE_SUPERSEDED );
+            AssignCmnFltResult( Args, FLT_PREOP_COMPLETE );
         }
         else
         {
@@ -420,10 +415,10 @@ NTSTATUS ProcessPreCreate_SUPERSEDE_NEW( IRP_CONTEXT* Args, CREATE_RESULT* Resul
         
     }
 
-    return Result->IoStatus.Status;
+    return Args->Status;
 }
 
-NTSTATUS ProcessPreCreate_SUPERSEDE_EXIST( IRP_CONTEXT* Args, CREATE_RESULT* Result )
+NTSTATUS ProcessPreCreate_SUPERSEDE_EXIST( IRP_CONTEXT* Args )
 {
     auto CreateArgs = ( ( CREATE_ARGS* )Args->Params );
 
@@ -436,18 +431,18 @@ NTSTATUS ProcessPreCreate_SUPERSEDE_EXIST( IRP_CONTEXT* Args, CREATE_RESULT* Res
 
     }
 
-    return Result->IoStatus.Status;
+    return Args->Status;
 }
 
-NTSTATUS ProcessPreCreate_OPEN( IRP_CONTEXT* Args, CREATE_RESULT* Result )
+NTSTATUS ProcessPreCreate_OPEN( IRP_CONTEXT* Args )
 {
     if( ( ( CREATE_ARGS* )Args->Params )->Fcb == NULLPTR )
-        return ProcessPreCreate_OPEN_NEW( Args, Result );
+        return ProcessPreCreate_OPEN_NEW( Args );
 
-    return ProcessPreCreate_OPEN_EXIST( Args, Result );
+    return ProcessPreCreate_OPEN_EXIST( Args );
 }
 
-NTSTATUS ProcessPreCreate_OPEN_NEW( IRP_CONTEXT* Args, CREATE_RESULT* Result )
+NTSTATUS ProcessPreCreate_OPEN_NEW( IRP_CONTEXT* Args )
 {
     auto CreateArgs = ( ( CREATE_ARGS* )Args->Params );
 
@@ -456,11 +451,12 @@ NTSTATUS ProcessPreCreate_OPEN_NEW( IRP_CONTEXT* Args, CREATE_RESULT* Result )
         // 파일이 존재하지 않으면 오류 코드를 반환하고 끝낸다
         if( !BooleanFlagOn( CreateArgs->FileStatus, FILE_ALREADY_EXISTS ) )
         {
-            Result->IoStatus.Status = STATUS_OBJECT_NAME_NOT_FOUND;
-            Result->IoStatus.Information = 0;
-            Result->FltStatus = FLT_PREOP_COMPLETE;
 
-            SetFlag( Result->CompleteStatus, COMPLETE_DONT_CONTINUE_PROCESS );
+            AssignCmnResult( Args, STATUS_OBJECT_NAME_NOT_FOUND );
+            AssignCmnResultInfo( Args, 0 );
+            AssignCmnFltResult( Args, FLT_PREOP_COMPLETE );
+
+            SetFlag( Args->CompleteStatus, COMPLETE_DONT_CONT_PROCESS );
             __leave;
         }
 
@@ -471,10 +467,10 @@ NTSTATUS ProcessPreCreate_OPEN_NEW( IRP_CONTEXT* Args, CREATE_RESULT* Result )
 
     }
 
-    return Result->IoStatus.Status;
+    return Args->Status;
 }
 
-NTSTATUS ProcessPreCreate_OPEN_EXIST( IRP_CONTEXT* Args, CREATE_RESULT* Result )
+NTSTATUS ProcessPreCreate_OPEN_EXIST( IRP_CONTEXT* Args )
 {
     auto CreateArgs = ( ( CREATE_ARGS* )Args->Params );
 
@@ -487,18 +483,18 @@ NTSTATUS ProcessPreCreate_OPEN_EXIST( IRP_CONTEXT* Args, CREATE_RESULT* Result )
 
     }
 
-    return Result->IoStatus.Status;
+    return Args->Status;
 }
 
-NTSTATUS ProcessPreCreate_CREATE( IRP_CONTEXT* Args, CREATE_RESULT* Result )
+NTSTATUS ProcessPreCreate_CREATE( IRP_CONTEXT* Args )
 {
     if( ( ( CREATE_ARGS* )Args->Params )->Fcb == NULLPTR )
-        return ProcessPreCreate_CREATE_NEW( Args, Result );
+        return ProcessPreCreate_CREATE_NEW( Args );
 
-    return ProcessPreCreate_CREATE_EXIST( Args, Result );
+    return ProcessPreCreate_CREATE_EXIST( Args );
 }
 
-NTSTATUS ProcessPreCreate_CREATE_NEW( IRP_CONTEXT* Args, CREATE_RESULT* Result )
+NTSTATUS ProcessPreCreate_CREATE_NEW( IRP_CONTEXT* Args )
 {
     auto CreateArgs = ( ( CREATE_ARGS* )Args->Params );
 
@@ -511,10 +507,10 @@ NTSTATUS ProcessPreCreate_CREATE_NEW( IRP_CONTEXT* Args, CREATE_RESULT* Result )
 
     }
 
-    return Result->IoStatus.Status;
+    return Args->Status;
 }
 
-NTSTATUS ProcessPreCreate_CREATE_EXIST( IRP_CONTEXT* Args, CREATE_RESULT* Result )
+NTSTATUS ProcessPreCreate_CREATE_EXIST( IRP_CONTEXT* Args )
 {
     auto CreateArgs = ( ( CREATE_ARGS* )Args->Params );
 
@@ -527,18 +523,18 @@ NTSTATUS ProcessPreCreate_CREATE_EXIST( IRP_CONTEXT* Args, CREATE_RESULT* Result
 
     }
 
-    return Result->IoStatus.Status;
+    return Args->Status;
 }
 
-NTSTATUS ProcessPreCreate_OPEN_IF( IRP_CONTEXT* Args, CREATE_RESULT* Result )
+NTSTATUS ProcessPreCreate_OPEN_IF( IRP_CONTEXT* Args )
 {
     if( ( ( CREATE_ARGS* )Args->Params )->Fcb == NULLPTR )
-        return ProcessPreCreate_OPEN_IF_NEW( Args, Result );
+        return ProcessPreCreate_OPEN_IF_NEW( Args );
 
-    return ProcessPreCreate_OPEN_IF_EXIST( Args, Result );
+    return ProcessPreCreate_OPEN_IF_EXIST( Args );
 }
 
-NTSTATUS ProcessPreCreate_OPEN_IF_NEW( IRP_CONTEXT* Args, CREATE_RESULT* Result )
+NTSTATUS ProcessPreCreate_OPEN_IF_NEW( IRP_CONTEXT* Args )
 {
     auto CreateArgs = ( ( CREATE_ARGS* )Args->Params );
 
@@ -551,10 +547,10 @@ NTSTATUS ProcessPreCreate_OPEN_IF_NEW( IRP_CONTEXT* Args, CREATE_RESULT* Result 
 
     }
 
-    return Result->IoStatus.Status;
+    return Args->Status;
 }
 
-NTSTATUS ProcessPreCreate_OPEN_IF_EXIST( IRP_CONTEXT* Args, CREATE_RESULT* Result )
+NTSTATUS ProcessPreCreate_OPEN_IF_EXIST( IRP_CONTEXT* Args )
 {
     auto CreateArgs = ( ( CREATE_ARGS* )Args->Params );
 
@@ -567,18 +563,18 @@ NTSTATUS ProcessPreCreate_OPEN_IF_EXIST( IRP_CONTEXT* Args, CREATE_RESULT* Resul
 
     }
 
-    return Result->IoStatus.Status;
+    return Args->Status;
 }
 
-NTSTATUS ProcessPreCreate_OVERWRITE( IRP_CONTEXT* Args, CREATE_RESULT* Result )
+NTSTATUS ProcessPreCreate_OVERWRITE( IRP_CONTEXT* Args )
 {
     if( ( ( CREATE_ARGS* )Args->Params )->Fcb == NULLPTR )
-        return ProcessPreCreate_OVERWRITE_NEW( Args, Result );
+        return ProcessPreCreate_OVERWRITE_NEW( Args );
 
-    return ProcessPreCreate_OVERWRITE_EXIST( Args, Result );
+    return ProcessPreCreate_OVERWRITE_EXIST( Args );
 }
 
-NTSTATUS ProcessPreCreate_OVERWRITE_NEW( IRP_CONTEXT* Args, CREATE_RESULT* Result )
+NTSTATUS ProcessPreCreate_OVERWRITE_NEW( IRP_CONTEXT* Args )
 {
     auto CreateArgs = ( ( CREATE_ARGS* )Args->Params );
 
@@ -591,10 +587,10 @@ NTSTATUS ProcessPreCreate_OVERWRITE_NEW( IRP_CONTEXT* Args, CREATE_RESULT* Resul
 
     }
 
-    return Result->IoStatus.Status;
+    return Args->Status;
 }
 
-NTSTATUS ProcessPreCreate_OVERWRITE_EXIST( IRP_CONTEXT* Args, CREATE_RESULT* Result )
+NTSTATUS ProcessPreCreate_OVERWRITE_EXIST( IRP_CONTEXT* Args )
 {
     auto CreateArgs = ( ( CREATE_ARGS* )Args->Params );
 
@@ -607,18 +603,18 @@ NTSTATUS ProcessPreCreate_OVERWRITE_EXIST( IRP_CONTEXT* Args, CREATE_RESULT* Res
 
     }
 
-    return Result->IoStatus.Status;
+    return Args->Status;
 }
 
-NTSTATUS ProcessPreCreate_OVERWRITE_IF( IRP_CONTEXT* Args, CREATE_RESULT* Result )
+NTSTATUS ProcessPreCreate_OVERWRITE_IF( IRP_CONTEXT* Args )
 {
     if( ( ( CREATE_ARGS* )Args->Params )->Fcb == NULLPTR )
-        return ProcessPreCreate_OVERWRITE_IF_NEW( Args, Result );
+        return ProcessPreCreate_OVERWRITE_IF_NEW( Args );
 
-    return ProcessPreCreate_OVERWRITE_IF_EXIST( Args, Result );
+    return ProcessPreCreate_OVERWRITE_IF_EXIST( Args );
 }
 
-NTSTATUS ProcessPreCreate_OVERWRITE_IF_NEW( IRP_CONTEXT* Args, CREATE_RESULT* Result )
+NTSTATUS ProcessPreCreate_OVERWRITE_IF_NEW( IRP_CONTEXT* Args )
 {
     auto CreateArgs = ( ( CREATE_ARGS* )Args->Params );
 
@@ -631,10 +627,10 @@ NTSTATUS ProcessPreCreate_OVERWRITE_IF_NEW( IRP_CONTEXT* Args, CREATE_RESULT* Re
 
     }
 
-    return Result->IoStatus.Status;
+    return Args->Status;
 }
 
-NTSTATUS ProcessPreCreate_OVERWRITE_IF_EXIST( IRP_CONTEXT* Args, CREATE_RESULT* Result )
+NTSTATUS ProcessPreCreate_OVERWRITE_IF_EXIST( IRP_CONTEXT* Args )
 {
     auto CreateArgs = ( ( CREATE_ARGS* )Args->Params );
 
@@ -647,5 +643,5 @@ NTSTATUS ProcessPreCreate_OVERWRITE_IF_EXIST( IRP_CONTEXT* Args, CREATE_RESULT* 
 
     }
 
-    return Result->IoStatus.Status;
+    return Args->Status;
 }

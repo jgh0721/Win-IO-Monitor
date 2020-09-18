@@ -13,6 +13,22 @@
 
 extern LONG volatile GlobalEvtID;
 
+enum TyEnCompleteState
+{
+    COMPLETE_FREE_MAIN_RSRC             = 0x1,      // Fcb 의 MainResource 락 해제
+    COMPLETE_FREE_INST_RSRC             = 0x2,      // InstanceContext 의 VcbLock 해제
+    COMPLETE_FREE_PGIO_RSRC             = 0x4,      // Fcb 의 PagingIoResource 락 해제
+                                                    // 만약 MainResource 와 PagingIoResource 가 동시에 있다면 PagingIoResource -> MainResource 순서로 해제한다
+    COMPLETE_FREE_LOWER_FILEOBJECT      = 0x10,     // 해당 객체가 디렉토리이거나, 이미 FCB 에 객체가 설정되었거나 등의 이유로 Lower 객체가 필요하지 않음
+                                                    // FCB 를 새로 할당해야함 
+    COMPLETE_CRTE_INIT_FCB              = 0x100,    // FCB 를 초기화 해야함
+
+    COMPLETE_DONT_CONT_PROCESS          = 0x1000,   // 외부 함수 수행 후에 즉시 종료
+    COMPLETE_IOSTATUS_STATUS            = 0x2000,   // Data->IoStatus.Status 에 Status 값을 대입한다       
+    COMPLETE_IOSTATUS_INFORMATION       = 0x4000,   // Data->IoStatus.Information 에 Information 값을 대입한다
+    COMPLETE_RETURN_FLTSTATUS           = 0x8000,   // PreFltStatus 값을 IRP 처리 결과로 반환한다
+};
+
 typedef struct _IRP_CONTEXT
 {
     PFLT_CALLBACK_DATA                  Data;
@@ -35,6 +51,17 @@ typedef struct _IRP_CONTEXT
 
     PVOID                               Params;                 // 각 IRP 마다 사용하는 고유의 입력 / 출력 변수 구조체에 대한 포인터
     PVOID                               Result;
+
+    ///////////////////////////////////////////////////////////////////////////
+    /// IRP 를 처리한 결과
+
+    NTSTATUS                            Status;
+    ULONG_PTR                           Information;
+    FLT_PREOP_CALLBACK_STATUS           PreFltStatus;
+
+    // TyEnCompleteState 의 조합
+    // CloseIrpContext 에서 해당 값의 조합들을 이용하여 후처리를 진행한다
+    ULONG                               CompleteStatus;
 
 } IRP_CONTEXT, *PIRP_CONTEXT;
 

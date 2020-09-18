@@ -27,6 +27,11 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreSetInformation( PFLT_CALLBACK_DATA Dat
         FILE_OBJECT* FileObject = FltObjects->FileObject;
         FCB* Fcb = (FCB*)FileObject->FsContext;
         IrpContext = CreateIrpContext( Data, FltObjects );
+        if( IrpContext != NULLPTR )
+            PrintIrpContext( IrpContext );
+
+        AcquireCmnResource( IrpContext, FCB_MAIN_SHARED );
+
         const auto& FileInformationClass = ( nsW32API::FILE_INFORMATION_CLASS )IrpContext->Data->Iopb->Parameters.QueryFileInformation.FileInformationClass;
 
         KdPrint( ( "[WinIOSol] EvtID=%09d %s CLASS=%-45s Name=%ws\n",

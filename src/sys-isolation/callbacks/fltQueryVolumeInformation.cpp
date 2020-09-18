@@ -14,8 +14,7 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreQueryVolumeInformation( PFLT_CALLBACK_
     IRP_CONTEXT*                                IrpContext = NULLPTR;
     FILE_OBJECT*                                FileObject = FltObjects->FileObject;
 
-    FCB*                                        Fcb = NULLPTR;
-    bool                                        IsFreeMainResource = false;
+    UNREFERENCED_PARAMETER( CompletionContext );
 
     __try
     {
@@ -27,11 +26,8 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreQueryVolumeInformation( PFLT_CALLBACK_
         if( IrpContext != NULLPTR )
             PrintIrpContext( IrpContext );
 
-        Fcb = ( FCB* )FileObject->FsContext;
-        FltAcquireResourceShared( &Fcb->MainResource );
-        IsFreeMainResource = true;
-
-        auto FsInformationClass = Data->Iopb->Parameters.QueryVolumeInformation.FsInformationClass;
+        AcquireCmnResource( IrpContext, FCB_MAIN_SHARED );
+        auto FsInformationClass = (nsW32API::FS_INFORMATION_CLASS)Data->Iopb->Parameters.QueryVolumeInformation.FsInformationClass;
 
         switch( FsInformationClass )
         {
@@ -85,9 +81,6 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreQueryVolumeInformation( PFLT_CALLBACK_
     }
     __finally
     {
-        if( IsFreeMainResource == true )
-            FltReleaseResource( &Fcb->MainResource );
-
         CloseIrpContext( IrpContext );
     }
 

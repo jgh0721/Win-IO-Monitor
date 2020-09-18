@@ -175,6 +175,26 @@ VOID CloseIrpContext( __in PIRP_CONTEXT IrpContext )
     if( IrpContext == NULLPTR )
         return;
 
+    if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_IOSTATUS_STATUS ) )
+        IrpContext->Data->IoStatus.Status = IrpContext->Status;
+
+    if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_IOSTATUS_INFORMATION ) )
+        IrpContext->Data->IoStatus.Information = IrpContext->Information;
+
+    if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_FREE_LOWER_FILEOBJECT ) )
+    {
+        
+    }
+
+    if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_FREE_PGIO_RSRC ) )
+        FltReleaseResource( &IrpContext->Fcb->PagingIoResource );
+
+    if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_FREE_MAIN_RSRC ) )
+        FltReleaseResource( &IrpContext->Fcb->MainResource );
+
+    if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_FREE_INST_RSRC ) )
+        FltReleaseResource( &IrpContext->InstanceContext->VcbLock );
+
     ExFreeToNPagedLookasideList( &GlobalContext.DebugLookasideList, IrpContext->DebugText );
 
     DeallocateBuffer( &IrpContext->ProcessFullPath );
@@ -293,5 +313,95 @@ VOID PrintIrpContext( __in PIRP_CONTEXT IrpContext )
         case IRP_MJ_SET_QUOTA: {} break;
         case IRP_MJ_PNP: {} break;
     }
-        
+}
+
+VOID AcquireCmnResource( PIRP_CONTEXT IrpContext, LONG RsrcFlags )
+{
+    ASSERT( IrpContext != NULLPTR );
+    if( IrpContext == NULLPTR )
+        return;
+
+    ASSERT( IrpContext->Fcb != NULLPTR );
+    if( IrpContext->Fcb == NULLPTR )
+        return;
+
+    if( BooleanFlagOn( RsrcFlags, FCB_MAIN_EXCLUSIVE ) )
+    {
+        if( BooleanFlagOn( RsrcFlags, FCB_MAIN_SHARED ) )
+        {
+            KdBreakPoint();
+            ASSERT( false );
+            return;
+        }
+
+        FltAcquireResourceExclusive( &IrpContext->Fcb->MainResource );
+        SetFlag( IrpContext->CompleteStatus, COMPLETE_FREE_MAIN_RSRC );
+    }
+
+    if( BooleanFlagOn( RsrcFlags, FCB_MAIN_SHARED ) )
+    {
+        if( BooleanFlagOn( RsrcFlags, FCB_MAIN_EXCLUSIVE ) )
+        {
+            KdBreakPoint();
+            ASSERT( false );
+            return;
+        }
+
+        FltAcquireResourceShared( &IrpContext->Fcb->MainResource );
+        SetFlag( IrpContext->CompleteStatus, COMPLETE_FREE_MAIN_RSRC );
+    }
+
+
+    if( BooleanFlagOn( RsrcFlags, FCB_PGIO_EXCLUSIVE ) )
+    {
+        if( BooleanFlagOn( RsrcFlags, FCB_PGIO_SHARED ) )
+        {
+            KdBreakPoint();
+            ASSERT( false );
+            return;
+        }
+
+        FltAcquireResourceExclusive( &IrpContext->Fcb->PagingIoResource );
+        SetFlag( IrpContext->CompleteStatus, COMPLETE_FREE_PGIO_RSRC );
+    }
+
+    if( BooleanFlagOn( RsrcFlags, FCB_PGIO_SHARED ) )
+    {
+        if( BooleanFlagOn( RsrcFlags, FCB_PGIO_EXCLUSIVE ) )
+        {
+            KdBreakPoint();
+            ASSERT( false );
+            return;
+        }
+
+        FltAcquireResourceShared( &IrpContext->Fcb->PagingIoResource );
+        SetFlag( IrpContext->CompleteStatus, COMPLETE_FREE_PGIO_RSRC );
+    }
+
+
+    if( BooleanFlagOn( RsrcFlags, INST_EXCLUSIVE ) )
+    {
+        if( BooleanFlagOn( RsrcFlags, INST_SHARED ) )
+        {
+            KdBreakPoint();
+            ASSERT( false );
+            return;
+        }
+
+        FltAcquireResourceExclusive( &IrpContext->InstanceContext->VcbLock );
+        SetFlag( IrpContext->CompleteStatus, COMPLETE_FREE_INST_RSRC );
+    }
+
+    if( BooleanFlagOn( RsrcFlags, INST_SHARED ) )
+    {
+        if( BooleanFlagOn( RsrcFlags, INST_EXCLUSIVE ) )
+        {
+            KdBreakPoint();
+            ASSERT( false );
+            return;
+        }
+
+        FltAcquireResourceShared( &IrpContext->InstanceContext->VcbLock );
+        SetFlag( IrpContext->CompleteStatus, COMPLETE_FREE_INST_RSRC );
+    }
 }

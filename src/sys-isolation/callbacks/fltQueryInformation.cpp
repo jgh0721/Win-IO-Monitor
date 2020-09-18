@@ -26,11 +26,11 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreQueryInformation( PFLT_CALLBACK_DATA D
             __leave;
         }
 
-        FILE_OBJECT* FileObject = FltObjects->FileObject;
-        FCB* Fcb = ( FCB* )FileObject->FsContext;
         IrpContext = CreateIrpContext( Data, FltObjects );
         if( IrpContext != NULLPTR )
             PrintIrpContext( IrpContext );
+
+        AcquireCmnResource( IrpContext, FCB_MAIN_SHARED );
 
         auto FileInformationClass = ( nsW32API::FILE_INFORMATION_CLASS )IrpContext->Data->Iopb->Parameters.QueryFileInformation.FileInformationClass;
         auto InputBuffer = Data->Iopb->Parameters.QueryFileInformation.InfoBuffer;
@@ -78,6 +78,8 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreQueryInformation( PFLT_CALLBACK_DATA D
                 ProcessFileHardLinkInformation( IrpContext );
             } break;
             default: {
+                FILE_OBJECT* FileObject = FltObjects->FileObject;
+                FCB* Fcb = ( FCB* )FileObject->FsContext;
                 ULONG ReturnLength = 0;
 
                 Data->IoStatus.Status = FltQueryInformationFile( FltObjects->Instance, Fcb->LowerFileObject,

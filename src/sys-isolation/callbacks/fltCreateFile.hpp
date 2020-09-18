@@ -74,43 +74,23 @@ typedef struct _CREATE_ARGS
     
 } CREATE_ARGS, * PCREATE_ARGS;
 
-enum TyEnCompleteStatus
-{
-    COMPLETE_FREE_MAIN_RSRC             = 0x1,      // Fcb 내의 MainResource
-    COMPLETE_FREE_INST_RSRC             = 0x2,      // InstanceContext 내의 Lock
-    COMPLETE_ALLOCATE_FCB               = 0x4,      // FCB 를 새로 할당해야함 
-    COMPLETE_INIT_FCB                   = 0x8,      // FCB 를 초기화 해야함
-
-    COMPLETE_DONT_CONTINUE_PROCESS      = 0x100,    // 외부 함수 수행 후에 즉시 종료
-    COMPLETE_CLOSE_LOWER_FILE           = 0x200     // 해당 객체가 디렉토리이거나, 이미 FCB 에 객체가 설정되었거나 등의 이유로 Lower 객체가 필요하지 않음
-};
-
-typedef struct _RESULT
-{
-    IO_STATUS_BLOCK             IoStatus;       // IRP 를 처리하면서 설정, 해당 값을 Data->Iopb->IoStatus 에 설정한다
-    FLT_PREOP_CALLBACK_STATUS   FltStatus;
-
-    // IRP_MJ_CREATE( Pre-Create ) 에 대한 최종 후처리 지시사항들
-    ULONG                       CompleteStatus;
-} CREATE_RESULT, * PCREATE_RESULT;
-
-NTSTATUS ProcessPreCreate_SUPERSEDE( __in IRP_CONTEXT* Args, __inout CREATE_RESULT* Result );
-NTSTATUS ProcessPreCreate_SUPERSEDE_NEW( __in IRP_CONTEXT* Args, __inout CREATE_RESULT* Result );
-NTSTATUS ProcessPreCreate_SUPERSEDE_EXIST( __in IRP_CONTEXT* Args, __inout CREATE_RESULT* Result );
-NTSTATUS ProcessPreCreate_OPEN( __in IRP_CONTEXT* Args, __inout CREATE_RESULT* Result );
-NTSTATUS ProcessPreCreate_OPEN_NEW( __in IRP_CONTEXT* Args, __inout CREATE_RESULT* Result );
-NTSTATUS ProcessPreCreate_OPEN_EXIST( __in IRP_CONTEXT* Args, __inout CREATE_RESULT* Result );
-NTSTATUS ProcessPreCreate_CREATE( __in IRP_CONTEXT* Args, __inout CREATE_RESULT* Result );
-NTSTATUS ProcessPreCreate_CREATE_NEW( __in IRP_CONTEXT* Args, __inout CREATE_RESULT* Result );
-NTSTATUS ProcessPreCreate_CREATE_EXIST( __in IRP_CONTEXT* Args, __inout CREATE_RESULT* Result );
-NTSTATUS ProcessPreCreate_OPEN_IF( __in IRP_CONTEXT* Args, __inout CREATE_RESULT* Result );
-NTSTATUS ProcessPreCreate_OPEN_IF_NEW( __in IRP_CONTEXT* Args, __inout CREATE_RESULT* Result );
-NTSTATUS ProcessPreCreate_OPEN_IF_EXIST( __in IRP_CONTEXT* Args, __inout CREATE_RESULT* Result );
-NTSTATUS ProcessPreCreate_OVERWRITE( __in IRP_CONTEXT* Args, __inout CREATE_RESULT* Result );
-NTSTATUS ProcessPreCreate_OVERWRITE_NEW( __in IRP_CONTEXT* Args, __inout CREATE_RESULT* Result );
-NTSTATUS ProcessPreCreate_OVERWRITE_EXIST( __in IRP_CONTEXT* Args, __inout CREATE_RESULT* Result );
-NTSTATUS ProcessPreCreate_OVERWRITE_IF( __in IRP_CONTEXT* Args, __inout CREATE_RESULT* Result );
-NTSTATUS ProcessPreCreate_OVERWRITE_IF_NEW( __in IRP_CONTEXT* Args, __inout CREATE_RESULT* Result );
-NTSTATUS ProcessPreCreate_OVERWRITE_IF_EXIST( __in IRP_CONTEXT* Args, __inout CREATE_RESULT* Result );
+NTSTATUS ProcessPreCreate_SUPERSEDE( __in IRP_CONTEXT* Args );
+NTSTATUS ProcessPreCreate_SUPERSEDE_NEW( __in IRP_CONTEXT* Args );
+NTSTATUS ProcessPreCreate_SUPERSEDE_EXIST( __in IRP_CONTEXT* Args );
+NTSTATUS ProcessPreCreate_OPEN( __in IRP_CONTEXT* Args );
+NTSTATUS ProcessPreCreate_OPEN_NEW( __in IRP_CONTEXT* Args );
+NTSTATUS ProcessPreCreate_OPEN_EXIST( __in IRP_CONTEXT* Args );
+NTSTATUS ProcessPreCreate_CREATE( __in IRP_CONTEXT* Args );
+NTSTATUS ProcessPreCreate_CREATE_NEW( __in IRP_CONTEXT* Args );
+NTSTATUS ProcessPreCreate_CREATE_EXIST( __in IRP_CONTEXT* Args );
+NTSTATUS ProcessPreCreate_OPEN_IF( __in IRP_CONTEXT* Args );
+NTSTATUS ProcessPreCreate_OPEN_IF_NEW( __in IRP_CONTEXT* Args );
+NTSTATUS ProcessPreCreate_OPEN_IF_EXIST( __in IRP_CONTEXT* Args );
+NTSTATUS ProcessPreCreate_OVERWRITE( __in IRP_CONTEXT* Args );
+NTSTATUS ProcessPreCreate_OVERWRITE_NEW( __in IRP_CONTEXT* Args );
+NTSTATUS ProcessPreCreate_OVERWRITE_EXIST( __in IRP_CONTEXT* Args );
+NTSTATUS ProcessPreCreate_OVERWRITE_IF( __in IRP_CONTEXT* Args );
+NTSTATUS ProcessPreCreate_OVERWRITE_IF_NEW( __in IRP_CONTEXT* Args );
+NTSTATUS ProcessPreCreate_OVERWRITE_IF_EXIST( __in IRP_CONTEXT* Args );
 
 #endif // HDR_ISOLATION_CREATE
