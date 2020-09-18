@@ -73,6 +73,8 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
         IrpContext->IsAudit = true;
         IrpContext->Params = &CreateArgs;
 
+        InitializeVolumeProperties( IrpContext );
+
         /*!
             해당 파일에 대한 Lower FileObject 를 획득한다.
             해당 파일이 이미 필터링 중인가?
@@ -377,6 +379,98 @@ ACCESS_MASK CreateDesiredAccess( PIRP_CONTEXT IrpContext )
     }
 
     return CreatedDesiredAccess;
+}
+
+void InitializeVolumeProperties( PIRP_CONTEXT IrpContext )
+{
+    auto InstanceContext = ( CTX_INSTANCE_CONTEXT* )IrpContext->InstanceContext;
+
+    /*!
+        MSDN 의 권고문에는 InstanceSetupCallback 에서 수행하는 것을 권장하지만,
+        몇몇 USB 장치의 볼륨에 대한 정보를 가져올 때 OS 가 응답없음에 빠지는 경우가 존재하여
+        이곳에서 값을 가져옴
+    */
+    if( InstanceContext->IsVolumePropertySet == FALSE && IrpContext->FltObjects->Volume != NULL )
+    {
+        ULONG                      nReturnedLength = 0;
+
+        FltGetVolumeProperties( IrpContext->FltObjects->Volume,
+                                &InstanceContext->VolumeProperties,
+                                sizeof( UCHAR ) * _countof( InstanceContext->Data ),
+                                &nReturnedLength );
+
+        KeMemoryBarrier();
+
+        InstanceContext->IsVolumePropertySet = TRUE;
+    }
+
+    // TODO: 향후 별도 함수로 분리
+    if( IrpContext->InstanceContext->IsAllocationPropertySet == FALSE )
+    {
+        NTSTATUS Status = STATUS_SUCCESS;
+        IO_STATUS_BLOCK IoStatus;
+        FILE_FS_FULL_SIZE_INFORMATION fsFullSizeInformation;
+        RtlZeroMemory( &fsFullSizeInformation, sizeof( FILE_FS_FULL_SIZE_INFORMATION ) );
+
+        switch( IrpContext->InstanceContext->VolumeProperties.DeviceType )
+        {
+            case FILE_DEVICE_CD_ROM_FILE_SYSTEM:
+            {
+                IrpContext->InstanceContext->BytesPerSector = 2048;
+                IrpContext->InstanceContext->SectorsPerAllocationUnit = 1;
+            } break;
+            case FILE_DEVICE_DISK_FILE_SYSTEM:
+            {
+                Status = FltQueryVolumeInformation( IrpContext->FltObjects->Instance,
+                                                    &IoStatus, &fsFullSizeInformation, sizeof( FILE_FS_FULL_SIZE_INFORMATION )
+                                                    , FileFsFullSizeInformation );
+
+                if( !NT_SUCCESS( Status ) )
+                {
+                    KdPrint( ( "[WinIOSol] EvtID=%09d %s %s Line=%d Status=0x%08x,%s Src=%ws\n"
+                               , IrpContext->EvtID, __FUNCTION__
+                               , "FltQueryVolumeInformation FAILED", __LINE__
+                               , Status, ntkernel_error_category::find_ntstatus( Status )->message
+                               , IrpContext->InstanceContext->DeviceNameBuffer ) );
+                    break;
+                }
+
+                IrpContext->InstanceContext->BytesPerSector = fsFullSizeInformation.BytesPerSector;
+                IrpContext->InstanceContext->SectorsPerAllocationUnit = fsFullSizeInformation.SectorsPerAllocationUnit;
+            } break;
+            case FILE_DEVICE_NETWORK_FILE_SYSTEM:
+            {
+                ULONG LengthReturned = 0;
+                Status = FltQueryVolumeInformationFile( IrpContext->FltObjects->Instance
+                                                        , ( ( CREATE_ARGS* )IrpContext->Params )->LowerFileObject
+                                                        , &fsFullSizeInformation, sizeof( FILE_FS_FULL_SIZE_INFORMATION )
+                                                        , FileFsFullSizeInformation
+                                                        , &LengthReturned );
+                if( !NT_SUCCESS( Status ) )
+                {
+                    KdPrint( ( "[WinIOSol] EvtID=%09d %s %s Line=%d Status=0x%08x,%s Dev=%ws Src=%ws\n"
+                               , IrpContext->EvtID, __FUNCTION__
+                               , "FltQueryVolumeInformationFile FAILED", __LINE__
+                               , Status, ntkernel_error_category::find_ntstatus( Status )->message
+                               , IrpContext->InstanceContext->DeviceNameBuffer
+                               , IrpContext->SrcFileFullPath.Buffer ) );
+                    break;
+                }
+
+                IrpContext->InstanceContext->BytesPerSector = fsFullSizeInformation.BytesPerSector;
+                IrpContext->InstanceContext->SectorsPerAllocationUnit = fsFullSizeInformation.SectorsPerAllocationUnit;
+            } break;
+        }
+
+        if( NT_SUCCESS( Status ) )
+        {
+            IrpContext->InstanceContext->ClusterSize = IrpContext->InstanceContext->BytesPerSector * IrpContext->InstanceContext->SectorsPerAllocationUnit;
+
+            KeMemoryBarrier();
+            IrpContext->InstanceContext->IsAllocationPropertySet = TRUE;
+        }
+    }
+
 }
 
 NTSTATUS ProcessPreCreate_SUPERSEDE( IRP_CONTEXT* Args )

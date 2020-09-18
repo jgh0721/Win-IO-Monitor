@@ -46,6 +46,8 @@ NTSTATUS OpenLowerFileObject( __in PIRP_CONTEXT IrpContext );
 
 ACCESS_MASK CreateDesiredAccess( __in PIRP_CONTEXT IrpContext );
 
+VOID InitializeVolumeProperties( __in PIRP_CONTEXT IrpContext );
+
 ///////////////////////////////////////////////////////////////////////////////
 
 enum TyEnFileStatus

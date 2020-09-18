@@ -62,6 +62,11 @@ typedef struct _CTX_INSTANCE_CONTEXT
 
     BOOLEAN                         IsWritable;
 
+    ULONG                           BytesPerSector;
+    ULONG                           SectorsPerAllocationUnit;
+    ULONG                           ClusterSize;
+    BOOLEAN                         IsAllocationPropertySet;
+
     ///
     /// Fcb Management
     ///
