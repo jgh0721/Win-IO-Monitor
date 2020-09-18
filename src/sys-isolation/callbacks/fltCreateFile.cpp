@@ -205,8 +205,7 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
         if( BooleanFlagOn( CreateArgs.CreateOptions, FILE_DELETE_ON_CLOSE ) )
             SetFlag( CreateArgs.Fcb->Flags, FILE_DELETE_ON_CLOSE );
 
-        IrpContext->PreFltStatus = FLT_PREOP_COMPLETE;
-        SetFlag( IrpContext->CompleteStatus, COMPLETE_RETURN_FLTSTATUS );
+        AssignCmnFltResult( IrpContext, FLT_PREOP_COMPLETE );
 
         //CreateResult.IoStatus.Status = OpenLowerFileObject( IrpContext );
 
@@ -237,18 +236,6 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
     }
     __finally
     {
-        if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_RETURN_FLTSTATUS ) )
-            FltStatus = IrpContext->PreFltStatus;
-
-        if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_FREE_LOWER_FILEOBJECT ) )
-        {
-            if( CreateArgs.LowerFileHandle != INVALID_HANDLE_VALUE )
-                FltClose( CreateArgs.LowerFileHandle );
-
-            if( CreateArgs.LowerFileObject != NULLPTR )
-                ObDereferenceObject( CreateArgs.LowerFileObject );
-        }
-
         if( IrpContext != NULLPTR )
         {
             if( IrpContext->IsAudit == true )
@@ -258,6 +245,18 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
                            , IrpContext->Status, nsW32API::ConvertCreateResultInformation( IrpContext->Status, IrpContext->Information )
                            , IrpContext->SrcFileFullPath.Buffer ) );
             }
+
+            if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_FREE_LOWER_FILEOBJECT ) )
+            {
+                if( CreateArgs.LowerFileHandle != INVALID_HANDLE_VALUE )
+                    FltClose( CreateArgs.LowerFileHandle );
+
+                if( CreateArgs.LowerFileObject != NULLPTR )
+                    ObDereferenceObject( CreateArgs.LowerFileObject );
+            }
+
+            if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_RETURN_FLTSTATUS ) )
+                FltStatus = IrpContext->PreFltStatus;
         }
 
         DeallocateBuffer( &CreateArgs.CreateFileName );

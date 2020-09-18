@@ -317,13 +317,13 @@ VOID PrintIrpContext( __in PIRP_CONTEXT IrpContext )
 
 VOID AcquireCmnResource( PIRP_CONTEXT IrpContext, LONG RsrcFlags )
 {
-    ASSERT( IrpContext != NULLPTR );
-    if( IrpContext == NULLPTR )
-        return;
+    //ASSERT( IrpContext != NULLPTR );
+    //if( IrpContext == NULLPTR )
+    //    return;
 
-    ASSERT( IrpContext->Fcb != NULLPTR );
-    if( IrpContext->Fcb == NULLPTR )
-        return;
+    //ASSERT( IrpContext->Fcb != NULLPTR );
+    //if( IrpContext->Fcb == NULLPTR )
+    //    return;
 
     if( BooleanFlagOn( RsrcFlags, FCB_MAIN_EXCLUSIVE ) )
     {

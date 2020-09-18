@@ -34,47 +34,60 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreQueryVolumeInformation( PFLT_CALLBACK_
             case FileFsVolumeInformation: {
                 ProcessFileFsVolumeInformation( IrpContext );
             } break;
-            case FileFsLabelInformation: {
-                ProcessFileFsLabelInformation( IrpContext );
+            //case FileFsLabelInformation: {
+            //    ProcessFileFsLabelInformation( IrpContext );
+            //} break;
+            //case FileFsSizeInformation: {
+            //    ProcessFileFsSizeInformation( IrpContext );
+            //} break;
+            //case FileFsDeviceInformation: {
+            //    ProcessFileFsDeviceInformation( IrpContext );
+            //} break;
+            //case FileFsAttributeInformation: {
+            //    ProcessFileFsAttributeInformation( IrpContext );
+            //} break;
+            //case FileFsControlInformation: {
+            //    ProcessFileFsControlInformation( IrpContext );
+            //} break;
+            //case FileFsFullSizeInformation: {
+            //    ProcessFileFsFullSizeInformation( IrpContext );
+            //} break;
+            //case FileFsObjectIdInformation: {
+            //    ProcessFileFsObjectIdInformation( IrpContext );
+            //} break;
+            //case FileFsDriverPathInformation: {
+            //    ProcessFileFsDriverPathInformation( IrpContext );
+            //} break;
+            //case FileFsVolumeFlagsInformation: {
+            //    ProcessFileFsVolumeFlagsInformation( IrpContext );
+            //} break;
+            //case nsW32API::FileFsSectorSizeInformation: {
+            //    ProcessFileFsSectorSizeInformation( IrpContext );
+            //} break;
+            //case nsW32API::FileFsDataCopyInformation: {
+            //    ProcessFileFsDataCopyInformation( IrpContext );
+            //} break;
+            //case nsW32API::FileFsMetadataSizeInformation: {
+            //    ProcessFileFsMetadataSizeInformation( IrpContext );
+            //} break;
+            //case nsW32API::FileFsFullSizeInformationEx: {
+            //    ProcessFileFsFullSizeInformationEx( IrpContext );
+            //} break;
+            default: {
+                auto Fcb = ( FCB* )FltObjects->FileObject->FsContext;
+
+                auto InputBuffer = IrpContext->Data->Iopb->Parameters.QueryVolumeInformation.VolumeBuffer;
+                auto Length = IrpContext->Data->Iopb->Parameters.QueryVolumeInformation.Length;
+                auto FsInformationClass = IrpContext->Data->Iopb->Parameters.QueryVolumeInformation.FsInformationClass;
+
+                ULONG LengthReturned = 0;
+                Data->IoStatus.Status = FltQueryVolumeInformationFile( FltObjects->Instance, Fcb->LowerFileObject
+                                                                       , InputBuffer, Length, FsInformationClass
+                                                                       , &LengthReturned );
+                if( NT_SUCCESS( Data->IoStatus.Status ) )
+                    Data->IoStatus.Status = LengthReturned;
+
             } break;
-            case FileFsSizeInformation: {
-                ProcessFileFsSizeInformation( IrpContext );
-            } break;
-            case FileFsDeviceInformation: {
-                ProcessFileFsDeviceInformation( IrpContext );
-            } break;
-            case FileFsAttributeInformation: {
-                ProcessFileFsAttributeInformation( IrpContext );
-            } break;
-            case FileFsControlInformation: {
-                ProcessFileFsControlInformation( IrpContext );
-            } break;
-            case FileFsFullSizeInformation: {
-                ProcessFileFsFullSizeInformation( IrpContext );
-            } break;
-            case FileFsObjectIdInformation: {
-                ProcessFileFsObjectIdInformation( IrpContext );
-            } break;
-            case FileFsDriverPathInformation: {
-                ProcessFileFsDriverPathInformation( IrpContext );
-            } break;
-            case FileFsVolumeFlagsInformation: {
-                ProcessFileFsVolumeFlagsInformation( IrpContext );
-            } break;
-            case nsW32API::FileFsSectorSizeInformation: {
-                ProcessFileFsSectorSizeInformation( IrpContext );
-            } break;
-            case nsW32API::FileFsDataCopyInformation: {
-                ProcessFileFsDataCopyInformation( IrpContext );
-            } break;
-            case nsW32API::FileFsMetadataSizeInformation: {
-                ProcessFileFsMetadataSizeInformation( IrpContext );
-            } break;
-            case nsW32API::FileFsFullSizeInformationEx: {
-                ProcessFileFsFullSizeInformationEx( IrpContext );
-            } break;
-            default:
-                break;
         }
         
         FltStatus = FLT_PREOP_COMPLETE;

@@ -64,8 +64,8 @@ NTSTATUS CreateInstanceContext( PCFLT_RELATED_OBJECTS FltObjects, FLT_INSTANCE_S
         Status = CtxAllocateContext( FltObjects->Filter, FLT_INSTANCE_CONTEXT, ( PFLT_CONTEXT* )&InstanceContext );
         if( !NT_SUCCESS( Status ) )
         {
-            KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_ERROR_LEVEL, "[WinIOMon] %s %s Status=0x%08x\n",
-                         __FUNCTION__, "CtxAllocateContext FAILED", Status ) );
+            KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_ERROR_LEVEL, "[WinIOMon] %s %s Status=0x%08x,%s\n",
+                         __FUNCTION__, "CtxAllocateContext FAILED", Status, ntkernel_error_category::find_ntstatus( Status )->message ) );
             break;
         }
 
