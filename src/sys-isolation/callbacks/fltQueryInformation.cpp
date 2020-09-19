@@ -44,39 +44,49 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreQueryInformation( PFLT_CALLBACK_DATA D
             case FileStandardInformation: {
                 ProcessFileStandardInformation( IrpContext );
             } break;
-            //case FileInternalInformation: {
-            //    ProcessFileInternalInformation( IrpContext );
-            //} break;
-            //case FileEaInformation: {
-            //    ProcessFileEaInformation( IrpContext );
-            //} break;
-            //case FileNameInformation: {
-            //    ProcessFileNameInformation( IrpContext );
-            //} break;
-            //case FilePositionInformation: {
-            //    ProcessFilePositionInformation( IrpContext );
-            //} break;
+            case FileInternalInformation: {
+                ProcessFileInternalInformation( IrpContext );
+            } break;
+            case FileEaInformation: {
+                ProcessFileEaInformation( IrpContext );
+            } break;
+            case FileNameInformation: {
+                ProcessFileNameInformation( IrpContext );
+            } break;
+            case FilePositionInformation: {
+                ProcessFilePositionInformation( IrpContext );
+            } break;
             case FileAllInformation: {
                 ProcessFileAllInformation( IrpContext );
             } break;
-            //case FileAttributeTagInformation: {
-            //    ProcessFileAttributeTagInformation( IrpContext );
-            //} break;
-            //case FileCompressionInformation: {
-            //    ProcessFileCompressionInformation( IrpContext );
-            //} break;
+            case FileStreamInformation: {
+                ProcessFileStreamInformation( IrpContext );
+            } break;
+            case FileCompressionInformation: {
+                ProcessFileCompressionInformation( IrpContext );
+            } break;
+            // NOTE: FileMoveClusterInformation is reserved for system use
             //case FileMoveClusterInformation: {
             //    ProcessFileMoveClusterInformation( IrpContext );
             //} break;
-            //case FileNetworkOpenInformation: {
-            //    ProcessFileNetworkOpenInformation( IrpContext );
-            //} break;
-            //case FileStreamInformation: {
-            //    ProcessFileStreamInformation( IrpContext );
-            //} break;
-            //case FileHardLinkInformation: {
-            //    ProcessFileHardLinkInformation( IrpContext );
-            //} break;
+            case FileNetworkOpenInformation: {
+                ProcessFileNetworkOpenInformation( IrpContext );
+            } break;
+            case FileAttributeTagInformation: {
+                ProcessFileAttributeTagInformation( IrpContext );
+            } break;
+            // NOTE: Windows Vista ~ 
+            case FileHardLinkInformation: {
+                ProcessFileHardLinkInformation( IrpContext );
+            } break;
+            // NOTE: Windows 8 ~
+            case FileNormalizedNameInformation: {
+                ProcessFileNormalizedNameInformation( IrpContext );
+            } break;
+            // NOTE: Windows 7 ~
+            case FileStandardLinkInformation: {
+                ProcessFileStandardLinkInformation( IrpContext );
+            } break;
             default: {
                 FILE_OBJECT* FileObject = FltObjects->FileObject;
                 FCB* Fcb = ( FCB* )FileObject->FsContext;
@@ -139,6 +149,7 @@ NTSTATUS ProcessFileBasicInformation( IRP_CONTEXT* IrpContext )
 {
     NTSTATUS Status = STATUS_SUCCESS;
     ULONG_PTR Information = 0;
+    ULONG LengthReturned = 0;
 
     auto InputBuffer = IrpContext->Data->Iopb->Parameters.QueryFileInformation.InfoBuffer;
     auto Length = IrpContext->Data->Iopb->Parameters.QueryFileInformation.Length;
@@ -152,7 +163,6 @@ NTSTATUS ProcessFileBasicInformation( IRP_CONTEXT* IrpContext )
         }
 
         FILE_BASIC_INFORMATION fbi;
-        ULONG LengthReturned = 0;
 
         RtlZeroMemory( &fbi, sizeof( fbi ) );
         Status = FltQueryInformationFile( IrpContext->FltObjects->Instance,
@@ -188,6 +198,7 @@ NTSTATUS ProcessFileStandardInformation( IRP_CONTEXT* IrpContext )
 {
     NTSTATUS Status = STATUS_SUCCESS;
     ULONG_PTR Information = 0;
+    ULONG LengthReturned = 0;
 
     PVOID InputBuffer = IrpContext->Data->Iopb->Parameters.QueryFileInformation.InfoBuffer;
     ULONG Length = IrpContext->Data->Iopb->Parameters.QueryFileInformation.Length;
@@ -200,7 +211,6 @@ NTSTATUS ProcessFileStandardInformation( IRP_CONTEXT* IrpContext )
             __leave;
         }
 
-        ULONG LengthReturned = 0;
         FILE_STANDARD_INFORMATION FileStdInfo;
 
         Status = FltQueryInformationFile( IrpContext->FltObjects->Instance, 
@@ -230,10 +240,169 @@ NTSTATUS ProcessFileStandardInformation( IRP_CONTEXT* IrpContext )
     return Status;
 }
 
+NTSTATUS ProcessFileInternalInformation( IRP_CONTEXT* IrpContext )
+{
+    NTSTATUS Status = STATUS_SUCCESS;
+    ULONG_PTR Information = 0;
+    ULONG LengthReturned = 0;
+
+    PVOID InputBuffer = IrpContext->Data->Iopb->Parameters.QueryFileInformation.InfoBuffer;
+    ULONG Length = IrpContext->Data->Iopb->Parameters.QueryFileInformation.Length;
+
+    __try
+    {
+        if( Length < sizeof( FILE_INTERNAL_INFORMATION ) )
+        {
+            Status = STATUS_INFO_LENGTH_MISMATCH;
+            __leave;
+        }
+
+        Status = FltQueryInformationFile( IrpContext->FltObjects->Instance, IrpContext->Fcb->LowerFileObject,
+                                          InputBuffer, Length,
+                                          FileInternalInformation, &LengthReturned );
+
+        if( !NT_SUCCESS( Status ) )
+        {
+            KdPrint( ( "[WinIOSol] EvtID=%09d %s %s Line=%d Status=0x%08x,%s Src=%ws\n",
+                       IrpContext->EvtID, __FUNCTION__, "FltQueryInformationFile FAILED", __LINE__
+                       , Status, ntkernel_error_category::find_ntstatus( Status )->message
+                       , IrpContext->SrcFileFullPath.Buffer ) );
+
+            __leave;
+        }
+
+        Information = LengthReturned;
+    }
+    __finally
+    {
+        AssignCmnResult( IrpContext, Status );
+        AssignCmnResultInfo( IrpContext, Information );
+    }
+
+    return Status;
+}
+
+NTSTATUS ProcessFileEaInformation( IRP_CONTEXT* IrpContext )
+{
+    NTSTATUS Status = STATUS_SUCCESS;
+    ULONG_PTR Information = 0;
+    ULONG LengthReturned = 0;
+
+    PVOID InputBuffer = IrpContext->Data->Iopb->Parameters.QueryFileInformation.InfoBuffer;
+    ULONG Length = IrpContext->Data->Iopb->Parameters.QueryFileInformation.Length;
+
+    __try
+    {
+        if( Length < sizeof( FILE_EA_INFORMATION ) )
+        {
+            Status = STATUS_INFO_LENGTH_MISMATCH;
+            __leave;
+        }
+
+        Status = FltQueryInformationFile( IrpContext->FltObjects->Instance, IrpContext->Fcb->LowerFileObject,
+                                          InputBuffer, Length,
+                                          FileEaInformation, &LengthReturned );
+
+        if( !NT_SUCCESS( Status ) )
+        {
+            KdPrint( ( "[WinIOSol] EvtID=%09d %s %s Line=%d Status=0x%08x,%s Src=%ws\n",
+                       IrpContext->EvtID, __FUNCTION__, "FltQueryInformationFile FAILED", __LINE__
+                       , Status, ntkernel_error_category::find_ntstatus( Status )->message
+                       , IrpContext->SrcFileFullPath.Buffer ) );
+
+            __leave;
+        }
+
+        Information = LengthReturned;
+    }
+    __finally
+    {
+        AssignCmnResult( IrpContext, Status );
+        AssignCmnResultInfo( IrpContext, Information );
+    }
+
+    return Status;
+}
+
+NTSTATUS ProcessFileNameInformation( IRP_CONTEXT* IrpContext )
+{
+    NTSTATUS Status = STATUS_SUCCESS;
+    ULONG_PTR Information = 0;
+
+    PVOID InputBuffer = IrpContext->Data->Iopb->Parameters.QueryFileInformation.InfoBuffer;
+    ULONG Length = IrpContext->Data->Iopb->Parameters.QueryFileInformation.Length;
+
+    __try
+    {
+        if( Length < sizeof( FILE_NAME_INFORMATION ) )
+        {
+            Status = STATUS_INFO_LENGTH_MISMATCH;
+            __leave;
+        }
+
+        auto nameInfo = ( PFILE_NAME_INFORMATION )InputBuffer;
+        ULONG nameLength = ( ULONG )( nsUtils::strlength( IrpContext->Fcb->FileFullPathWOVolume ) * sizeof( WCHAR ) );
+        ULONG RequiredLength = sizeof( FILE_NAME_INFORMATION ) + nameLength - sizeof( WCHAR );
+
+        if( Length < RequiredLength )
+        {
+            nameInfo->FileNameLength = RequiredLength;
+            RtlCopyMemory( nameInfo->FileName, IrpContext->Fcb->FileFullPathWOVolume, Length - sizeof( ULONG ) );
+            Status = STATUS_BUFFER_OVERFLOW;
+            Information = Length;
+            __leave;
+        }
+
+        nameInfo->FileNameLength = nameLength;
+        RtlCopyMemory( nameInfo->FileName, IrpContext->Fcb->FileFullPathWOVolume, nameLength );
+
+        Status = STATUS_SUCCESS;
+        Information = nameLength + sizeof( ULONG );
+    }
+    __finally
+    {
+        AssignCmnResult( IrpContext, Status );
+        AssignCmnResultInfo( IrpContext, Information );
+    }
+
+    return Status;
+}
+
+NTSTATUS ProcessFilePositionInformation( IRP_CONTEXT* IrpContext )
+{
+    NTSTATUS Status = STATUS_SUCCESS;
+    ULONG_PTR Information = 0;
+
+    PVOID InputBuffer = IrpContext->Data->Iopb->Parameters.QueryFileInformation.InfoBuffer;
+    ULONG Length = IrpContext->Data->Iopb->Parameters.QueryFileInformation.Length;
+
+    __try
+    {
+        if( Length < sizeof( FILE_POSITION_INFORMATION ) )
+        {
+            Status = STATUS_INFO_LENGTH_MISMATCH;
+            __leave;
+        }
+
+        auto FilePositionInfo = ( PFILE_POSITION_INFORMATION )InputBuffer;
+        FilePositionInfo->CurrentByteOffset = IrpContext->FltObjects->FileObject->CurrentByteOffset;
+
+        Status = STATUS_SUCCESS;
+    }
+    __finally
+    {
+        AssignCmnResult( IrpContext, Status );
+        AssignCmnResultInfo( IrpContext, Information );
+    }
+
+    return Status;
+}
+
 NTSTATUS ProcessFileAllInformation( IRP_CONTEXT* IrpContext )
 {
     NTSTATUS Status = STATUS_SUCCESS;
     ULONG_PTR Information = 0;
+    ULONG LengthReturned = 0;
 
     PVOID InputBuffer = IrpContext->Data->Iopb->Parameters.QueryFileInformation.InfoBuffer;
     ULONG Length = IrpContext->Data->Iopb->Parameters.QueryFileInformation.Length;
@@ -247,7 +416,6 @@ NTSTATUS ProcessFileAllInformation( IRP_CONTEXT* IrpContext )
             __leave;
         }
 
-        ULONG LengthReturned = 0;
         auto Fcb = IrpContext->Fcb;
         SIZE_T poolSize = sizeof( FILE_ALL_INFORMATION ) + ( nsUtils::strlength( Fcb->FileFullPath.Buffer ) * sizeof( WCHAR ) );
         FileAllInformationBuffer = ( PFILE_ALL_INFORMATION )ExAllocatePoolWithTag( PagedPool, poolSize, POOL_MAIN_TAG );
@@ -300,20 +468,42 @@ NTSTATUS ProcessFileAllInformation( IRP_CONTEXT* IrpContext )
     return Status;
 }
 
-NTSTATUS ProcessFileAttributeTagInformation( IRP_CONTEXT* IrpContext )
+NTSTATUS ProcessFileStreamInformation( IRP_CONTEXT* IrpContext )
 {
     NTSTATUS Status = STATUS_SUCCESS;
     ULONG_PTR Information = 0;
+    ULONG LengthReturned = 0;
+
+    PVOID InputBuffer = IrpContext->Data->Iopb->Parameters.QueryFileInformation.InfoBuffer;
+    ULONG Length = IrpContext->Data->Iopb->Parameters.QueryFileInformation.Length;
 
     __try
     {
+        if( Length < sizeof( FILE_STREAM_INFORMATION ) )
+        {
+            Status = STATUS_BUFFER_TOO_SMALL;
+            __leave;
+        }
 
+        Status = FltQueryInformationFile( IrpContext->FltObjects->Instance,
+                                          IrpContext->Fcb->LowerFileObject,
+                                          InputBuffer, Length,
+                                          FileStreamInformation, &LengthReturned );
+
+        if( !NT_SUCCESS( Status ) )
+        {
+            KdPrint( ( "[WinIOSol] EvtID=%09d %s %s Line=%d Status=0x%08x,%s Src=%ws\n",
+                       IrpContext->EvtID, __FUNCTION__, "FltQueryInformationFile FAILED", __LINE__
+                       , Status, ntkernel_error_category::find_ntstatus( Status )->message
+                       , IrpContext->SrcFileFullPath.Buffer ) );
+
+            __leave;
+        }
     }
     __finally
     {
         AssignCmnResult( IrpContext, Status );
         AssignCmnResultInfo( IrpContext, Information );
-
     }
 
     return Status;
@@ -323,92 +513,39 @@ NTSTATUS ProcessFileCompressionInformation( IRP_CONTEXT* IrpContext )
 {
     NTSTATUS Status = STATUS_SUCCESS;
     ULONG_PTR Information = 0;
+    ULONG LengthReturned = 0;
+
+    PVOID InputBuffer = IrpContext->Data->Iopb->Parameters.QueryFileInformation.InfoBuffer;
+    ULONG Length = IrpContext->Data->Iopb->Parameters.QueryFileInformation.Length;
 
     __try
     {
+        if( Length < sizeof( FILE_COMPRESSION_INFORMATION ) )
+        {
+            Status = STATUS_INFO_LENGTH_MISMATCH;
+            __leave;
+        }
 
+        Status = FltQueryInformationFile( IrpContext->FltObjects->Instance, IrpContext->Fcb->LowerFileObject,
+                                          InputBuffer, Length,
+                                          FileCompressionInformation, &LengthReturned );
+
+        if( !NT_SUCCESS( Status ) )
+        {
+            KdPrint( ( "[WinIOSol] EvtID=%09d %s %s Line=%d Status=0x%08x,%s Src=%ws\n",
+                       IrpContext->EvtID, __FUNCTION__, "FltQueryInformationFile FAILED", __LINE__
+                       , Status, ntkernel_error_category::find_ntstatus( Status )->message
+                       , IrpContext->SrcFileFullPath.Buffer ) );
+
+            __leave;
+        }
+
+        Information = LengthReturned;
     }
     __finally
     {
         AssignCmnResult( IrpContext, Status );
         AssignCmnResultInfo( IrpContext, Information );
-
-    }
-
-    return Status;
-}
-
-NTSTATUS ProcessFileEaInformation( IRP_CONTEXT* IrpContext )
-{
-    NTSTATUS Status = STATUS_SUCCESS;
-    ULONG_PTR Information = 0;
-
-    __try
-    {
-
-    }
-    __finally
-    {
-        AssignCmnResult( IrpContext, Status );
-        AssignCmnResultInfo( IrpContext, Information );
-
-    }
-
-    return Status;
-}
-
-NTSTATUS ProcessFileInternalInformation( IRP_CONTEXT* IrpContext )
-{
-    NTSTATUS Status = STATUS_SUCCESS;
-    ULONG_PTR Information = 0;
-
-    __try
-    {
-
-    }
-    __finally
-    {
-        AssignCmnResult( IrpContext, Status );
-        AssignCmnResultInfo( IrpContext, Information );
-
-    }
-
-    return Status;
-}
-
-NTSTATUS ProcessFileMoveClusterInformation( IRP_CONTEXT* IrpContext )
-{
-    NTSTATUS Status = STATUS_SUCCESS;
-    ULONG_PTR Information = 0;
-
-    __try
-    {
-
-    }
-    __finally
-    {
-        AssignCmnResult( IrpContext, Status );
-        AssignCmnResultInfo( IrpContext, Information );
-
-    }
-
-    return Status;
-}
-
-NTSTATUS ProcessFileNameInformation( IRP_CONTEXT* IrpContext )
-{
-    NTSTATUS Status = STATUS_SUCCESS;
-    ULONG_PTR Information = 0;
-
-    __try
-    {
-
-    }
-    __finally
-    {
-        AssignCmnResult( IrpContext, Status );
-        AssignCmnResultInfo( IrpContext, Information );
-
     }
 
     return Status;
@@ -418,54 +555,84 @@ NTSTATUS ProcessFileNetworkOpenInformation( IRP_CONTEXT* IrpContext )
 {
     NTSTATUS Status = STATUS_SUCCESS;
     ULONG_PTR Information = 0;
+    ULONG LengthReturned = 0;
+
+    PVOID InputBuffer = IrpContext->Data->Iopb->Parameters.QueryFileInformation.InfoBuffer;
+    ULONG Length = IrpContext->Data->Iopb->Parameters.QueryFileInformation.Length;
 
     __try
     {
+        if( Length < sizeof( FILE_NETWORK_OPEN_INFORMATION ) )
+        {
+            Status = STATUS_INFO_LENGTH_MISMATCH;
+            __leave;
+        }
 
+        FILE_NETWORK_OPEN_INFORMATION networkOpenInfo;
+
+        Status = FltQueryInformationFile( IrpContext->FltObjects->Instance, IrpContext->Fcb->LowerFileObject,
+                                          &networkOpenInfo, sizeof( FILE_NETWORK_OPEN_INFORMATION ),
+                                          FileNetworkOpenInformation, &LengthReturned );
+
+        if( !NT_SUCCESS( Status ) )
+        {
+            KdPrint( ( "[WinIOSol] EvtID=%09d %s %s Line=%d Status=0x%08x,%s Src=%ws\n",
+                       IrpContext->EvtID, __FUNCTION__, "FltQueryInformationFile FAILED", __LINE__
+                       , Status, ntkernel_error_category::find_ntstatus( Status )->message
+                       , IrpContext->SrcFileFullPath.Buffer ) );
+
+            __leave;
+        }
+
+        RtlCopyMemory( InputBuffer, &networkOpenInfo, Length );
+        Information = LengthReturned;
     }
     __finally
     {
         AssignCmnResult( IrpContext, Status );
         AssignCmnResultInfo( IrpContext, Information );
-
     }
 
     return Status;
 }
 
-NTSTATUS ProcessFilePositionInformation( IRP_CONTEXT* IrpContext )
+NTSTATUS ProcessFileAttributeTagInformation( IRP_CONTEXT* IrpContext )
 {
     NTSTATUS Status = STATUS_SUCCESS;
     ULONG_PTR Information = 0;
+    ULONG LengthReturned = 0;
+
+    PVOID InputBuffer = IrpContext->Data->Iopb->Parameters.QueryFileInformation.InfoBuffer;
+    ULONG Length = IrpContext->Data->Iopb->Parameters.QueryFileInformation.Length;
 
     __try
     {
+        if( Length < sizeof( FILE_ATTRIBUTE_TAG_INFORMATION ) )
+        {
+            Status = STATUS_INFO_LENGTH_MISMATCH;
+            __leave;
+        }
 
+        Status = FltQueryInformationFile( IrpContext->FltObjects->Instance, IrpContext->Fcb->LowerFileObject,
+                                          InputBuffer, Length,
+                                          FileAttributeTagInformation, &LengthReturned );
+
+        if( !NT_SUCCESS( Status ) )
+        {
+            KdPrint( ( "[WinIOSol] EvtID=%09d %s %s Line=%d Status=0x%08x,%s Src=%ws\n",
+                       IrpContext->EvtID, __FUNCTION__, "FltQueryInformationFile FAILED", __LINE__
+                       , Status, ntkernel_error_category::find_ntstatus( Status )->message
+                       , IrpContext->SrcFileFullPath.Buffer ) );
+
+            __leave;
+        }
+
+        Information = LengthReturned;
     }
     __finally
     {
         AssignCmnResult( IrpContext, Status );
         AssignCmnResultInfo( IrpContext, Information );
-
-    }
-
-    return Status;
-}
-
-NTSTATUS ProcessFileStreamInformation( IRP_CONTEXT* IrpContext )
-{
-    NTSTATUS Status = STATUS_SUCCESS;
-    ULONG_PTR Information = 0;
-
-    __try
-    {
-
-    }
-    __finally
-    {
-        AssignCmnResult( IrpContext, Status );
-        AssignCmnResultInfo( IrpContext, Information );
-
     }
 
     return Status;
@@ -475,16 +642,123 @@ NTSTATUS ProcessFileHardLinkInformation( IRP_CONTEXT* IrpContext )
 {
     NTSTATUS Status = STATUS_SUCCESS;
     ULONG_PTR Information = 0;
+    ULONG LengthReturned = 0;
+
+    PVOID InputBuffer = IrpContext->Data->Iopb->Parameters.QueryFileInformation.InfoBuffer;
+    ULONG Length = IrpContext->Data->Iopb->Parameters.QueryFileInformation.Length;
 
     __try
     {
+        if( Length < sizeof( FILE_LINKS_INFORMATION ) )
+        {
+            Status = STATUS_INFO_LENGTH_MISMATCH;
+            __leave;
+        }
 
+        Status = FltQueryInformationFile( IrpContext->FltObjects->Instance, IrpContext->Fcb->LowerFileObject,
+                                          InputBuffer, Length,
+                                          FileHardLinkInformation, &LengthReturned );
+
+        if( !NT_SUCCESS( Status ) )
+        {
+            KdPrint( ( "[WinIOSol] EvtID=%09d %s %s Line=%d Status=0x%08x,%s Src=%ws\n",
+                       IrpContext->EvtID, __FUNCTION__, "FltQueryInformationFile FAILED", __LINE__
+                       , Status, ntkernel_error_category::find_ntstatus( Status )->message
+                       , IrpContext->SrcFileFullPath.Buffer ) );
+
+            __leave;
+        }
+
+        Information = LengthReturned;
     }
     __finally
     {
         AssignCmnResult( IrpContext, Status );
         AssignCmnResultInfo( IrpContext, Information );
+    }
 
+    return Status;
+}
+
+NTSTATUS ProcessFileNormalizedNameInformation( IRP_CONTEXT* IrpContext )
+{
+    NTSTATUS Status = STATUS_SUCCESS;
+    ULONG_PTR Information = 0;
+    ULONG LengthReturned = 0;
+
+    PVOID InputBuffer = IrpContext->Data->Iopb->Parameters.QueryFileInformation.InfoBuffer;
+    ULONG Length = IrpContext->Data->Iopb->Parameters.QueryFileInformation.Length;
+
+    __try
+    {
+        if( Length < sizeof( FILE_NAME_INFORMATION ) )
+        {
+            Status = STATUS_INFO_LENGTH_MISMATCH;
+            __leave;
+        }
+
+        Status = FltQueryInformationFile( IrpContext->FltObjects->Instance, IrpContext->Fcb->LowerFileObject,
+                                          InputBuffer, Length,
+                                          FileNormalizedNameInformation, &LengthReturned );
+
+        if( !NT_SUCCESS( Status ) )
+        {
+            KdPrint( ( "[WinIOSol] EvtID=%09d %s %s Line=%d Status=0x%08x,%s Src=%ws\n",
+                       IrpContext->EvtID, __FUNCTION__, "FltQueryInformationFile FAILED", __LINE__
+                       , Status, ntkernel_error_category::find_ntstatus( Status )->message
+                       , IrpContext->SrcFileFullPath.Buffer ) );
+
+            __leave;
+        }
+
+        Information = LengthReturned;
+    }
+    __finally
+    {
+        AssignCmnResult( IrpContext, Status );
+        AssignCmnResultInfo( IrpContext, Information );
+    }
+
+    return Status;
+}
+
+NTSTATUS ProcessFileStandardLinkInformation( IRP_CONTEXT* IrpContext )
+{
+    NTSTATUS Status = STATUS_SUCCESS;
+    ULONG_PTR Information = 0;
+    ULONG LengthReturned = 0;
+
+    PVOID InputBuffer = IrpContext->Data->Iopb->Parameters.QueryFileInformation.InfoBuffer;
+    ULONG Length = IrpContext->Data->Iopb->Parameters.QueryFileInformation.Length;
+
+    __try
+    {
+        if( Length < sizeof( FILE_STANDARD_LINK_INFORMATION ) )
+        {
+            Status = STATUS_INFO_LENGTH_MISMATCH;
+            __leave;
+        }
+
+        Status = FltQueryInformationFile( IrpContext->FltObjects->Instance, IrpContext->Fcb->LowerFileObject,
+                                          InputBuffer, Length,
+                                          FileStandardLinkInformation, &LengthReturned );
+
+        if( !NT_SUCCESS( Status ) )
+        {
+            KdPrint( ( "[WinIOSol] EvtID=%09d %s %s Line=%d Status=0x%08x,%s Src=%ws\n",
+                       IrpContext->EvtID, __FUNCTION__, "FltQueryInformationFile FAILED", __LINE__
+                       , Status, ntkernel_error_category::find_ntstatus( Status )->message
+                       , IrpContext->SrcFileFullPath.Buffer ) );
+
+            __leave;
+        }
+
+        Information = LengthReturned;
+    }
+    __finally
+    {
+        AssignCmnResult( IrpContext, Status );
+        AssignCmnResultInfo( IrpContext, Information );
     }
 
     return Status;

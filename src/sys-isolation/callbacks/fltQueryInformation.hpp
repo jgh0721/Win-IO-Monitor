@@ -30,12 +30,14 @@ NTSTATUS ProcessFileBasicInformation( __in IRP_CONTEXT* IrpContext );
 NTSTATUS ProcessFileCompressionInformation( __in IRP_CONTEXT* IrpContext );
 NTSTATUS ProcessFileEaInformation( __in IRP_CONTEXT* IrpContext );
 NTSTATUS ProcessFileInternalInformation( __in IRP_CONTEXT* IrpContext );
-NTSTATUS ProcessFileMoveClusterInformation( __in IRP_CONTEXT* IrpContext );
+//NTSTATUS ProcessFileMoveClusterInformation( __in IRP_CONTEXT* IrpContext );
 NTSTATUS ProcessFileNameInformation( __in IRP_CONTEXT* IrpContext );
 NTSTATUS ProcessFileNetworkOpenInformation( __in IRP_CONTEXT* IrpContext );
 NTSTATUS ProcessFilePositionInformation( __in IRP_CONTEXT* IrpContext );
 NTSTATUS ProcessFileStandardInformation( __in IRP_CONTEXT* IrpContext );
 NTSTATUS ProcessFileStreamInformation( __in IRP_CONTEXT* IrpContext );
 NTSTATUS ProcessFileHardLinkInformation( __in IRP_CONTEXT* IrpContext );
+NTSTATUS ProcessFileNormalizedNameInformation( __in IRP_CONTEXT* IrpContext );
+NTSTATUS ProcessFileStandardLinkInformation( __in IRP_CONTEXT* IrpContext );
 
 #endif // HDR_ISOLATION_QUERY_INFORMATION
