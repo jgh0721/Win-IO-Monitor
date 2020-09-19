@@ -2,6 +2,7 @@
 #define HDR_ISOLATION_WRITE
 
 #include "fltBase.hpp"
+#include "irpContext_Defs.hpp"
 
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
@@ -21,5 +22,20 @@ FilterPostWrite( __inout PFLT_CALLBACK_DATA    Data,
                  __in FLT_POST_OPERATION_FLAGS Flags );
 
 EXTERN_C_END
+
+///////////////////////////////////////////////////////////////////////////////
+
+/*!
+ * Paging I/O
+ *  System Cache <-> Device
+ * Non Cached I/O( Direct I/O )
+ *  User Buffer <-> Device
+ * Cached I/O
+ *  User Buffer <-> System Cache
+ */
+
+NTSTATUS WritePagingIO( __in IRP_CONTEXT* IrpContext );
+NTSTATUS WriteCachedIO( __in IRP_CONTEXT* IrpContext );
+NTSTATUS WriteNonCachedIO( __in IRP_CONTEXT* IrpContext );
 
 #endif // HDR_ISOLATION_WRITE

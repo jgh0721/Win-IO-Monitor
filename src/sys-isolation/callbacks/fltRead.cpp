@@ -31,6 +31,9 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreRead( PFLT_CALLBACK_DATA Data, PCFLT_R
         if( IrpContext != NULLPTR )
             PrintIrpContext( IrpContext );
 
+        auto PagingIo = BooleanFlagOn( Data->Iopb->IrpFlags, IRP_PAGING_IO );
+        auto NonCachedIo = BooleanFlagOn( Data->Iopb->IrpFlags, IRP_NOCACHE );
+
         auto FileObject = FltObjects->FileObject;
         auto Fcb = ( FCB* )FileObject->FsContext;
         auto& Params = Data->Iopb->Parameters.Read;
@@ -48,10 +51,16 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreRead( PFLT_CALLBACK_DATA Data, PCFLT_R
         if( FileObject->CurrentByteOffset.QuadPart > Fcb->AdvFcbHeader.FileSize.QuadPart )
             FileObject->CurrentByteOffset.QuadPart = Fcb->AdvFcbHeader.FileSize.QuadPart;
 
-        FltStatus = FLT_PREOP_COMPLETE;
+        AssignCmnFltResult( IrpContext, FLT_PREOP_COMPLETE );
     }
     __finally
     {
+        if( IrpContext != NULLPTR )
+        {
+            if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_RETURN_FLTSTATUS ) )
+                FltStatus = IrpContext->PreFltStatus;
+        }
+
         CloseIrpContext( IrpContext );
     }
 
