@@ -25,6 +25,18 @@
 #define ALIGNED(T, A, B) (((A) + (B) - 1) & (~((T)(B) - 1)))
 #endif
 
+#define SafeZeroMemory(AT,BYTE_COUNT)                       \
+do {                                                        \
+	__try                                                   \
+    {                                                       \
+        RtlZeroMemory( ( AT ), ( BYTE_COUNT ) );            \
+    }                                                       \
+    __except( EXCEPTION_EXECUTE_HANDLER )                   \
+    {                                                       \
+        ExRaiseStatus( STATUS_INVALID_USER_BUFFER );        \
+    }                                                       \
+} while( false )
+
 #define NULLPTR nullptr
 
 #define IF_FAILED_BREAK( var, expr ) if( !NT_SUCCESS( ( (var) = (expr) ) ) ) break;
