@@ -42,9 +42,29 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreRead( PFLT_CALLBACK_DATA Data, PCFLT_R
         auto NonCachedIo = BooleanFlagOn( Data->Iopb->IrpFlags, IRP_NOCACHE );
         auto ReadBuffer = nsUtils::MakeUserBuffer( Data );
 
+        if( Data->Iopb->Parameters.Read.Length == 0 )
+        {
+            AssignCmnResult( IrpContext, STATUS_SUCCESS );
+            AssignCmnFltResult( IrpContext, FLT_PREOP_COMPLETE );
+            __leave;
+        }
+
+        // Non-CachedIO 에서는 반드시 섹터단위로 정렬되어야한다 
+        if( NonCachedIo != FALSE )
+        {
+            if( ( Data->Iopb->Parameters.Read.ByteOffset.LowPart & (IrpContext->InstanceContext->BytesPerSector - 1) ) ||
+                ( Data->Iopb->Parameters.Read.Length & (IrpContext->InstanceContext->BytesPerSector - 1)) )
+            {
+                AssignCmnResult( IrpContext, STATUS_INVALID_PARAMETER );
+                AssignCmnFltResult( IrpContext, FLT_PREOP_COMPLETE );
+                __leave;
+            }
+        }
+
         if( ReadBuffer == NULLPTR )
         {
             AssignCmnResult( IrpContext, STATUS_INVALID_USER_BUFFER );
+            AssignCmnFltResult( IrpContext, FLT_PREOP_COMPLETE );
             __leave;
         }
 
