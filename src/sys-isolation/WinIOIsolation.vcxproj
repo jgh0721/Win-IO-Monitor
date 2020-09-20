@@ -198,7 +198,6 @@
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>C:\WinDDK\7600.16385.1\inc\api;C:\WinDDK\7600.16385.1\inc\ddk;C:\WinDDK\7600.16385.1\inc\crt;$(ProjectDir);$(SolutionDir)cmn</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>USE_ON_KERNEL;DBG;_X86_;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <MinimalRebuild>true</MinimalRebuild>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <WarningLevel>Level4</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
@@ -258,7 +257,6 @@
       <Optimization>Full</Optimization>
       <AdditionalIncludeDirectories>C:\WinDDK\7600.16385.1\inc\api;C:\WinDDK\7600.16385.1\inc\ddk;C:\WinDDK\7600.16385.1\inc\crt;$(ProjectDir);$(SolutionDir)cmn</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>USE_ON_KERNEL;NDEBUG;_X86_;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <MinimalRebuild>true</MinimalRebuild>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <WarningLevel>Level4</WarningLevel>
       <TreatWarningAsError>false</TreatWarningAsError>
