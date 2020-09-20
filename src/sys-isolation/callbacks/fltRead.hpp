@@ -44,6 +44,7 @@ NTSTATUS ReadPagingIO( __in IRP_CONTEXT* IrpContext, __out PVOID ReadBuffer );
 NTSTATUS ReadCachedIO( __in IRP_CONTEXT* IrpContext, __out PVOID ReadBuffer );
 NTSTATUS ReadNonCachedIO( __in IRP_CONTEXT* IrpContext, __out PVOID ReadBuffer );
 
+NTSTATUS ReadCachedIO( __in IRP_CONTEXT* IrpContext, __out PVOID ReadBuffer, __in ULONG BytesToCopy, __in ULONG BytesToRead, __in ULONG BytesToZero );
 NTSTATUS ReadNonCachedIO( __in IRP_CONTEXT* IrpContext, __out PVOID ReadBuffer, __in ULONG BytesToCopy, __in ULONG BytesToRead, __in ULONG BytesToZero );
 
 #endif // HDR_ISOLATION_READ
