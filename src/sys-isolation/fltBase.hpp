@@ -20,6 +20,11 @@
 #define FlagOnAll( F, T )                                                    \
     (FlagOn( F, T ) == T)
 
+#ifndef ALIGNED
+// A 자료형이 T 형이고, 해당 자료형을 B 의 단위로 정렬한 크기를 반환
+#define ALIGNED(T, A, B) (((A) + (B) - 1) & (~((T)(B) - 1)))
+#endif
+
 #define NULLPTR nullptr
 
 #define IF_FAILED_BREAK( var, expr ) if( !NT_SUCCESS( ( (var) = (expr) ) ) ) break;

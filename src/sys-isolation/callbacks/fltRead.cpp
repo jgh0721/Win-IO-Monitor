@@ -2,6 +2,7 @@
 
 #include "privateFCBMgr.hpp"
 #include "irpContext.hpp"
+#include "utilities/bufferMgr.hpp"
 
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
@@ -33,6 +34,18 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreRead( PFLT_CALLBACK_DATA Data, PCFLT_R
 
         auto PagingIo = BooleanFlagOn( Data->Iopb->IrpFlags, IRP_PAGING_IO );
         auto NonCachedIo = BooleanFlagOn( Data->Iopb->IrpFlags, IRP_NOCACHE );
+
+        if( PagingIo != FALSE )
+        {
+            ReadPagingIO( IrpContext );
+        }
+        else
+        {
+            if( NonCachedIo != FALSE )
+                ReadNonCachedIO( IrpContext );
+            else
+                ReadCachedIO( IrpContext );
+        }
 
         auto FileObject = FltObjects->FileObject;
         auto Fcb = ( FCB* )FileObject->FsContext;
@@ -72,5 +85,215 @@ FLT_POSTOP_CALLBACK_STATUS FLTAPI FilterPostRead( PFLT_CALLBACK_DATA Data, PCFLT
 {
     FLT_POSTOP_CALLBACK_STATUS                  FltStatus = FLT_POSTOP_FINISHED_PROCESSING;
 
+    UNREFERENCED_PARAMETER( Data );
+    UNREFERENCED_PARAMETER( FltObjects );
+    UNREFERENCED_PARAMETER( CompletionContext );
+    UNREFERENCED_PARAMETER( Flags );
+
     return FltStatus;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+NTSTATUS ReadPagingIO( IRP_CONTEXT* IrpContext )
+{
+    auto Fcb = IrpContext->Fcb;
+    auto Length = IrpContext->Data->Iopb->Parameters.Read.Length;
+    auto ByteOffset = IrpContext->Data->Iopb->Parameters.Read.ByteOffset;
+
+    NTSTATUS Status = STATUS_SUCCESS;
+    TyGenericBuffer<BYTE> TySwapBuffer;
+
+    AcquireCmnResource( IrpContext, FCB_PGIO_SHARED );
+
+    __try
+    {
+        if( Fcb->AdvFcbHeader.ValidDataLength.QuadPart == Fcb->AdvFcbHeader.FileSize.QuadPart )
+        {
+            if( ByteOffset.QuadPart < Fcb->AdvFcbHeader.FileSize.QuadPart )
+            {
+
+            }
+            else if( ByteOffset.QuadPart >= Fcb->AdvFcbHeader.FileSize.QuadPart )
+            {
+
+            }
+            else
+            {
+                ASSERT( false );
+            }
+        }
+        else if( Fcb->AdvFcbHeader.ValidDataLength.QuadPart < Fcb->AdvFcbHeader.FileSize.QuadPart )
+        {
+            if( ByteOffset.QuadPart == Fcb->AdvFcbHeader.ValidDataLength.QuadPart )
+            {
+
+            }
+            else if( ByteOffset.QuadPart < Fcb->AdvFcbHeader.ValidDataLength.QuadPart )
+            {
+
+            }
+            else if( ByteOffset.QuadPart > Fcb->AdvFcbHeader.ValidDataLength.QuadPart &&
+                     ByteOffset.QuadPart < Fcb->AdvFcbHeader.FileSize.QuadPart )
+            {
+
+            }
+            else if( ByteOffset.QuadPart > Fcb->AdvFcbHeader.FileSize.QuadPart )
+            {
+
+            }
+            else
+            {
+                ASSERT( false );
+            }
+        }
+        else
+        {
+            ASSERT( false );
+        }
+    }
+    __finally
+    {
+        DeallocateBuffer( &TySwapBuffer );
+    }
+
+    return IrpContext->Status;
+}
+
+NTSTATUS ReadCachedIO( IRP_CONTEXT* IrpContext )
+{
+    auto Fcb = IrpContext->Fcb;
+    auto Length = IrpContext->Data->Iopb->Parameters.Read.Length;
+    auto ByteOffset = IrpContext->Data->Iopb->Parameters.Read.ByteOffset;
+
+    NTSTATUS Status = STATUS_SUCCESS;
+    TyGenericBuffer<BYTE> TySwapBuffer;
+
+    AcquireCmnResource( IrpContext, FCB_MAIN_SHARED );
+
+    __try
+    {
+        if( Fcb->AdvFcbHeader.ValidDataLength.QuadPart == Fcb->AdvFcbHeader.FileSize.QuadPart )
+        {
+            if( ByteOffset.QuadPart < Fcb->AdvFcbHeader.ValidDataLength.QuadPart )
+            {
+
+            }
+            else if( ByteOffset.QuadPart == Fcb->AdvFcbHeader.ValidDataLength.QuadPart )
+            {
+
+            }
+            else if( ByteOffset.QuadPart > Fcb->AdvFcbHeader.ValidDataLength.QuadPart )
+            {
+
+            }
+        }
+        else if( Fcb->AdvFcbHeader.ValidDataLength.QuadPart < Fcb->AdvFcbHeader.FileSize.QuadPart )
+        {
+            if( ByteOffset.QuadPart == Fcb->AdvFcbHeader.ValidDataLength.QuadPart )
+            {
+
+            }
+            else if( ByteOffset.QuadPart < Fcb->AdvFcbHeader.ValidDataLength.QuadPart )
+            {
+
+            }
+            else if( ByteOffset.QuadPart > Fcb->AdvFcbHeader.ValidDataLength.QuadPart &&
+                     ByteOffset.QuadPart < Fcb->AdvFcbHeader.FileSize.QuadPart )
+            {
+
+            }
+            else if( ByteOffset.QuadPart > Fcb->AdvFcbHeader.FileSize.QuadPart )
+            {
+
+            }
+            else
+            {
+                ASSERT( false );
+            }
+        }
+        else
+        {
+            ASSERT( false );
+        }
+    }
+    __finally
+    {
+        DeallocateBuffer( &TySwapBuffer );
+    }
+
+    return IrpContext->Status;
+}
+
+NTSTATUS ReadNonCachedIO( IRP_CONTEXT* IrpContext )
+{
+    auto Fcb = IrpContext->Fcb;
+    auto Length = IrpContext->Data->Iopb->Parameters.Read.Length;
+    auto ByteOffset = IrpContext->Data->Iopb->Parameters.Read.ByteOffset;
+
+    NTSTATUS Status = STATUS_SUCCESS;
+    TyGenericBuffer<BYTE> TySwapBuffer;
+
+    AcquireCmnResource( IrpContext, FCB_MAIN_SHARED );
+
+    __try
+    {
+        if( Fcb->AdvFcbHeader.ValidDataLength.QuadPart == Fcb->AdvFcbHeader.FileSize.QuadPart )
+        {
+            if( ByteOffset.QuadPart < Fcb->AdvFcbHeader.ValidDataLength.QuadPart )
+            {
+                if( ByteOffset.QuadPart + Length <= Fcb->AdvFcbHeader.ValidDataLength.QuadPart )
+                {
+                }
+                else if( ByteOffset.QuadPart + Length > Fcb->AdvFcbHeader.ValidDataLength.QuadPart &&
+                         ByteOffset.QuadPart + Length <= Fcb->AdvFcbHeader.FileSize.QuadPart
+                         )
+                {
+
+                }
+                else if( ByteOffset.QuadPart + Length > Fcb->AdvFcbHeader.FileSize.QuadPart )
+                {
+
+                }
+                else
+                {
+                    ASSERT( false );
+                }
+            }
+            else if( ByteOffset.QuadPart >= Fcb->AdvFcbHeader.ValidDataLength.QuadPart )
+            {
+
+            }
+        }
+        else if( Fcb->AdvFcbHeader.ValidDataLength.QuadPart < Fcb->AdvFcbHeader.FileSize.QuadPart )
+        {
+            if( ByteOffset.QuadPart < Fcb->AdvFcbHeader.ValidDataLength.QuadPart )
+            {
+
+            }
+            else if( ByteOffset.QuadPart >= Fcb->AdvFcbHeader.ValidDataLength.QuadPart &&
+                     ByteOffset.QuadPart < Fcb->AdvFcbHeader.FileSize.QuadPart )
+            {
+
+            }
+            else if( ByteOffset.QuadPart >= Fcb->AdvFcbHeader.FileSize.QuadPart )
+            {
+
+            }
+            else
+            {
+                ASSERT( false );
+            }
+        }
+        else
+        {
+            ASSERT( false );
+        }
+    }
+    __finally
+    {
+        DeallocateBuffer( &TySwapBuffer );
+    }
+
+    return IrpContext->Status;
 }

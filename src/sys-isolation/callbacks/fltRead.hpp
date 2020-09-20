@@ -32,6 +32,11 @@ EXTERN_C_END
  *  User Buffer <-> Device
  * Cached I/O
  *  User Buffer <-> System Cache
+ *
+ *  ValidDataLength <= FileSize <= AllocationSize
+ *
+ *  파일을 읽을 때, 위의 세 가지 파일 크기에 유의하여 ByteOffset 과 Length 의 현재 위치를 고려해야한다
+ *  또한, 읽기 동작을 수행하기 전에 Byte-Range Lock( FileLock) 과 Oplock 을 점검해야한다. 
  */
 
 NTSTATUS ReadPagingIO( __in IRP_CONTEXT* IrpContext );
