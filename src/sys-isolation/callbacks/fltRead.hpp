@@ -28,6 +28,7 @@ EXTERN_C_END
 /*!
  * Paging I/O
  *  System Cache <-> Device
+ *  현재 파일포인터를 변경하지 않는다
  * Non Cached I/O( Direct I/O )
  *  User Buffer <-> Device
  * Cached I/O
@@ -44,6 +45,7 @@ NTSTATUS ReadPagingIO( __in IRP_CONTEXT* IrpContext, __out PVOID ReadBuffer );
 NTSTATUS ReadCachedIO( __in IRP_CONTEXT* IrpContext, __out PVOID ReadBuffer );
 NTSTATUS ReadNonCachedIO( __in IRP_CONTEXT* IrpContext, __out PVOID ReadBuffer );
 
+NTSTATUS ReadPagingIO( __in IRP_CONTEXT* IrpContext, __out PVOID ReadBuffer, __in ULONG BytesToCopy, __in ULONG BytesToRead, __in ULONG BytesToZero );
 NTSTATUS ReadCachedIO( __in IRP_CONTEXT* IrpContext, __out PVOID ReadBuffer, __in ULONG BytesToCopy, __in ULONG BytesToRead, __in ULONG BytesToZero );
 NTSTATUS ReadNonCachedIO( __in IRP_CONTEXT* IrpContext, __out PVOID ReadBuffer, __in ULONG BytesToCopy, __in ULONG BytesToRead, __in ULONG BytesToZero );
 

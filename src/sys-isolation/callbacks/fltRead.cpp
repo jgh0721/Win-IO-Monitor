@@ -60,23 +60,6 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreRead( PFLT_CALLBACK_DATA Data, PCFLT_R
                 ReadCachedIO( IrpContext, ReadBuffer );
         }
 
-        auto FileObject = FltObjects->FileObject;
-        auto Fcb = ( FCB* )FileObject->FsContext;
-        auto& Params = Data->Iopb->Parameters.Read;
-        ULONG BytesReturned = 0;
-
-        Data->IoStatus.Status = FltReadFile( FltObjects->Instance,
-                                             Fcb->LowerFileObject,
-                                             &Params.ByteOffset, Params.Length,
-                                             Params.ReadBuffer, FLTFL_IO_OPERATION_NON_CACHED
-                                             , &BytesReturned, NULLPTR,NULLPTR
-        );
-
-        Data->IoStatus.Information = BytesReturned;
-        FileObject->CurrentByteOffset.QuadPart = Params.ByteOffset.QuadPart + BytesReturned;
-        if( FileObject->CurrentByteOffset.QuadPart > Fcb->AdvFcbHeader.FileSize.QuadPart )
-            FileObject->CurrentByteOffset.QuadPart = Fcb->AdvFcbHeader.FileSize.QuadPart;
-
         AssignCmnFltResult( IrpContext, FLT_PREOP_COMPLETE );
     }
     __finally
@@ -126,11 +109,45 @@ NTSTATUS ReadPagingIO( IRP_CONTEXT* IrpContext, __out PVOID ReadBuffer )
         {
             if( ByteOffset.QuadPart < Fcb->AdvFcbHeader.FileSize.QuadPart )
             {
+                if( ByteOffset.QuadPart + Length <= Fcb->AdvFcbHeader.FileSize.QuadPart )
+                {
+                    auto BytesToCopy = Length;
+                    auto BytesToRead = ALIGNED( ULONG, BytesToCopy, Fcb->InstanceContext->BytesPerSector );
+                    auto BytesToZero = 0;
 
+                    Status = ReadPagingIO( IrpContext, ReadBuffer, BytesToCopy, BytesToRead, BytesToZero );
+
+                    if( NT_SUCCESS( Status ) )
+                    {
+                        AssignCmnResultInfo( IrpContext, BytesToCopy );
+                    }
+                }
+                else if( ByteOffset.QuadPart + Length > Fcb->AdvFcbHeader.FileSize.QuadPart )
+                {
+                    auto ValidDataLengthOffset = ( ULONG )( Fcb->AdvFcbHeader.FileSize.QuadPart - ByteOffset.QuadPart );
+                    auto BytesToRead = ALIGNED( ULONG, Length, Fcb->InstanceContext->BytesPerSector );
+                    auto BytesToZero = Length - ValidDataLengthOffset;
+                    auto BytesToCopy = Length - BytesToZero;
+
+                    Status = ReadPagingIO( IrpContext, ReadBuffer, BytesToCopy, BytesToRead, BytesToZero );
+
+                    if( NT_SUCCESS( Status ) )
+                    {
+                        SafeZeroMemory( Add2Ptr( ReadBuffer, ValidDataLengthOffset ), BytesToZero );
+                        AssignCmnResultInfo( IrpContext, BytesToCopy );
+                    }
+                }
+                else
+                {
+                    ASSERT( false );
+                }
             }
             else if( ByteOffset.QuadPart >= Fcb->AdvFcbHeader.FileSize.QuadPart )
             {
+                SafeZeroMemory( ReadBuffer, Length );
 
+                AssignCmnResult( IrpContext, STATUS_SUCCESS );
+                AssignCmnResultInfo( IrpContext, 0 );
             }
             else
             {
@@ -139,26 +156,100 @@ NTSTATUS ReadPagingIO( IRP_CONTEXT* IrpContext, __out PVOID ReadBuffer )
         }
         else if( Fcb->AdvFcbHeader.ValidDataLength.QuadPart < Fcb->AdvFcbHeader.FileSize.QuadPart )
         {
-            if( ByteOffset.QuadPart == Fcb->AdvFcbHeader.ValidDataLength.QuadPart )
+            if( ByteOffset.QuadPart < Fcb->AdvFcbHeader.ValidDataLength.QuadPart )
             {
+                if( ByteOffset.QuadPart + Length <= Fcb->AdvFcbHeader.ValidDataLength.QuadPart )
+                {
+                    auto BytesToCopy = Length;
+                    auto BytesToRead = ALIGNED( ULONG, BytesToCopy, Fcb->InstanceContext->BytesPerSector );
+                    auto BytesToZero = 0;
 
+                    Status = ReadPagingIO( IrpContext, ReadBuffer, BytesToCopy, BytesToRead, BytesToZero );
+
+                    if( NT_SUCCESS( Status ) )
+                    {
+                        AssignCmnResultInfo( IrpContext, BytesToCopy );
+                    }
+                }
+                else if( ByteOffset.QuadPart + Length > Fcb->AdvFcbHeader.ValidDataLength.QuadPart &&
+                         ByteOffset.QuadPart + Length <= Fcb->AdvFcbHeader.FileSize.QuadPart
+                         )
+                {
+                    auto BytesToCopy = ( ULONG )( Fcb->AdvFcbHeader.ValidDataLength.QuadPart - ByteOffset.QuadPart );
+                    auto BytesToRead = ALIGNED( ULONG, BytesToCopy, Fcb->InstanceContext->BytesPerSector );
+                    auto BytesToZero = Length - BytesToCopy;
+
+                    Status = ReadPagingIO( IrpContext, ReadBuffer, BytesToCopy, BytesToRead, BytesToZero );
+
+                    if( NT_SUCCESS( Status ) )
+                    {
+                        SafeZeroMemory( Add2Ptr( ReadBuffer, BytesToCopy ), BytesToZero );
+                        AssignCmnResultInfo( IrpContext, Length );
+                    }
+                }
+                else if( ByteOffset.QuadPart + Length > Fcb->AdvFcbHeader.FileSize.QuadPart )
+                {
+                    auto BytesToCopy = ( ULONG )( Fcb->AdvFcbHeader.ValidDataLength.QuadPart - ByteOffset.QuadPart );
+                    auto BytesToRead = ALIGNED( ULONG, BytesToCopy, Fcb->InstanceContext->BytesPerSector );
+                    auto BytesToZero = ( ULONG )( ByteOffset.QuadPart + Length - Fcb->AdvFcbHeader.ValidDataLength.QuadPart );
+
+                    Status = ReadPagingIO( IrpContext, ReadBuffer, BytesToCopy, BytesToRead, BytesToZero );
+
+                    if( NT_SUCCESS( Status ) )
+                    {
+                        SafeZeroMemory( Add2Ptr( ReadBuffer, BytesToCopy ), BytesToZero );
+                        AssignCmnResultInfo( IrpContext, ( ( ULONG )( Fcb->AdvFcbHeader.FileSize.QuadPart - ByteOffset.QuadPart ) ) );
+                    }
+                }
+                else
+                {
+                    ASSERT( false );
+                }
             }
-            else if( ByteOffset.QuadPart < Fcb->AdvFcbHeader.ValidDataLength.QuadPart )
+            else if( ByteOffset.QuadPart == Fcb->AdvFcbHeader.ValidDataLength.QuadPart )
             {
+                if( ByteOffset.QuadPart + Length <= Fcb->AdvFcbHeader.FileSize.QuadPart )
+                {
+                    SafeZeroMemory( ReadBuffer, Length );
 
+                    AssignCmnResult( IrpContext, STATUS_SUCCESS );
+                    AssignCmnResultInfo( IrpContext, Length );
+                }
+                else
+                {
+                    auto BytesToZero = ( ULONG )( Fcb->AdvFcbHeader.FileSize.QuadPart - Fcb->AdvFcbHeader.ValidDataLength.QuadPart );
+                    SafeZeroMemory( ReadBuffer, BytesToZero );
+
+                    AssignCmnResult( IrpContext, STATUS_SUCCESS );
+                    AssignCmnResultInfo( IrpContext, BytesToZero );
+                }
             }
             else if( ByteOffset.QuadPart > Fcb->AdvFcbHeader.ValidDataLength.QuadPart &&
                      ByteOffset.QuadPart < Fcb->AdvFcbHeader.FileSize.QuadPart )
             {
+                if( ByteOffset.QuadPart + Length <= Fcb->AdvFcbHeader.FileSize.QuadPart )
+                {
+                    SafeZeroMemory( ReadBuffer, Length );
 
-            }
-            else if( ByteOffset.QuadPart > Fcb->AdvFcbHeader.FileSize.QuadPart )
-            {
+                    AssignCmnResult( IrpContext, STATUS_SUCCESS );
+                    AssignCmnResultInfo( IrpContext, Length );
+                }
+                else
+                {
+                    auto BytesToZero = ( ULONG )( Fcb->AdvFcbHeader.FileSize.QuadPart - ByteOffset.QuadPart );
 
+                    SafeZeroMemory( ReadBuffer, BytesToZero );
+
+                    AssignCmnResult( IrpContext, STATUS_SUCCESS );
+                    AssignCmnResultInfo( IrpContext, BytesToZero );
+                }
             }
-            else
+            else if( ByteOffset.QuadPart >= Fcb->AdvFcbHeader.FileSize.QuadPart )
             {
-                ASSERT( false );
+                SafeZeroMemory( ReadBuffer, Length );
+
+                AssignCmnResult( IrpContext, STATUS_SUCCESS );
+                AssignCmnResultInfo( IrpContext, 0 );
             }
         }
         else
@@ -542,6 +633,59 @@ NTSTATUS ReadNonCachedIO( IRP_CONTEXT* IrpContext, __out PVOID ReadBuffer )
     }
 
     return IrpContext->Status;
+}
+
+NTSTATUS ReadPagingIO( IRP_CONTEXT* IrpContext, PVOID ReadBuffer, ULONG BytesToCopy, ULONG BytesToRead,
+                       ULONG BytesToZero )
+{
+    auto Fcb = IrpContext->Fcb;
+    auto Length = IrpContext->Data->Iopb->Parameters.Read.Length;
+    auto ByteOffset = IrpContext->Data->Iopb->Parameters.Read.ByteOffset;
+    auto FileObject = IrpContext->FltObjects->FileObject;
+
+    ULONG BytesRead = 0;                // FltReadFile 을 통해 읽은 바이트 수
+    NTSTATUS Status = STATUS_SUCCESS;
+    TyGenericBuffer<BYTE> TySwapBuffer;
+
+    __try
+    {
+        TySwapBuffer = AllocateSwapBuffer( BUFFER_SWAP_READ, BytesToRead );
+
+        if( TySwapBuffer.Buffer == NULLPTR )
+        {
+            Status = STATUS_INSUFFICIENT_RESOURCES;
+            AssignCmnResult( IrpContext, Status );
+            KdPrint( ( "[WinIOSol] EvtID=%09d %s %s Line=%d\n",
+                       IrpContext->EvtID, __FUNCTION__, "Allocate Swap Buffer FAILED", __LINE__ ) );
+            __leave;
+        }
+
+        Status = FltReadFile( IrpContext->FltObjects->Instance, Fcb->LowerFileObject,
+                              &ByteOffset, BytesToRead,
+                              TySwapBuffer.Buffer,
+                              FLTFL_IO_OPERATION_NON_CACHED,
+                              &BytesRead, NULLPTR, NULLPTR
+        );
+
+        AssignCmnResult( IrpContext, Status );
+
+        if( !NT_SUCCESS( Status ) )
+        {
+            KdPrint( ( "[WinIOSol] EvtID=%09d %s %s Line=%d Status=0x%08x,%s\n"
+                       , IrpContext->EvtID, __FUNCTION__, "FltReadFile FAILED", __LINE__
+                       , Status, ntkernel_error_category::find_ntstatus( Status )->message
+                       ) );
+            __leave;
+        }
+
+        RtlCopyMemory( ReadBuffer, TySwapBuffer.Buffer, BytesToCopy );
+    }
+    __finally
+    {
+        DeallocateBuffer( &TySwapBuffer );
+    }
+
+    return Status;
 }
 
 NTSTATUS ReadCachedIO( IRP_CONTEXT* IrpContext, PVOID ReadBuffer, ULONG BytesToCopy, ULONG BytesToRead,
