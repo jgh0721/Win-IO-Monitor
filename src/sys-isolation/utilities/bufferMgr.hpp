@@ -15,8 +15,8 @@
 #define POOL_MSG_SEND_SIZE      2048
 #define POOL_MSG_REPLY_SIZE     1024
 
-NTSTATUS AllocateGenericBuffer( __inout TyGenericBuffer<VOID>* GenericBuffer, __in ULONG RequiredSize, __in PNPAGED_LOOKASIDE_LIST LookasideList, __in ULONG PoolSize, __in ULONG PoolTag );
-void DeallocateGenericBuffer( __inout TyGenericBuffer<VOID>* GenericBuffer, __in PNPAGED_LOOKASIDE_LIST LookasideList );
+NTSTATUS AllocateGenericBuffer( __inout TyGenericBuffer<VOID>* GenericBuffer, __in ULONG RequiredSize, __in PVOID LookasideList, __in ULONG PoolSize, __in ULONG PoolTag, _POOL_TYPE ePoolType = NonPagedPool );
+void DeallocateGenericBuffer( __inout TyGenericBuffer<VOID>* GenericBuffer, __in PVOID LookasideList, _POOL_TYPE ePoolType = NonPagedPool );
 
 template< typename T >
 TyGenericBuffer<T> AllocateBuffer( TyEnBufferType eBufferType, ULONG uRequiredSize = 0 )
@@ -47,6 +47,7 @@ TyGenericBuffer<T> AllocateBuffer( TyEnBufferType eBufferType, ULONG uRequiredSi
                                    &GlobalContext.ProcNameLookasideList, 
                                    POOL_PROCNAME_SIZE, POOL_PROCNAME_TAG );
         } break;
+        default: ASSERT( false );
     }
 
     return tyGenericBuffer;
@@ -70,6 +71,46 @@ void DeallocateBuffer( TyGenericBuffer<T>* tyGenericBuffer )
         case BUFFER_PROCNAME: {
             DeallocateGenericBuffer( ( TyGenericBuffer<VOID>* )tyGenericBuffer, &GlobalContext.ProcNameLookasideList );
         } break;
+
+        case BUFFER_SWAP_READ: {
+            DeallocateGenericBuffer( ( TyGenericBuffer<VOID>* )tyGenericBuffer, NULLPTR );
+        } break;
+        case BUFFER_SWAP_READ_1024: {
+            DeallocateGenericBuffer( ( TyGenericBuffer<VOID>* )tyGenericBuffer, &GlobalContext.SwapReadLookasideList_1024 );
+        } break;
+        case BUFFER_SWAP_READ_4096: {
+            DeallocateGenericBuffer( ( TyGenericBuffer<VOID>* )tyGenericBuffer, &GlobalContext.SwapReadLookasideList_4096 );
+        } break;
+        case BUFFER_SWAP_READ_8192: {
+            DeallocateGenericBuffer( ( TyGenericBuffer<VOID>* )tyGenericBuffer, &GlobalContext.SwapReadLookasideList_8192 );
+        } break;
+        case BUFFER_SWAP_READ_16384: {
+            DeallocateGenericBuffer( ( TyGenericBuffer<VOID>* )tyGenericBuffer, &GlobalContext.SwapReadLookasideList_16384 );
+        } break;
+        case BUFFER_SWAP_READ_65536: {
+            DeallocateGenericBuffer( ( TyGenericBuffer<VOID>* )tyGenericBuffer, &GlobalContext.SwapReadLookasideList_65536 );
+        } break;
+
+        case BUFFER_SWAP_WRITE: {
+            DeallocateGenericBuffer( ( TyGenericBuffer<VOID>* )tyGenericBuffer, NULLPTR );
+        } break;
+        case BUFFER_SWAP_WRITE_1024: {
+            DeallocateGenericBuffer( ( TyGenericBuffer<VOID>* )tyGenericBuffer, &GlobalContext.SwapWriteLookasideList_1024 );
+        } break;
+        case BUFFER_SWAP_WRITE_4096: {
+            DeallocateGenericBuffer( ( TyGenericBuffer<VOID>* )tyGenericBuffer, &GlobalContext.SwapWriteLookasideList_4096 );
+        } break;
+        case BUFFER_SWAP_WRITE_8192: {
+            DeallocateGenericBuffer( ( TyGenericBuffer<VOID>* )tyGenericBuffer, &GlobalContext.SwapWriteLookasideList_8192 );
+        } break;
+        case BUFFER_SWAP_WRITE_16384: {
+            DeallocateGenericBuffer( ( TyGenericBuffer<VOID>* )tyGenericBuffer, &GlobalContext.SwapWriteLookasideList_16384 );
+        } break;
+        case BUFFER_SWAP_WRITE_65536: {
+            DeallocateGenericBuffer( ( TyGenericBuffer<VOID>* )tyGenericBuffer, &GlobalContext.SwapWriteLookasideList_65536 );
+        } break;
+
+        default: ASSERT( false );
     }
 }
 
@@ -90,5 +131,8 @@ TyGenericBuffer<T> CloneBuffer( TyGenericBuffer<T>* tyGenericBuffer )
 
     return ret;
 }
+
+TyGenericBuffer<BYTE> AllocateSwapBuffer( TyEnBufferType eBufferType, ULONG uRequiredSize );
+
 
 #endif // HDR_WINIOMONITOR_BUFFERMGR

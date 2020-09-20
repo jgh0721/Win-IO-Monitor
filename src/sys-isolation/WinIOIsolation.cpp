@@ -87,6 +87,18 @@ void DriverUnload( PDRIVER_OBJECT DriverObject )
     ExDeleteNPagedLookasideList( &GlobalContext.ReplyPacketLookasideList );
     ExDeleteNPagedLookasideList( &GlobalContext.FcbLookasideList );
 
+    ExDeletePagedLookasideList( &GlobalContext.SwapReadLookasideList_1024 );
+    ExDeletePagedLookasideList( &GlobalContext.SwapReadLookasideList_4096 );
+    ExDeletePagedLookasideList( &GlobalContext.SwapReadLookasideList_8192 );
+    ExDeletePagedLookasideList( &GlobalContext.SwapReadLookasideList_16384 );
+    ExDeletePagedLookasideList( &GlobalContext.SwapReadLookasideList_65536 );
+
+    ExDeletePagedLookasideList( &GlobalContext.SwapWriteLookasideList_1024 );
+    ExDeletePagedLookasideList( &GlobalContext.SwapWriteLookasideList_4096 );
+    ExDeletePagedLookasideList( &GlobalContext.SwapWriteLookasideList_8192 );
+    ExDeletePagedLookasideList( &GlobalContext.SwapWriteLookasideList_16384 );
+    ExDeletePagedLookasideList( &GlobalContext.SwapWriteLookasideList_65536 );
+
     if( DriverObject->FastIoDispatch != NULLPTR )
         ExFreePool( DriverObject->FastIoDispatch );
 }
@@ -131,7 +143,27 @@ NTSTATUS InitializeGlobalContext( PDRIVER_OBJECT DriverObject )
                                          NULL, NULL, 0,
                                          sizeof( FCB ), POOL_FCB_TAG, 0 );
 
-        AllocateBuffer<WCHAR>( BUFFER_FILENAME );
+        ExInitializePagedLookasideList( &GlobalContext.SwapReadLookasideList_1024, NULL, NULL, 0, 
+                                        BUFFER_SWAP_READ_1024_SIZE, POOL_READ_TAG, 0 );
+        ExInitializePagedLookasideList( &GlobalContext.SwapReadLookasideList_4096, NULL, NULL, 0,
+                                        BUFFER_SWAP_READ_4096_SIZE, POOL_READ_TAG, 0 );
+        ExInitializePagedLookasideList( &GlobalContext.SwapReadLookasideList_8192, NULL, NULL, 0,
+                                        BUFFER_SWAP_READ_8192_SIZE, POOL_READ_TAG, 0 );
+        ExInitializePagedLookasideList( &GlobalContext.SwapReadLookasideList_16384, NULL, NULL, 0,
+                                        BUFFER_SWAP_READ_16384_SIZE, POOL_READ_TAG, 0 );
+        ExInitializePagedLookasideList( &GlobalContext.SwapReadLookasideList_65536, NULL, NULL, 0,
+                                        BUFFER_SWAP_READ_65536_SIZE, POOL_READ_TAG, 0 );
+
+        ExInitializePagedLookasideList( &GlobalContext.SwapWriteLookasideList_1024, NULL, NULL, 0,
+                                        BUFFER_SWAP_WRITE_1024_SIZE, POOL_WRITE_TAG, 0 );
+        ExInitializePagedLookasideList( &GlobalContext.SwapWriteLookasideList_4096, NULL, NULL, 0,
+                                        BUFFER_SWAP_WRITE_4096_SIZE, POOL_WRITE_TAG, 0 );
+        ExInitializePagedLookasideList( &GlobalContext.SwapWriteLookasideList_8192, NULL, NULL, 0,
+                                        BUFFER_SWAP_WRITE_8192_SIZE, POOL_WRITE_TAG, 0 );
+        ExInitializePagedLookasideList( &GlobalContext.SwapWriteLookasideList_16384, NULL, NULL, 0,
+                                        BUFFER_SWAP_WRITE_16384_SIZE, POOL_WRITE_TAG, 0 );
+        ExInitializePagedLookasideList( &GlobalContext.SwapWriteLookasideList_65536, NULL, NULL, 0,
+                                        BUFFER_SWAP_WRITE_65536_SIZE, POOL_WRITE_TAG, 0 );
 
         Status = STATUS_SUCCESS;
 

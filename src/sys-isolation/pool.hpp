@@ -14,6 +14,9 @@
 #define POOL_MSG_REPLY_TAG  'rpTG'
 #define POOL_FCB_TAG        'fbTG'
 
+#define POOL_READ_TAG       'rdTG'
+#define POOL_WRITE_TAG      'wrTG'
+
 #define CTX_STRING_TAG                          'tSxC'
 #define CTX_RESOURCE_TAG                        'cRxC'
 #define CTX_INSTANCE_CONTEXT_TAG                'cIxC'

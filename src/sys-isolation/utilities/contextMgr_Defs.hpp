@@ -30,7 +30,19 @@ typedef struct _CTX_GLOBAL_DATA
     NPAGED_LOOKASIDE_LIST           SendPacketLookasideList;
     NPAGED_LOOKASIDE_LIST           ReplyPacketLookasideList;
     NPAGED_LOOKASIDE_LIST           FcbLookasideList;
-    
+
+    PAGED_LOOKASIDE_LIST            SwapReadLookasideList_1024;
+    PAGED_LOOKASIDE_LIST            SwapReadLookasideList_4096;
+    PAGED_LOOKASIDE_LIST            SwapReadLookasideList_8192;
+    PAGED_LOOKASIDE_LIST            SwapReadLookasideList_16384;
+    PAGED_LOOKASIDE_LIST            SwapReadLookasideList_65536;
+
+    PAGED_LOOKASIDE_LIST            SwapWriteLookasideList_1024;
+    PAGED_LOOKASIDE_LIST            SwapWriteLookasideList_4096;
+    PAGED_LOOKASIDE_LIST            SwapWriteLookasideList_8192;
+    PAGED_LOOKASIDE_LIST            SwapWriteLookasideList_16384;
+    PAGED_LOOKASIDE_LIST            SwapWriteLookasideList_65536;
+
     PVOID                           ProcessFilter;
 
     LARGE_INTEGER                   TimeOutMs;
