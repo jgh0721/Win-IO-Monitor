@@ -35,6 +35,7 @@ EXTERN_C_END
         또한, 캐시관리자를 호출하여 ValidDataLength 와 새로 설정된 파일의 끝 사이를 0 으로 채우고, 기록이 완료되면 캐시관리자에게 변경된 파일 크기를 알려야한다. 
  * Cached I/O
  *  User Buffer <-> System Cache
+ *  캐시된 파일에 기록하기 전에 반드시 CcCanIWrite 를 호출하여 응답에 따라 캐시관리자 기록함수를 호출한다
  */
 
 NTSTATUS WritePagingIO( __in IRP_CONTEXT* IrpContext, __out PVOID WriteBuffer );
@@ -42,6 +43,7 @@ NTSTATUS WriteCachedIO( __in IRP_CONTEXT* IrpContext, __out PVOID WriteBuffer );
 NTSTATUS WriteNonCachedIO( __in IRP_CONTEXT* IrpContext, __out PVOID WriteBuffer );
 
 
+NTSTATUS WritePagingIO( __in IRP_CONTEXT* IrpContext, __out PVOID WriteBuffer, __in ULONG BytesToCopy, __in ULONG BytesToWrite );
 NTSTATUS WriteNonCachedIO( __in IRP_CONTEXT* IrpContext, __out PVOID WriteBuffer, __in ULONG BytesToCopy, __in ULONG BytesToWrite );
 
 NTSTATUS SetEndOfFile( __in IRP_CONTEXT* IrpContext, __in LONGLONG llEndOfFile );

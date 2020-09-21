@@ -103,6 +103,7 @@ NTSTATUS WritePagingIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
 	auto Fcb = IrpContext->Fcb;
 	auto Length = IrpContext->Data->Iopb->Parameters.Write.Length;
 	auto ByteOffset = IrpContext->Data->Iopb->Parameters.Write.ByteOffset;
+	auto FileObject = IrpContext->FltObjects->FileObject;
 
 	ULONG BytesWritten = 0;                // FltWriteFile 을 통해 기록한 바이트 수
 	NTSTATUS Status = STATUS_SUCCESS;
@@ -110,6 +111,219 @@ NTSTATUS WritePagingIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
 
 	__try
 	{
+		AcquireCmnResource( IrpContext, FCB_PGIO_EXCLUSIVE );
+
+		SetFlag( Fcb->Flags, FO_FILE_MODIFIED );
+
+		if( Fcb->AdvFcbHeader.ValidDataLength.QuadPart == Fcb->AdvFcbHeader.FileSize.QuadPart )
+		{
+			if( ByteOffset.QuadPart < Fcb->AdvFcbHeader.ValidDataLength.QuadPart )
+			{
+				if( ByteOffset.QuadPart + Length <= Fcb->AdvFcbHeader.FileSize.QuadPart )
+				{
+					auto BytesToCopy = Length;
+					auto BytesToWrite = ALIGNED( ULONG, BytesToCopy, Fcb->InstanceContext->BytesPerSector );
+
+					Status = WritePagingIO( IrpContext, WriteBuffer, BytesToCopy, BytesToWrite );
+
+					if( NT_SUCCESS( Status ) )
+					{
+						AssignCmnResultInfo( IrpContext, BytesToCopy );
+					}
+				}
+				else if( ByteOffset.QuadPart + Length > Fcb->AdvFcbHeader.FileSize.QuadPart )
+				{
+					auto BytesToCopy = Length;
+					auto BytesToWrite = ALIGNED( ULONG, BytesToCopy, Fcb->InstanceContext->BytesPerSector );
+
+					Status = WritePagingIO( IrpContext, WriteBuffer, BytesToCopy, BytesToWrite );
+
+					if( NT_SUCCESS( Status ) )
+					{
+						AssignCmnResultInfo( IrpContext, BytesToCopy );
+					}
+				}
+				else
+				{
+					ASSERT( FALSE );
+				}
+			}
+			else if( ByteOffset.QuadPart >= Fcb->AdvFcbHeader.ValidDataLength.QuadPart )
+			{
+				AssignCmnResult( IrpContext, STATUS_SUCCESS );
+				AssignCmnResultInfo( IrpContext, 0 );
+			}
+			else
+			{
+				ASSERT( FALSE );
+			}
+		}
+		else if( Fcb->AdvFcbHeader.ValidDataLength.QuadPart < Fcb->AdvFcbHeader.FileSize.QuadPart )
+		{
+			if( ByteOffset.QuadPart < Fcb->AdvFcbHeader.ValidDataLength.QuadPart )
+			{
+				if( ByteOffset.QuadPart + Length <= Fcb->AdvFcbHeader.ValidDataLength.QuadPart )
+				{
+					auto BytesToCopy = Length;
+					auto BytesToWrite = ALIGNED( ULONG, BytesToCopy, Fcb->InstanceContext->BytesPerSector );
+
+					Status = WritePagingIO( IrpContext, WriteBuffer, BytesToCopy, BytesToWrite );
+
+					if( NT_SUCCESS( Status ) )
+					{
+						AssignCmnResultInfo( IrpContext, BytesToCopy );
+					}
+				}
+				else if( ByteOffset.QuadPart + Length > Fcb->AdvFcbHeader.ValidDataLength.QuadPart &&
+						 ByteOffset.QuadPart + Length <= Fcb->AdvFcbHeader.FileSize.QuadPart )
+				{
+					auto BytesToCopy = ( ULONG )( Fcb->AdvFcbHeader.ValidDataLength.QuadPart - ByteOffset.QuadPart );
+					auto BytesToWrite = ALIGNED( ULONG, BytesToCopy, Fcb->InstanceContext->BytesPerSector );
+
+					Status = WritePagingIO( IrpContext, WriteBuffer, BytesToCopy, BytesToWrite );
+
+					if( NT_SUCCESS( Status ) )
+					{
+						AssignCmnResultInfo( IrpContext, BytesToCopy );
+
+						Fcb->AdvFcbHeader.ValidDataLength.QuadPart = ByteOffset.QuadPart + Length;
+						if( CcIsFileCached( FileObject ) )
+						{
+							CcSetFileSizes( FileObject, ( PCC_FILE_SIZES )( &( Fcb->AdvFcbHeader.AllocationSize ) ) );
+							SetFlag( Fcb->Flags, FO_FILE_MODIFIED );
+						}
+					}
+				}
+				else if( ByteOffset.QuadPart + Length > Fcb->AdvFcbHeader.FileSize.QuadPart )
+				{
+					auto BytesToCopy = ( ULONG )( Fcb->AdvFcbHeader.FileSize.QuadPart - ByteOffset.QuadPart );
+					auto BytesToWrite = ALIGNED( ULONG, BytesToCopy, Fcb->InstanceContext->BytesPerSector );
+
+					Status = WritePagingIO( IrpContext, WriteBuffer, BytesToCopy, BytesToWrite );
+
+					if( NT_SUCCESS( Status ) )
+					{
+						AssignCmnResultInfo( IrpContext, BytesToCopy );
+
+						Fcb->AdvFcbHeader.ValidDataLength.QuadPart =
+							Fcb->AdvFcbHeader.FileSize.QuadPart;
+
+						if( CcIsFileCached( FileObject ) )
+						{
+							CcSetFileSizes( FileObject, ( PCC_FILE_SIZES )( &( Fcb->AdvFcbHeader.AllocationSize ) ) );
+							SetFlag( Fcb->Flags, FO_FILE_MODIFIED );
+						}
+					}
+				}
+				else
+				{
+					ASSERT( FALSE );
+				}
+			}
+			else if( ByteOffset.QuadPart == Fcb->AdvFcbHeader.ValidDataLength.QuadPart )
+			{
+				if( ByteOffset.QuadPart + Length <= Fcb->AdvFcbHeader.FileSize.QuadPart )
+				{
+					auto BytesToCopy = Length;
+					auto BytesToWrite = ALIGNED( ULONG, BytesToCopy, Fcb->InstanceContext->BytesPerSector );
+
+					Status = WritePagingIO( IrpContext, WriteBuffer, BytesToCopy, BytesToWrite );
+
+					if( NT_SUCCESS( Status ) )
+					{
+						AssignCmnResultInfo( IrpContext, BytesToCopy );
+
+					    Fcb->AdvFcbHeader.ValidDataLength.QuadPart = ByteOffset.QuadPart + Length;
+						if( CcIsFileCached( FileObject ) )
+						{
+							CcSetFileSizes( FileObject, ( PCC_FILE_SIZES )( &( Fcb->AdvFcbHeader.AllocationSize ) ) );
+							SetFlag( Fcb->Flags, FO_FILE_MODIFIED );
+						}
+					}
+				}
+				else if( ByteOffset.QuadPart + Length > Fcb->AdvFcbHeader.FileSize.QuadPart )
+				{
+					auto BytesToCopy = ( ULONG )( Fcb->AdvFcbHeader.FileSize.QuadPart - ByteOffset.QuadPart );
+					auto BytesToWrite = ALIGNED( ULONG, BytesToCopy, Fcb->InstanceContext->BytesPerSector );
+
+					Status = WritePagingIO( IrpContext, WriteBuffer, BytesToCopy, BytesToWrite );
+
+					if( NT_SUCCESS( Status ) )
+					{
+						AssignCmnResultInfo( IrpContext, BytesToCopy );
+
+						Fcb->AdvFcbHeader.ValidDataLength.QuadPart = Fcb->AdvFcbHeader.FileSize.QuadPart;
+						if( CcIsFileCached( FileObject ) )
+						{
+							CcSetFileSizes( FileObject, ( PCC_FILE_SIZES )( &Fcb->AdvFcbHeader.AllocationSize ) );
+						}
+					}
+				}
+				else
+				{
+					ASSERT( FALSE );
+				}
+			}
+			else if( ByteOffset.QuadPart > Fcb->AdvFcbHeader.ValidDataLength.QuadPart &&
+					 ByteOffset.QuadPart < Fcb->AdvFcbHeader.FileSize.QuadPart
+					 )
+			{
+				if( ByteOffset.QuadPart + Length > Fcb->AdvFcbHeader.ValidDataLength.QuadPart &&
+					ByteOffset.QuadPart + Length <= Fcb->AdvFcbHeader.FileSize.QuadPart )
+				{
+					auto BytesToCopy = Length;
+					auto BytesToWrite = ALIGNED( ULONG, BytesToCopy, Fcb->InstanceContext->BytesPerSector );
+
+					Status = WritePagingIO( IrpContext, WriteBuffer, BytesToCopy, BytesToWrite );
+
+					if( NT_SUCCESS( Status ) )
+					{
+						AssignCmnResultInfo( IrpContext, BytesToCopy );
+
+						Fcb->AdvFcbHeader.ValidDataLength.QuadPart = ByteOffset.QuadPart + Length;
+						if( CcIsFileCached( FileObject ) )
+						{
+							CcSetFileSizes( FileObject, ( PCC_FILE_SIZES )( &Fcb->AdvFcbHeader.AllocationSize ) );
+						}
+					}
+				}
+				else if( ByteOffset.QuadPart + Length > Fcb->AdvFcbHeader.FileSize.QuadPart )
+				{
+					auto BytesToCopy = ( ULONG )( Fcb->AdvFcbHeader.FileSize.QuadPart - ByteOffset.QuadPart );
+					auto BytesToWrite = ALIGNED( ULONG, BytesToCopy, Fcb->InstanceContext->BytesPerSector );
+
+					Status = WritePagingIO( IrpContext, WriteBuffer, BytesToCopy, BytesToWrite );
+
+					if( NT_SUCCESS( Status ) )
+					{
+						AssignCmnResultInfo( IrpContext, BytesToCopy );
+
+						Fcb->AdvFcbHeader.ValidDataLength.QuadPart = Fcb->AdvFcbHeader.FileSize.QuadPart;
+						if( CcIsFileCached( FileObject ) )
+						{
+							CcSetFileSizes( FileObject, ( PCC_FILE_SIZES )( &Fcb->AdvFcbHeader.AllocationSize ) );
+						}
+					}
+				}
+				else
+				{
+					ASSERT( FALSE );
+				}
+			}
+			else if( ByteOffset.QuadPart >= Fcb->AdvFcbHeader.FileSize.QuadPart )
+			{
+			    AssignCmnResult( IrpContext, STATUS_SUCCESS );
+			    AssignCmnResultInfo( IrpContext, 0 );
+			}
+			else
+			{
+				ASSERT( FALSE );
+			}
+		}
+		else
+		{
+			ASSERT( FALSE );
+		}
 
 	}
 	__finally
