@@ -32,14 +32,6 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreSetInformation( PFLT_CALLBACK_DATA Dat
 
         AcquireCmnResource( IrpContext, FCB_MAIN_SHARED );
 
-        const auto& FileInformationClass = ( nsW32API::FILE_INFORMATION_CLASS )IrpContext->Data->Iopb->Parameters.QueryFileInformation.FileInformationClass;
-
-        KdPrint( ( "[WinIOSol] EvtID=%09d %s CLASS=%-45s Name=%ws\n",
-                   IrpContext->EvtID, __FUNCTION__
-                   , nsW32API::ConvertFileInformationClassTo( FileInformationClass )
-                   , IrpContext->SrcFileFullPath.Buffer
-                   ) );
-
         Data->IoStatus.Status = FltSetInformationFile( FltObjects->Instance, Fcb->LowerFileObject, Data->Iopb->Parameters.SetFileInformation.InfoBuffer,
                                                        Data->Iopb->Parameters.SetFileInformation.Length,
                                                        Data->Iopb->Parameters.SetFileInformation.FileInformationClass );
