@@ -467,7 +467,8 @@ NTSTATUS InsertProcessInfo( __in ULONG uParentProcessId, ULONG uProcessId )
                 break;
 
             // ZwQueryInformationProcess call IRP_MJ_QUERY_INFORMATION, so change call order of functions.
-            if( GetProcessNameFromEPROCESS( uProcessId, procInfo->Process, &procInfo->ProcessFileFullPath ) == FALSE )
+            if( GetProcessNameFromEPROCESS( uProcessId, procInfo->Process, &procInfo->ProcessFileFullPath ) == FALSE || 
+                nsUtils::strlength( procInfo->ProcessFileFullPath.Buffer ) == 0 )
             {
                 HANDLE hProcess = GetProcessHandleFromEPROCESS( procInfo->Process );
 
@@ -483,6 +484,28 @@ NTSTATUS InsertProcessInfo( __in ULONG uParentProcessId, ULONG uProcessId )
 
         if( procInfo->ProcessFileFullPathUni != NULLPTR || procInfo->ProcessFileFullPath.Buffer != NULLPTR )
         {
+            if( procInfo->ProcessFileFullPath.Buffer != NULLPTR )
+            {
+                if( nsUtils::StartsWithW( procInfo->ProcessFileFullPath.Buffer, L"\\??\\" ) != NULLPTR )
+                {
+                    RtlMoveMemory( procInfo->ProcessFileFullPath.Buffer, &procInfo->ProcessFileFullPath.Buffer[ 4 ], 
+                                   ( procInfo->ProcessFileFullPath.BufferSize - ( 4 * sizeof( WCHAR ) ) ) );
+                }
+            }
+
+            if( procInfo->ProcessFileFullPathUni != NULLPTR )
+            {
+                KdPrint( ( "[WinIOSol] [ProcNameMgr] %s Lv1. Proc=%06d,%wZ\n"
+                           , __FUNCTION__, uProcessId, procInfo->ProcessFileFullPathUni
+                           ) );
+            }
+            else if( procInfo->ProcessFileFullPath.Buffer != NULLPTR )
+            {
+                KdPrint( ( "[WinIOSol] [ProcNameMgr] %s Lv2. Proc=%06d,%ws\n"
+                           , __FUNCTION__, uProcessId, procInfo->ProcessFileFullPath.Buffer
+                           ) );
+            }
+
             Status = STATUS_SUCCESS;
             InsertHeadList( &nsDetail::ProcInfoListHead, &procInfo->ListEntry );
             break;

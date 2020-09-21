@@ -94,8 +94,12 @@ namespace nsCmn
         public: \
             bool Is_##FuncName() \
             { \
-                if( nsCmn::nsDetailLib::IMPORT_PROC_STATE_UNKNOWN == m_ips##FuncName ) \
-                    m_pf##FuncName = (TYPE_##FuncName)getProcAddress(#FuncName, m_ips##FuncName); \
+                if( nsCmn::nsDetailLib::IMPORT_PROC_STATE_UNKNOWN == m_ips##FuncName )                      \
+                {                                                                                           \
+                    m_pf##FuncName = (TYPE_##FuncName)getProcAddress(L ## #FuncName, m_ips##FuncName);      \
+                    if( nsCmn::nsDetailLib::IMPORT_PROC_STATE_AVAILABLE != m_ips##FuncName )                \
+                        m_pf##FuncName = (TYPE_##FuncName)getProcAddress(#FuncName, m_ips##FuncName);       \
+                }                                                                                           \
                 return( nsCmn::nsDetailLib::IMPORT_PROC_STATE_AVAILABLE == m_ips##FuncName); \
             }
 

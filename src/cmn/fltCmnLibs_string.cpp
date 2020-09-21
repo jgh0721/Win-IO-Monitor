@@ -90,6 +90,25 @@ namespace nsUtils
 		return &wszString[ base ];
     }
 
+    WCHAR* StartsWithW( WCHAR* wszString, const WCHAR* wszPattern )
+    {
+		auto lhs = strlength( wszString );
+		auto rhs = strlength( wszPattern );
+
+		if( lhs < rhs )
+			return NULLPTR;
+
+		for( auto idx = 0; idx < rhs; ++idx )
+		{
+			if( RtlUpcaseUnicodeChar( wszString[ idx ] ) != RtlUpcaseUnicodeChar( wszPattern[ idx ] ) )
+			{
+				return NULLPTR;
+			}
+		}
+
+		return &wszString[ 0 ];
+	}
+
     bool WildcardMatch_straight( const char* pszString, const char* pszMatch, bool isCaseSensitive /* = false */ )
 	{
 		const char* mp = NULL;

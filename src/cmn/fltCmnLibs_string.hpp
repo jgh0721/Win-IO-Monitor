@@ -32,6 +32,7 @@ namespace nsUtils
      *  IRQL = PAASIVE_LEVEL
     */
     WCHAR* EndsWithW( __in_z WCHAR* wszString, __in_z const WCHAR* wszPattern );
+    WCHAR* StartsWithW( __in_z WCHAR* wszString, __in_z const WCHAR* wszPattern );
 
     /**
      * @brief 지정한 문자열에서 와일드카드(*,?) 를 이용하여 일치하는지 검사
