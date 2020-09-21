@@ -1,5 +1,7 @@
 ﻿#include "fltCleanup.hpp"
 
+
+#include "fltWrite.hpp"
 #include "privateFCBMgr.hpp"
 #include "irpContext.hpp"
 
@@ -53,9 +55,26 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCleanup( PFLT_CALLBACK_DATA Data, PCFL
 
         if( UncleanCount == 0 )
         {
-            
+            if( Fcb->AdvFcbHeader.ValidDataLength.QuadPart < Fcb->AdvFcbHeader.FileSize.QuadPart )
+            {
+                SafeCcZeroData( IrpContext, Fcb->AdvFcbHeader.ValidDataLength.QuadPart, Fcb->AdvFcbHeader.FileSize.QuadPart );
+
+                KdPrint( ( "[WinIOSol] EvtID=%09d %s %s Line=%d StartOffset=%I64d EndOffset=%I64d\n"
+                           , IrpContext->EvtID, __FUNCTION__, "CcZeroData", __LINE__
+                           , Fcb->AdvFcbHeader.ValidDataLength.QuadPart, Fcb->AdvFcbHeader.FileSize.QuadPart ) );
+
+                FltAcquireResourceExclusive( &Fcb->PagingIoResource );
+                Fcb->AdvFcbHeader.ValidDataLength.QuadPart = Fcb->AdvFcbHeader.FileSize.QuadPart;
+                FltReleaseResource( &Fcb->PagingIoResource );
+
+                if( CcIsFileCached( FileObject ) )
+                {
+                    CcSetFileSizes( FileObject, ( PCC_FILE_SIZES )&Fcb->AdvFcbHeader.AllocationSize );
+                }
+            }
         }
 
+        CcUninitializeCacheMap( FileObject, NULLPTR, NULLPTR );
         IoRemoveShareAccess( FileObject, &Fcb->LowerShareAccess );
 
         SetFlag( FileObject->Flags, FO_CLEANUP_COMPLETE );
