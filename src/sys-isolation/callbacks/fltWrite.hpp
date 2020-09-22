@@ -44,6 +44,7 @@ NTSTATUS WriteNonCachedIO( __in IRP_CONTEXT* IrpContext, __out PVOID WriteBuffer
 
 
 NTSTATUS WritePagingIO( __in IRP_CONTEXT* IrpContext, __out PVOID WriteBuffer, __in ULONG BytesToCopy, __in ULONG BytesToWrite );
+NTSTATUS WriteCachedIO( __in IRP_CONTEXT* IrpContext, __out PVOID WriteBuffer, __in ULONG BytesToCopy, __in ULONG BytesToWrite );
 NTSTATUS WriteNonCachedIO( __in IRP_CONTEXT* IrpContext, __out PVOID WriteBuffer, __in ULONG BytesToCopy, __in ULONG BytesToWrite );
 
 NTSTATUS SetEndOfFile( __in IRP_CONTEXT* IrpContext, __in LONGLONG llEndOfFile );
