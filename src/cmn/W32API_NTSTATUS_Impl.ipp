@@ -1,4 +1,5 @@
 // NTSTATUS code, Win32 error code equivalent, POSIX error code equivalent, NTSTATUS descriptive string in UTF8
+{ static_cast<int>(0x00000000),static_cast<int>(0x0),0,"STATUS_SUCCESS"},
 { static_cast<int>(0x80000001),static_cast<int>(0x0),0,"{EXCEPTION}\nGuard Page Exception\nA page of memory that marks the end of a data structure, such as a stack or an array, has been accessed."},
 { static_cast<int>(0x80000002),static_cast<int>(0x3e6),EACCES,"{EXCEPTION}\nAlignment Fault\nA datatype misalignment was detected in a load or store instruction."},
 { static_cast<int>(0x80000003),static_cast<int>(0x0),0,"{EXCEPTION}\nBreakpoint\nA breakpoint has been reached."},
