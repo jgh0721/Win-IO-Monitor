@@ -162,6 +162,18 @@ NTSTATUS CreateFileExistFCB( IRP_CONTEXT* IrpContext )
 
         AcquireCmnResource( IrpContext, FCB_MAIN_EXCLUSIVE );
 
+        // NOTE: MSDN 에 따르면, 쓰기 권한으로 파일을 열기 전에 IRP_MJ_CREATE 에서 MmFlushImageSection 을 MmFlushForWrite 로 호출해야한다
+        if( BooleanFlagOn( Args->CreateDesiredAccess, FILE_WRITE_DATA ) )
+        {
+            if( MmFlushImageSection( &IrpContext->Fcb->SectionObjects, MmFlushForWrite ) == FALSE )
+            {
+                Status = STATUS_SHARING_VIOLATION;
+                AssignCmnResult( IrpContext, Status );
+                SetFlag( IrpContext->CompleteStatus, COMPLETE_DONT_CONT_PROCESS );
+                __leave;
+            }
+        }
+
         InterlockedIncrement( &IrpContext->Fcb->OpnCount );
         InterlockedIncrement( &IrpContext->Fcb->ClnCount );
         InterlockedIncrement( &IrpContext->Fcb->RefCount );
