@@ -75,9 +75,9 @@ CONST FLT_OPERATION_REGISTRATION FilterCallbacks[] = {
 
     { IRP_MJ_RELEASE_FOR_MOD_WRITE,                     0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
 
-    { IRP_MJ_ACQUIRE_FOR_CC_FLUSH,                      0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
+    { IRP_MJ_ACQUIRE_FOR_CC_FLUSH,                      0,      FilterPreAcquireCcFlush,            FilterPostAcquireCcFlush    },
 
-    { IRP_MJ_RELEASE_FOR_CC_FLUSH,                      0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
+    { IRP_MJ_RELEASE_FOR_CC_FLUSH,                      0,      FilterPreReleaseCcFlush,            FilterPostReleaseCcFlush    },
 
     { IRP_MJ_FAST_IO_CHECK_IF_POSSIBLE,                 0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
     // This Always Fast I/O

@@ -18,6 +18,7 @@
 #include "fltSetInformation.hpp"
 #include "fltNetworkQueryOpen.hpp"
 #include "fltSectionSynchronization.hpp"
+#include "fltCcFlush.hpp"
 #include "fltQueryVolumeInformation.hpp"
 #include "fltCleanup.hpp"
 #include "fltClose.hpp"
