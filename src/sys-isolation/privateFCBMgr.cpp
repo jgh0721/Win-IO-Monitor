@@ -19,17 +19,53 @@ FCB* AllocateFcb()
     return Fcb;
 }
 
-NTSTATUS InitializeFCB( FCB* Fcb, __in IRP_CONTEXT* IrpContext )
+CCB* AllocateCcb()
+{
+    auto Ccb = ( CCB* )ExAllocateFromNPagedLookasideList( &GlobalContext.CcbLookasideList );
+    if( Ccb != NULLPTR )
+        RtlZeroMemory( Ccb, sizeof( CCB ) );
+
+    return Ccb;
+}
+
+void DeallocateFcb( FCB*& Fcb )
+{
+    if( Fcb == NULLPTR )
+        return;
+
+    ExFreeToNPagedLookasideList( &GlobalContext.FcbLookasideList, Fcb );
+    Fcb = NULLPTR;
+}
+
+void DeallocateCcb( CCB*& Ccb )
+{
+    if( Ccb == NULLPTR )
+        return;
+
+    ExFreeToNPagedLookasideList( &GlobalContext.CcbLookasideList, Ccb );
+    Ccb = NULLPTR;
+}
+
+NTSTATUS InitializeFcbAndCcb( IRP_CONTEXT* IrpContext )
 {
     NTSTATUS Status = STATUS_UNSUCCESSFUL;
 
     do
     {
-        ASSERT( Fcb != NULLPTR );
-        if( Fcb == NULLPTR )
+        if( IrpContext == NULLPTR )
             break;
 
-        RtlZeroMemory( Fcb, sizeof( FCB ) );
+        IrpContext->Fcb = AllocateFcb();
+        IrpContext->Ccb = AllocateCcb();
+
+        if( IrpContext->Fcb == NULLPTR || IrpContext->Ccb == NULLPTR )
+        {
+            Status = STATUS_INSUFFICIENT_RESOURCES;
+            break;
+        }
+
+        auto Fcb = IrpContext->Fcb;
+        auto Ccb = IrpContext->Ccb;
 
         ExInitializeFastMutex( &Fcb->FastMutex );
         FsRtlSetupAdvancedHeader( &Fcb->AdvFcbHeader, &Fcb->FastMutex );
@@ -58,9 +94,9 @@ NTSTATUS InitializeFCB( FCB* Fcb, __in IRP_CONTEXT* IrpContext )
         Fcb->AdvFcbHeader.Resource = &Fcb->MainResource;
         Fcb->AdvFcbHeader.PagingIoResource = &Fcb->PagingIoResource;
 
-        Fcb->AdvFcbHeader.AllocationSize    = ( ( CREATE_ARGS* )IrpContext->Params )->FileAllocationSize;
-        Fcb->AdvFcbHeader.FileSize          = ( ( CREATE_ARGS* )IrpContext->Params )->FileSize;
-        Fcb->AdvFcbHeader.ValidDataLength   = ( ( CREATE_ARGS* )IrpContext->Params )->FileSize;
+        Fcb->AdvFcbHeader.AllocationSize = ( ( CREATE_ARGS* )IrpContext->Params )->FileAllocationSize;
+        Fcb->AdvFcbHeader.FileSize = ( ( CREATE_ARGS* )IrpContext->Params )->FileSize;
+        Fcb->AdvFcbHeader.ValidDataLength = ( ( CREATE_ARGS* )IrpContext->Params )->FileSize;
 
         ///////////////////////////////////////////////////////////////////////
 
@@ -88,18 +124,35 @@ NTSTATUS InitializeFCB( FCB* Fcb, __in IRP_CONTEXT* IrpContext )
 
         ///////////////////////////////////////////////////////////////////////
 
+        Ccb->ProcessId = IrpContext->ProcessId;
+        Ccb->ProcessFileFullPath = CloneBuffer( &IrpContext->ProcessFullPath );
+        Ccb->ProcessName = nsUtils::ReverseFindW( Ccb->ProcessFileFullPath.Buffer, L'\\' );
+        
+        Ccb->SrcFileFullPath = CloneBuffer( &IrpContext->SrcFileFullPath );
+
         Status = STATUS_SUCCESS;
     } while( false );
+
+    if( !NT_SUCCESS( Status ) )
+    {
+        DeallocateFcb( IrpContext->Fcb );
+        DeallocateCcb( IrpContext->Ccb );
+    }
 
     return Status;
 }
 
-NTSTATUS UninitializeFCB( FCB* Fcb )
+NTSTATUS UninitializeFCB( IRP_CONTEXT* IrpContext )
 {
     NTSTATUS Status = STATUS_UNSUCCESSFUL;
 
     do
     {
+        ASSERT( IrpContext != NULLPTR );
+        if( IrpContext == NULLPTR )
+            break;
+
+        auto Fcb = IrpContext->Fcb;
         ASSERT( Fcb != NULLPTR );
         if( Fcb == NULLPTR )
             break;
@@ -134,8 +187,9 @@ NTSTATUS UninitializeFCB( FCB* Fcb )
 
         ///////////////////////////////////////////////////////////////////////
 
-        KdPrint( ( "[WinIOSol] %s Src=%ws\n",
-                   __FUNCTION__, Fcb->FileFullPath.Buffer ) );
+        KdPrint( ( "[WinIOSol] EvtID=%09d %s Src=%ws\n"
+                   , IrpContext->EvtID, __FUNCTION__
+                   , Fcb->FileFullPath.Buffer ) );
 
         DeallocateBuffer( &Fcb->FileFullPath );
 

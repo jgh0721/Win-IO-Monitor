@@ -77,12 +77,28 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCleanup( PFLT_CALLBACK_DATA Data, PCFL
         CcUninitializeCacheMap( FileObject, NULLPTR, NULLPTR );
         IoRemoveShareAccess( FileObject, &Fcb->LowerShareAccess );
 
-        // NOTE: 핸들을 이곳에서 닫지 않으면 핸들 누수가 일어난다
-        if( Fcb->LowerFileHandle != INVALID_HANDLE_VALUE )
-            FltClose( Fcb->LowerFileHandle );
-        Fcb->LowerFileHandle = INVALID_HANDLE_VALUE;
+        if( IrpContext->Ccb->LowerFileHandle != INVALID_HANDLE_VALUE )
+        {
+            FltClose( IrpContext->Ccb->LowerFileHandle );
+            IrpContext->Ccb->LowerFileHandle = INVALID_HANDLE_VALUE;
+        }
+
+        if( IrpContext->Ccb->LowerFileObject != NULLPTR )
+        {
+            ObDereferenceObject( IrpContext->Ccb->LowerFileObject );
+            IrpContext->Ccb->LowerFileObject = NULLPTR;
+        }
 
         SetFlag( FileObject->Flags, FO_CLEANUP_COMPLETE );
+
+        // NOTE: 파일이 삭제예약이 걸려있고, 모든 핸들이 닫혔다면 SFO 도 닫아서 파일이 삭제될 수 있도록 한다
+        if( BooleanFlagOn( Fcb->Flags, FILE_DELETE_ON_CLOSE ) && 
+            UncleanCount == 0 )
+        {
+            if( Fcb->LowerFileHandle != INVALID_HANDLE_VALUE )
+                FltClose( Fcb->LowerFileHandle );
+            Fcb->LowerFileHandle = INVALID_HANDLE_VALUE;
+        }
 
         Data->IoStatus.Status = STATUS_SUCCESS;
         Data->IoStatus.Information = 0;

@@ -30,6 +30,7 @@ typedef struct _CTX_GLOBAL_DATA
     NPAGED_LOOKASIDE_LIST           SendPacketLookasideList;
     NPAGED_LOOKASIDE_LIST           ReplyPacketLookasideList;
     NPAGED_LOOKASIDE_LIST           FcbLookasideList;
+    NPAGED_LOOKASIDE_LIST           CcbLookasideList;
 
     PAGED_LOOKASIDE_LIST            SwapReadLookasideList_1024;
     PAGED_LOOKASIDE_LIST            SwapReadLookasideList_4096;

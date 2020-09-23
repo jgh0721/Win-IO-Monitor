@@ -59,6 +59,11 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreClose( PFLT_CALLBACK_DATA Data, PCFLT_
             IsUninitializeFcb = true;
         }
 
+        if( BooleanFlagOn( FileObject->Flags, FO_CLEANUP_COMPLETE ) )
+        {
+            DeallocateCcb( IrpContext->Ccb );
+        }
+
         if( IsUninitializeFcb == true )
         {
             if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_FREE_MAIN_RSRC ) )
@@ -67,8 +72,8 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreClose( PFLT_CALLBACK_DATA Data, PCFLT_
                 ClearFlag( IrpContext->CompleteStatus, COMPLETE_FREE_MAIN_RSRC );
             }
 
-            UninitializeFCB( Fcb );
-            ExFreeToNPagedLookasideList( &GlobalContext.FcbLookasideList, Fcb );
+            UninitializeFCB( IrpContext );
+            DeallocateFcb( IrpContext->Fcb );
         }
 
         Data->IoStatus.Status = STATUS_SUCCESS;

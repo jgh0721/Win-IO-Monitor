@@ -86,6 +86,7 @@ void DriverUnload( PDRIVER_OBJECT DriverObject )
     ExDeleteNPagedLookasideList( &GlobalContext.SendPacketLookasideList );
     ExDeleteNPagedLookasideList( &GlobalContext.ReplyPacketLookasideList );
     ExDeleteNPagedLookasideList( &GlobalContext.FcbLookasideList );
+    ExDeleteNPagedLookasideList( &GlobalContext.CcbLookasideList );
 
     ExDeletePagedLookasideList( &GlobalContext.SwapReadLookasideList_1024 );
     ExDeletePagedLookasideList( &GlobalContext.SwapReadLookasideList_4096 );
@@ -142,6 +143,10 @@ NTSTATUS InitializeGlobalContext( PDRIVER_OBJECT DriverObject )
         ExInitializeNPagedLookasideList( &GlobalContext.FcbLookasideList,
                                          NULL, NULL, 0,
                                          sizeof( FCB ), POOL_FCB_TAG, 0 );
+
+        ExInitializeNPagedLookasideList( &GlobalContext.CcbLookasideList,
+                                         NULL, NULL, 0,
+                                         sizeof( CCB ), POOL_FCB_TAG, 0 );
 
         ExInitializePagedLookasideList( &GlobalContext.SwapReadLookasideList_1024, NULL, NULL, 0, 
                                         BUFFER_SWAP_READ_1024_SIZE, POOL_READ_TAG, 0 );

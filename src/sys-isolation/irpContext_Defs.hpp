@@ -34,6 +34,7 @@ typedef struct _IRP_CONTEXT
     PFLT_CALLBACK_DATA                  Data;
     PCFLT_RELATED_OBJECTS               FltObjects;
     FCB*                                Fcb;
+    CCB*                                Ccb;
     CHAR*                               DebugText;
 
     LONG                                EvtID;

@@ -59,7 +59,8 @@ PIRP_CONTEXT CreateIrpContext( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_
 
         if( IsOwnFileObject( FltObjects->FileObject ) == true )
         {
-            IrpContext->Fcb = (FCB*)FltObjects->FileObject->FsContext;
+            IrpContext->Fcb = ( FCB* )FltObjects->FileObject->FsContext;
+            IrpContext->Ccb = ( CCB* )FltObjects->FileObject->FsContext2;
             IrpContext->SrcFileFullPath = CloneBuffer( &IrpContext->Fcb->FileFullPath );
         }
 

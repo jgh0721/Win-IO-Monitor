@@ -12,8 +12,12 @@
 #endif
 
 FCB* AllocateFcb();
-NTSTATUS InitializeFCB( __in FCB* Fcb, __in IRP_CONTEXT* IrpContext );
-NTSTATUS UninitializeFCB( __in FCB* Fcb );
+CCB* AllocateCcb();
+VOID DeallocateFcb( FCB*& Fcb );
+VOID DeallocateCcb( CCB*& Ccb );
+
+NTSTATUS InitializeFcbAndCcb( __in IRP_CONTEXT* IrpContext );
+NTSTATUS UninitializeFCB( __in IRP_CONTEXT* IrpContext );
 
 // VCB = Volume Control Block,
 // 격리필터는 자신이 파일시스템인 것 처럼 작동하기 때문에, 마치 파일시스템의 VCB 에서 검색하는 것과 같다

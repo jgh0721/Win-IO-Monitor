@@ -81,7 +81,7 @@ typedef struct _FCB
 } FCB, * PFCB;
 
 // Free on IRP_MJ_CLEANUP
-typedef struct _HANDLE_CONTEXT
+typedef struct _CCB
 {
     ULONG                                       ProcessId;
     WCHAR*                                      ProcessName;            // ProcessFileFullPath 에 대한 포인터, 직접 해제하지 말 것!!!
@@ -92,7 +92,7 @@ typedef struct _HANDLE_CONTEXT
     FILE_OBJECT*                                LowerFileObject;
     HANDLE                                      LowerFileHandle;
 
-} HANDLE_CONTEXT, *PHANDLE_CONTEXT;
+} CCB, *PCCB;
 
 
 #endif // HDR_PRIVATE_FCB_MGR_DEFS
