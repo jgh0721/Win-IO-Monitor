@@ -30,4 +30,5 @@ Build Environments
 
 External Open Source Modules
 
+    * https://github.com/xiao70/X70FSD
     * https://github.com/ned14/ntkernel-error-category

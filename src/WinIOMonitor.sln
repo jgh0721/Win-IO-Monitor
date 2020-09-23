@@ -10,6 +10,9 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WinIOMonitorAPI", "api\WinIOMonitorAPI.vcxproj", "{1CC76C26-E43F-4801-8488-635E801C2508}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "documentation", "documentation", "{F41645C6-5F27-4CAC-89AE-367303768414}"
+	ProjectSection(SolutionItems) = preProject
+		..\README.md = ..\README.md
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WinIOMonitorControl", "cntl\WinIOMonitorControl.vcxproj", "{3457112C-DDEB-49B4-B8C9-476C9C5FE383}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -61,9 +64,9 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		                SolutionGuid = {54FB1274-30D8-4FBE-99CB-AE040C26E40A}
-		                        SolutionGuid = {0FD2E202-E7ED-40F7-A874-60849329379D}
-		        SolutionGuid = {AE1EA6B0-A734-4C05-80B8-BFB036F0E1F3}
 		SolutionGuid = {DB9E5585-CC7E-4D4B-8E2A-8556242A28C9}
+		        SolutionGuid = {AE1EA6B0-A734-4C05-80B8-BFB036F0E1F3}
+		                        SolutionGuid = {0FD2E202-E7ED-40F7-A874-60849329379D}
+		                SolutionGuid = {54FB1274-30D8-4FBE-99CB-AE040C26E40A}
 	EndGlobalSection
 EndGlobal
