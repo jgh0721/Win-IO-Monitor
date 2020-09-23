@@ -203,6 +203,8 @@ VOID CloseIrpContext( __in PIRP_CONTEXT IrpContext )
     DeallocateBuffer( &IrpContext->DstFileFullPath );
 
     CtxReleaseContext( IrpContext->InstanceContext );
+
+    ExFreeToNPagedLookasideList( &GlobalContext.IrpContextLookasideList, IrpContext );
 }
 
 VOID PrintIrpContext( __in PIRP_CONTEXT IrpContext )
