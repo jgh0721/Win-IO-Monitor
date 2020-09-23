@@ -84,12 +84,15 @@ typedef struct _FCB
 typedef struct _HANDLE_CONTEXT
 {
     ULONG                                       ProcessId;
-
     WCHAR*                                      ProcessName;            // ProcessFileFullPath 에 대한 포인터, 직접 해제하지 말 것!!!
     TyGenericBuffer<WCHAR>                      ProcessFileFullPath;
 
     TyGenericBuffer<WCHAR>                      SrcFileFullPath;
 
+    FILE_OBJECT*                                LowerFileObject;
+    HANDLE                                      LowerFileHandle;
+
 } HANDLE_CONTEXT, *PHANDLE_CONTEXT;
+
 
 #endif // HDR_PRIVATE_FCB_MGR_DEFS

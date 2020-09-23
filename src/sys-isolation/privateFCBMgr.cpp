@@ -134,6 +134,11 @@ NTSTATUS UninitializeFCB( FCB* Fcb )
 
         ///////////////////////////////////////////////////////////////////////
 
+        KdPrint( ( "[WinIOSol] %s Src=%ws\n",
+                   __FUNCTION__, Fcb->FileFullPath.Buffer ) );
+
+        DeallocateBuffer( &Fcb->FileFullPath );
+
         Status = STATUS_SUCCESS;
     } while( false );
 

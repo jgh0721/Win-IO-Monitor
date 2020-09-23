@@ -217,6 +217,8 @@ VOID PrintIrpContext( __in PIRP_CONTEXT IrpContext )
         case IRP_MJ_CREATE: {
             auto CreateOptions = IrpContext->Data->Iopb->Parameters.Create.Options & 0x00FFFFFF;
             auto Disposition = ( IrpContext->Data->Iopb->Parameters.Create.Options >> 24 ) & 0x000000ff;
+            auto SecurityContext = IrpContext->Data->Iopb->Parameters.Create.SecurityContext;
+            auto CreateDesiredAccess = SecurityContext->DesiredAccess;
 
             KdPrint( ( "[WinIOSol] EvtID=%09d IRP=%s Proc=%06d,%ws Src=%ws\n"
                        , IrpContext->EvtID
@@ -229,14 +231,18 @@ VOID PrintIrpContext( __in PIRP_CONTEXT IrpContext )
             nsW32API::PrintOutOperationFlags( IrpContext->DebugText, 1024, IrpContext->Data->Iopb->OperationFlags );
             RtlStringCbCatA( IrpContext->DebugText, 1024, " " );
 
+            RtlStringCbCatA( IrpContext->DebugText, 1024, "DesiredAccess=" );
+            nsW32API::PrintOutCreateDesiredAccess( IrpContext->DebugText, 1024, CreateDesiredAccess );
+            RtlStringCbCatA( IrpContext->DebugText, 1024, " " );
+
             RtlStringCbCatA( IrpContext->DebugText, 1024, "CreateOptions=" );
             nsW32API::PrintOutCreateOptions( IrpContext->DebugText, 1024, CreateOptions );
 
-            KdPrint( ( "[WinIOSol] EvtID=%09d       >> %s ShareAccess=%s Disposition=%s\n"
+            KdPrint( ( "[WinIOSol] EvtID=%09d       >> Disposition=%s ShareAccess=%s %s \n"
                        , IrpContext->EvtID
-                       , IrpContext->DebugText
-                       , nsW32API::ConvertCreateShareAccess( IrpContext->Data->Iopb->Parameters.Create.ShareAccess )
                        , nsW32API::ConvertCreateDisposition( Disposition )
+                       , nsW32API::ConvertCreateShareAccess( IrpContext->Data->Iopb->Parameters.Create.ShareAccess )
+                       , IrpContext->DebugText
                        ) );
 
         } break;

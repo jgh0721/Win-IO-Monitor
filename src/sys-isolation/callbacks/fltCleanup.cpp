@@ -77,6 +77,11 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCleanup( PFLT_CALLBACK_DATA Data, PCFL
         CcUninitializeCacheMap( FileObject, NULLPTR, NULLPTR );
         IoRemoveShareAccess( FileObject, &Fcb->LowerShareAccess );
 
+        // NOTE: 핸들을 이곳에서 닫지 않으면 핸들 누수가 일어난다
+        if( Fcb->LowerFileHandle != INVALID_HANDLE_VALUE )
+            FltClose( Fcb->LowerFileHandle );
+        Fcb->LowerFileHandle = INVALID_HANDLE_VALUE;
+
         SetFlag( FileObject->Flags, FO_CLEANUP_COMPLETE );
 
         Data->IoStatus.Status = STATUS_SUCCESS;

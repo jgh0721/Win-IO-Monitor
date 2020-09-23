@@ -35,6 +35,9 @@ EXTERN_C_END
     FILE_OVERWRITE_IF   Open the file, and overwrite it     Create the file
 */
 
+NTSTATUS CreateFileExistFCB( __in IRP_CONTEXT* IrpContext );
+NTSTATUS CreateFileNonExistFCB( __in IRP_CONTEXT* IrpContext );
+
 /**
  * @brief Open Lower Fileobject
  * @param IrpContext 
@@ -43,9 +46,7 @@ EXTERN_C_END
     IRQL = PASSIVE_LEVEL
 */
 NTSTATUS OpenLowerFileObject( __in PIRP_CONTEXT IrpContext );
-
 ACCESS_MASK CreateDesiredAccess( __in PIRP_CONTEXT IrpContext );
-
 VOID InitializeVolumeProperties( __in PIRP_CONTEXT IrpContext );
 
 ///////////////////////////////////////////////////////////////////////////////

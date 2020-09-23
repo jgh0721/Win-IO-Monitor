@@ -83,6 +83,7 @@ namespace nsW32API
     void PrintOutCreateOptions( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in ULONG CreateOptions );
     void PrintOutCreateShareAccess( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in ULONG ShareAccess );
     void PrintOutCreateDisposition( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in ULONG ShareAccess );
+    void PrintOutCreateDesiredAccess( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in ULONG DesiredAccess );
 
 } // nsW32API
 

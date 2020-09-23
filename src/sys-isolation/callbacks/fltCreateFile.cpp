@@ -29,20 +29,26 @@
     Flags
 */
 
+/*!
+    관련 파일 객체(Related FileObject) :
+        일반적으로 FileObject 가 위치한 디렉토리를 가르키지만, 해당 파일시스템이 ADS(Alternate File Stream) 를 지원한다면
+        관련 파일 객체는 FileObject(ADS) 의 주 파일스트림에 대한 파일객체가 될 수 있다
+*/
+
 FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects,
                                                   PVOID* CompletionContext )
 {
     FLT_PREOP_CALLBACK_STATUS                   FltStatus = FLT_PREOP_SUCCESS_NO_CALLBACK;
     IRP_CONTEXT*                                IrpContext = NULLPTR;
-    CREATE_ARGS                                 CreateArgs;
+    CREATE_ARGS                                 Args;
     auto&                                       IoStatus = Data->IoStatus;
 
     __try
     {
-        RtlZeroMemory( &CreateArgs, sizeof( CREATE_ARGS ) );
+        RtlZeroMemory( &Args, sizeof( CREATE_ARGS ) );
 
-        CreateArgs.LowerFileHandle = INVALID_HANDLE_VALUE;
-        CreateArgs.LowerFileObject = NULLPTR;
+        Args.LowerFileHandle = INVALID_HANDLE_VALUE;
+        Args.LowerFileObject = NULLPTR;
 
         ///////////////////////////////////////////////////////////////////////
         /// Validate Input
@@ -52,12 +58,12 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
 
         auto SecurityContext = Data->Iopb->Parameters.Create.SecurityContext;
 
-        CreateArgs.FileObject = Data->Iopb->TargetFileObject;
-        CreateArgs.CreateOptions = Data->Iopb->Parameters.Create.Options & 0x00FFFFFF;
-        CreateArgs.CreateDisposition = ( Data->Iopb->Parameters.Create.Options >> 24 ) & 0x000000ff;
-        CreateArgs.CreateDesiredAccess = SecurityContext->DesiredAccess;
+        Args.FileObject = Data->Iopb->TargetFileObject;
+        Args.CreateOptions = Data->Iopb->Parameters.Create.Options & 0x00FFFFFF;
+        Args.CreateDisposition = ( Data->Iopb->Parameters.Create.Options >> 24 ) & 0x000000ff;
+        Args.CreateDesiredAccess = SecurityContext->DesiredAccess;
 
-        if( BooleanFlagOn( CreateArgs.CreateOptions, FILE_DIRECTORY_FILE ) )
+        if( BooleanFlagOn( Args.CreateOptions, FILE_DIRECTORY_FILE ) )
             __leave;
 
         IrpContext = CreateIrpContext( Data, FltObjects );
@@ -66,173 +72,41 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
 
         if( IrpContext->SrcFileFullPath.Buffer == NULLPTR )
             __leave;
-        
-        if( nsUtils::EndsWithW( IrpContext->SrcFileFullPath.Buffer, L"IsolationTest.TXT" ) == false )
+
+        if( nsUtils::WildcardMatch_straight( IrpContext->SrcFileFullPathWOVolume, L"*isolationtest*.*" ) == false )
             __leave;
 
         IrpContext->IsAudit = true;
-        IrpContext->Params = &CreateArgs;
+        IrpContext->Params = &Args;
 
         InitializeVolumeProperties( IrpContext );
 
-        /*!
-            해당 파일에 대한 Lower FileObject 를 획득한다.
-            해당 파일이 이미 필터링 중인가?
-            CreateDisposition 에 따라 분기 처리를 한다
-        */
+        Args.CreateFileName = AllocateBuffer<WCHAR>( BUFFER_FILENAME, IrpContext->SrcFileFullPath.BufferSize + _countof( IrpContext->InstanceContext->DeviceNameBuffer ) );
+
+        RtlStringCbCatW( Args.CreateFileName.Buffer, Args.CreateFileName.BufferSize, IrpContext->InstanceContext->DeviceNameBuffer );
+        RtlStringCbCatW( Args.CreateFileName.Buffer, Args.CreateFileName.BufferSize, IrpContext->SrcFileFullPathWOVolume );
+        RtlInitUnicodeString( &Args.CreateFileNameUS, Args.CreateFileName.Buffer );
+
+        InitializeObjectAttributes( &Args.CreateObjectAttributes, &Args.CreateFileNameUS, OBJ_CASE_INSENSITIVE | OBJ_KERNEL_HANDLE, NULL, NULL );
 
         PrintIrpContext( IrpContext );
-
-        CreateArgs.CreateFileName = AllocateBuffer<WCHAR>( BUFFER_FILENAME, IrpContext->SrcFileFullPath.BufferSize + _countof( IrpContext->InstanceContext->DeviceNameBuffer ) );
-
-        RtlStringCbCatW( CreateArgs.CreateFileName.Buffer, CreateArgs.CreateFileName.BufferSize, IrpContext->InstanceContext->DeviceNameBuffer );
-        RtlStringCbCatW( CreateArgs.CreateFileName.Buffer, CreateArgs.CreateFileName.BufferSize, IrpContext->SrcFileFullPathWOVolume );
-        RtlInitUnicodeString( &CreateArgs.CreateFileNameUS, CreateArgs.CreateFileName.Buffer );
-
-        InitializeObjectAttributes( &CreateArgs.CreateObjectAttributes, &CreateArgs.CreateFileNameUS, OBJ_CASE_INSENSITIVE | OBJ_KERNEL_HANDLE, NULL, NULL );
-
-        IO_STATUS_BLOCK IoStatus;
-        IrpContext->Status = nsW32API::FltCreateFileEx( GlobalContext.Filter,
-                                                        FltObjects->Instance,
-                                                        &CreateArgs.LowerFileHandle, &CreateArgs.LowerFileObject,
-                                                        CreateArgs.CreateDesiredAccess, &CreateArgs.CreateObjectAttributes, &IoStatus,
-                                                        &Data->Iopb->Parameters.Create.AllocationSize,
-                                                        Data->Iopb->Parameters.Create.FileAttributes,
-                                                        Data->Iopb->Parameters.Create.ShareAccess,
-                                                        CreateArgs.CreateDisposition, CreateArgs.CreateOptions,
-                                                        Data->Iopb->Parameters.Create.EaBuffer, Data->Iopb->Parameters.Create.EaLength,
-                                                        IO_FORCE_ACCESS_CHECK
-        );
-
-        if( NT_SUCCESS( IrpContext->Status ) )
-        {
-            SetFlag( CreateArgs.FileStatus, FILE_ALREADY_EXISTS );
-
-            ULONG BytesReturned = 0;
-            FILE_STANDARD_INFORMATION fsi;
-            RtlZeroMemory( &fsi, sizeof( fsi ) );
-
-            NTSTATUS Status = FltQueryInformationFile( FltObjects->Instance, CreateArgs.LowerFileObject,
-                                                       &fsi, sizeof( fsi ), FileStandardInformation, &BytesReturned );
-
-            if( NT_SUCCESS( Status ) )
-            {
-                CreateArgs.FileSize = fsi.EndOfFile;
-                CreateArgs.FileAllocationSize = fsi.AllocationSize;
-
-                // 만약 성공했는데, 해당 객체가 디렉토리라면 무시한다
-                if( fsi.Directory != FALSE )
-                {
-                    SetFlag( IrpContext->CompleteStatus, COMPLETE_FREE_LOWER_FILEOBJECT );
-                    SetFlag( IrpContext->CompleteStatus, COMPLETE_RETURN_FLTSTATUS );
-
-                    IrpContext->PreFltStatus = FLT_PREOP_SUCCESS_NO_CALLBACK;
-                    __leave;
-                }
-            }
-            else
-            {
-                KdPrint( ( "[WinIOSol] EvtID=%09d %s %s Status=0x%08x,%s\n"
-                           , IrpContext->EvtID, __FUNCTION__, "FltQueryInformationFile FAILED"
-                           , Status, ntkernel_error_category::find_ntstatus( Status )->message ) );
-            }
-
-        }
-
         AcquireCmnResource( IrpContext, INST_EXCLUSIVE );
-        CreateArgs.Fcb = Vcb_SearchFCB( IrpContext->InstanceContext, IrpContext->SrcFileFullPathWOVolume );
 
-        switch( CreateArgs.CreateDisposition )
+        if( IsOwnFileObject( Args.FileObject ) == false )
         {
-            case FILE_SUPERSEDE:
-            {
-                ProcessPreCreate_SUPERSEDE( IrpContext );
-            } break;
-            case FILE_OPEN:
-            {
-                ProcessPreCreate_OPEN( IrpContext );
-            } break;
-            case FILE_CREATE:
-            {
-                ProcessPreCreate_CREATE( IrpContext );
-            } break;
-            case FILE_OPEN_IF:
-            {
-                ProcessPreCreate_OPEN_IF( IrpContext );
-            } break;
-            case FILE_OVERWRITE:
-            {
-                ProcessPreCreate_OVERWRITE( IrpContext );
-            } break;
-            case FILE_OVERWRITE_IF:
-            {
-                ProcessPreCreate_OVERWRITE_IF( IrpContext );
-            } break;
-        } // switch CreateDisposition
-
-        IF_DONT_CONTINUE_PROCESS_LEAVE( IrpContext );
-
-        if( CreateArgs.Fcb == NULLPTR )
-        {
-            CreateArgs.Fcb = AllocateFcb();
-            InitializeFCB( CreateArgs.Fcb, IrpContext );
-
-            IoSetShareAccess( CreateArgs.CreateDesiredAccess, Data->Iopb->Parameters.Create.ShareAccess,
-                              CreateArgs.FileObject, &CreateArgs.Fcb->LowerShareAccess );
-
-            CreateArgs.Fcb->LowerFileObject = CreateArgs.LowerFileObject;
-            CreateArgs.Fcb->LowerFileHandle = CreateArgs.LowerFileHandle;
-
-            Vcb_InsertFCB( IrpContext->InstanceContext, CreateArgs.Fcb );
+            CreateFileNonExistFCB( IrpContext );
         }
         else
         {
-            InterlockedIncrement( &CreateArgs.Fcb->OpnCount );
-            InterlockedIncrement( &CreateArgs.Fcb->ClnCount );
-            InterlockedIncrement( &CreateArgs.Fcb->RefCount );
-
-            // 최초에 LowerFileObject/Handle 을 설정했다면 추가로 설정할 필요 없음
-            SetFlag( IrpContext->CompleteStatus, COMPLETE_FREE_LOWER_FILEOBJECT );
+            CreateFileExistFCB( IrpContext );
         }
 
-        CreateArgs.FileObject->Vpb = CreateArgs.LowerFileObject->Vpb;
-        CreateArgs.FileObject->FsContext = CreateArgs.Fcb;
-        CreateArgs.FileObject->FsContext2 = NULLPTR;
-        CreateArgs.FileObject->SectionObjectPointer = &CreateArgs.Fcb->SectionObjects;
-        CreateArgs.FileObject->PrivateCacheMap = NULLPTR;               // 파일에 접근할 때 캐시를 초기화한다
-        CreateArgs.FileObject->Flags |= FO_CACHE_SUPPORTED;
+        IF_DONT_CONTINUE_PROCESS_LEAVE( IrpContext );
 
-        if( BooleanFlagOn( CreateArgs.CreateOptions, FILE_DELETE_ON_CLOSE ) )
-            SetFlag( CreateArgs.Fcb->Flags, FILE_DELETE_ON_CLOSE );
+        if( BooleanFlagOn( Args.CreateOptions, FILE_DELETE_ON_CLOSE ) )
+            SetFlag( IrpContext->Fcb->Flags, FILE_DELETE_ON_CLOSE );
 
         AssignCmnFltResult( IrpContext, FLT_PREOP_COMPLETE );
-
-        //CreateResult.IoStatus.Status = OpenLowerFileObject( IrpContext );
-
-        //FltAcquireResourceExclusive( &IrpContext->InstanceContext->VcbLock );
-        //CreateArgs.Fcb = Vcb_SearchFCB( IrpContext->InstanceContext, IrpContext->SrcFileFullPathWOVolume );
-
-        //// NOTE: 현재 해당 파일이 필터링 중이지 않다면 VCB 락을 해제하고, 그렇지 않으면 VCB 락을 유지한다. 
-        //if( CreateArgs.Fcb == NULLPTR )
-        //    FltReleaseResource( &IrpContext->InstanceContext->VcbLock );
-        //else
-        //    SetFlag( CreateResult.CompleteStatus, COMPLETE_FREE_INST_RSRC );
-
-
-        //if( BooleanFlagOn( CreateResult.CompleteStatus, COMPLETE_ALLOCATE_FCB ) )
-        //{
-        //    CreateArgs.Fcb = Vcb_SearchFCB( IrpContext->InstanceContext, IrpContext->SrcFileFullPathWOVolume );
-
-        //}
-
-        //CreateArgs.Fcb = AllocateFcb();
-        //if( CreateArgs.Fcb == NULLPTR )
-        //{
-        //    CreateResult.FltStatus = FLT_PREOP_COMPLETE;
-        //    CreateResult.IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
-        //    __leave;
-        //}
-
     }
     __finally
     {
@@ -240,30 +114,203 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
         {
             if( IrpContext->IsAudit == true )
             {
-                KdPrint( ( "[WinIOSol] EvtID=%09d %s Status=0x%08x Information=%s Name=%ws\n",
+                KdPrint( ( "[WinIOSol] EvtID=%09d %s Status=0x%08x Information=%s Open=%d Clean=%d Ref=%d Name=%ws\n",
                            IrpContext->EvtID, __FUNCTION__
                            , IrpContext->Status, nsW32API::ConvertCreateResultInformation( IrpContext->Status, IrpContext->Information )
+                           , IrpContext->Fcb != NULLPTR ? IrpContext->Fcb->OpnCount : 0
+                           , IrpContext->Fcb != NULLPTR ? IrpContext->Fcb->ClnCount : 0
+                           , IrpContext->Fcb != NULLPTR ? IrpContext->Fcb->RefCount : 0
                            , IrpContext->SrcFileFullPath.Buffer ) );
             }
 
             if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_FREE_LOWER_FILEOBJECT ) )
             {
-                if( CreateArgs.LowerFileHandle != INVALID_HANDLE_VALUE )
-                    FltClose( CreateArgs.LowerFileHandle );
+                if( Args.LowerFileHandle != INVALID_HANDLE_VALUE )
+                    FltClose( Args.LowerFileHandle );
 
-                if( CreateArgs.LowerFileObject != NULLPTR )
-                    ObDereferenceObject( CreateArgs.LowerFileObject );
+                if( Args.LowerFileObject != NULLPTR )
+                    ObDereferenceObject( Args.LowerFileObject );
             }
 
             if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_RETURN_FLTSTATUS ) )
                 FltStatus = IrpContext->PreFltStatus;
         }
 
-        DeallocateBuffer( &CreateArgs.CreateFileName );
+        DeallocateBuffer( &Args.CreateFileName );
         CloseIrpContext( IrpContext );
     }
 
     return FltStatus;
+}
+
+NTSTATUS CreateFileExistFCB( IRP_CONTEXT* IrpContext )
+{
+    NTSTATUS Status = STATUS_SUCCESS;
+    auto Data = IrpContext->Data;
+    auto Args = ( CREATE_ARGS* )IrpContext->Params;
+    IrpContext->Fcb = Vcb_SearchFCB( IrpContext->InstanceContext, IrpContext->SrcFileFullPathWOVolume );
+
+    __try
+    {
+        if( IrpContext->Fcb == NULLPTR )
+        {
+            Status = STATUS_INSUFFICIENT_RESOURCES;
+            AssignCmnResult( IrpContext, Status );
+            __leave;
+        }
+
+        AcquireCmnResource( IrpContext, FCB_MAIN_EXCLUSIVE );
+
+        InterlockedIncrement( &IrpContext->Fcb->OpnCount );
+        InterlockedIncrement( &IrpContext->Fcb->ClnCount );
+        InterlockedIncrement( &IrpContext->Fcb->RefCount );
+
+        //    // 최초에 LowerFileObject/Handle 을 설정했다면 추가로 설정할 필요 없음
+        //    SetFlag( IrpContext->CompleteStatus, COMPLETE_FREE_LOWER_FILEOBJECT );
+
+        IoCheckShareAccess( Args->CreateDesiredAccess, 
+                            Data->Iopb->Parameters.Create.ShareAccess, Args->FileObject, 
+                            &IrpContext->Fcb->LowerShareAccess, FALSE );
+
+        Args->FileObject->Vpb = Args->LowerFileObject->Vpb;
+        Args->FileObject->FsContext = IrpContext->Fcb;
+        Args->FileObject->FsContext2 = NULLPTR;
+        Args->FileObject->SectionObjectPointer = &IrpContext->Fcb->SectionObjects;
+        Args->FileObject->PrivateCacheMap = NULLPTR;               // 파일에 접근할 때 캐시를 초기화한다
+        Args->FileObject->Flags |= FO_CACHE_SUPPORTED;
+    }
+    __finally
+    {
+        
+    }
+
+    return Status;
+}
+
+NTSTATUS CreateFileNonExistFCB( IRP_CONTEXT* IrpContext )
+{
+    NTSTATUS Status = STATUS_SUCCESS;
+    auto Args = ( CREATE_ARGS* )IrpContext->Params;
+    auto Data = IrpContext->Data;
+
+    __try
+    {
+        IO_STATUS_BLOCK IoStatus;
+        Status = nsW32API::FltCreateFileEx( GlobalContext.Filter,
+                                            IrpContext->FltObjects->Instance,
+                                            &Args->LowerFileHandle, &Args->LowerFileObject,
+                                            Args->CreateDesiredAccess, &Args->CreateObjectAttributes, &IoStatus,
+                                            &Data->Iopb->Parameters.Create.AllocationSize,
+                                            Data->Iopb->Parameters.Create.FileAttributes,
+                                            Data->Iopb->Parameters.Create.ShareAccess,
+                                            Args->CreateDisposition, Args->CreateOptions,
+                                            Data->Iopb->Parameters.Create.EaBuffer, Data->Iopb->Parameters.Create.EaLength,
+                                            0
+        );
+
+        if( !NT_SUCCESS( Status ) )
+        {
+            KdPrint( ( "[WinIOSol] EvtID=%09d %s %s Status=0x%08x,%s\n"
+                       , IrpContext->EvtID, __FUNCTION__, "FltCreateFileEx FAILED"
+                       , Status, ntkernel_error_category::find_ntstatus( Status )->message
+                       ) );
+
+            AssignCmnResult( IrpContext, Status );
+            AssignCmnResultInfo( IrpContext, IoStatus.Information );
+            __leave;
+        }
+
+        SetFlag( Args->FileStatus, FILE_ALREADY_EXISTS );
+        AssignCmnResultInfo( IrpContext, IoStatus.Information );
+
+        ULONG BytesReturned = 0;
+        FILE_STANDARD_INFORMATION fsi;
+        RtlZeroMemory( &fsi, sizeof( fsi ) );
+
+        NTSTATUS Status = FltQueryInformationFile( IrpContext->FltObjects->Instance, Args->LowerFileObject,
+                                                   &fsi, sizeof( fsi ), FileStandardInformation, &BytesReturned );
+
+        if( NT_SUCCESS( Status ) )
+        {
+            Args->FileSize = fsi.EndOfFile;
+            Args->FileAllocationSize = fsi.AllocationSize;
+
+            // 만약 성공했는데, 해당 객체가 디렉토리라면 무시한다
+            if( fsi.Directory != FALSE )
+            {
+                SetFlag( IrpContext->CompleteStatus, COMPLETE_FREE_LOWER_FILEOBJECT );
+                AssignCmnFltResult( IrpContext, FLT_PREOP_SUCCESS_NO_CALLBACK );
+                __leave;
+            }
+        }
+        else
+        {
+            KdPrint( ( "[WinIOSol] EvtID=%09d %s %s Status=0x%08x,%s\n"
+                       , IrpContext->EvtID, __FUNCTION__, "FltQueryInformationFile FAILED"
+                       , Status, ntkernel_error_category::find_ntstatus( Status )->message ) );
+        }
+
+        //switch( CreateArgs.CreateDisposition )
+        //{
+        //    case FILE_SUPERSEDE:
+        //    {
+        //        ProcessPreCreate_SUPERSEDE( IrpContext );
+        //    } break;
+        //    case FILE_OPEN:
+        //    {
+        //        ProcessPreCreate_OPEN( IrpContext );
+        //    } break;
+        //    case FILE_CREATE:
+        //    {
+        //        ProcessPreCreate_CREATE( IrpContext );
+        //    } break;
+        //    case FILE_OPEN_IF:
+        //    {
+        //        ProcessPreCreate_OPEN_IF( IrpContext );
+        //    } break;
+        //    case FILE_OVERWRITE:
+        //    {
+        //        ProcessPreCreate_OVERWRITE( IrpContext );
+        //    } break;
+        //    case FILE_OVERWRITE_IF:
+        //    {
+        //        ProcessPreCreate_OVERWRITE_IF( IrpContext );
+        //    } break;
+        //} // switch CreateDisposition
+        //
+
+        IrpContext->Fcb = AllocateFcb();
+        if( IrpContext->Fcb == NULLPTR )
+        {
+            AssignCmnResult( IrpContext, STATUS_INSUFFICIENT_RESOURCES );
+            AssignCmnFltResult( IrpContext, FLT_PREOP_COMPLETE );
+            SetFlag( IrpContext->CompleteStatus, COMPLETE_DONT_CONT_PROCESS );
+            __leave;
+        }
+        
+        InitializeFCB( IrpContext->Fcb, IrpContext );
+
+        IoSetShareAccess( Args->CreateDesiredAccess, Data->Iopb->Parameters.Create.ShareAccess,
+                          Args->FileObject, &IrpContext->Fcb->LowerShareAccess );
+
+        IrpContext->Fcb->LowerFileObject = Args->LowerFileObject;
+        IrpContext->Fcb->LowerFileHandle = Args->LowerFileHandle;
+
+        Args->FileObject->Vpb = Args->LowerFileObject->Vpb;
+        Args->FileObject->FsContext = IrpContext->Fcb;
+        Args->FileObject->FsContext2 = NULLPTR;
+        Args->FileObject->SectionObjectPointer = &IrpContext->Fcb->SectionObjects;
+        Args->FileObject->PrivateCacheMap = NULLPTR;               // 파일에 접근할 때 캐시를 초기화한다
+        Args->FileObject->Flags |= FO_CACHE_SUPPORTED;
+
+        Vcb_InsertFCB( IrpContext->InstanceContext, IrpContext->Fcb );
+    }
+    __finally
+    {
+
+    }
+
+    return Status;
 }
 
 FLT_POSTOP_CALLBACK_STATUS FLTAPI FilterPostCreate( PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects,

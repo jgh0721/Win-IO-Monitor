@@ -566,3 +566,35 @@ void nsW32API::PrintOutCreateOptions( char* PrintBuffer, ULONG BufferSize, ULONG
     if( BooleanFlagOn( CreateOptions, FILE_OPEN_FOR_FREE_SPACE_QUERY ) )
         RtlStringCbCatA( PrintBuffer, BufferSize, "FILE_OPEN_FOR_FREE_SPACE_QUERY|" );
 }
+
+void nsW32API::PrintOutCreateDesiredAccess( char* PrintBuffer, ULONG BufferSize, ULONG DesiredAccess )
+{
+    if( PrintBuffer == NULLPTR || BufferSize == 0 ) return;
+
+    if( BooleanFlagOn( DesiredAccess, FILE_READ_DATA ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "FILE_READ_DATA|" );
+    if( BooleanFlagOn( DesiredAccess, FILE_READ_ATTRIBUTES ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "FILE_READ_ATTRIBUTES|" );
+    if( BooleanFlagOn( DesiredAccess, FILE_READ_EA ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "FILE_READ_EA|" );
+
+    if( BooleanFlagOn( DesiredAccess, FILE_WRITE_DATA ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "FILE_WRITE_DATA|" );
+    if( BooleanFlagOn( DesiredAccess, FILE_WRITE_ATTRIBUTES ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "FILE_WRITE_ATTRIBUTES|" );
+    if( BooleanFlagOn( DesiredAccess, FILE_WRITE_EA ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "FILE_WRITE_EA|" );
+
+    if( BooleanFlagOn( DesiredAccess, DELETE ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "DELETE|" );
+    if( BooleanFlagOn( DesiredAccess, READ_CONTROL ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "READ_CONTROL|" );
+    if( BooleanFlagOn( DesiredAccess, WRITE_DAC ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "WRITE_DAC|" );
+    if( BooleanFlagOn( DesiredAccess, WRITE_OWNER ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "WRITE_OWNER|" );
+    if( BooleanFlagOn( DesiredAccess, SYNCHRONIZE ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "SYNCHRONIZE|" );
+    if( BooleanFlagOn( DesiredAccess, FILE_EXECUTE ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "FILE_EXECUTE|" );
+}
