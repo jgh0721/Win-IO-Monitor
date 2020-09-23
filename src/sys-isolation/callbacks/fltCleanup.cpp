@@ -77,6 +77,8 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCleanup( PFLT_CALLBACK_DATA Data, PCFL
         CcUninitializeCacheMap( FileObject, NULLPTR, NULLPTR );
         IoRemoveShareAccess( FileObject, &Fcb->LowerShareAccess );
 
+        MmForceSectionClosed( &Fcb->SectionObjects, TRUE );
+
         if( IrpContext->Ccb->LowerFileHandle != INVALID_HANDLE_VALUE )
         {
             FltClose( IrpContext->Ccb->LowerFileHandle );
