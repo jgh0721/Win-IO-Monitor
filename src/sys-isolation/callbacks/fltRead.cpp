@@ -775,7 +775,7 @@ NTSTATUS ReadCachedIO( IRP_CONTEXT* IrpContext, PVOID ReadBuffer, ULONG BytesToC
         }
         __except( EXCEPTION_EXECUTE_HANDLER )
         {
-            AssignCmnResult( IrpContext, STATUS_UNSUCCESSFUL );
+            AssignCmnResult( IrpContext, STATUS_INSUFFICIENT_RESOURCES );
 
             KdPrint( ( "[WinIOSol] EvtID=%09d %s ExceptionCode=%d\n"
                        , IrpContext->EvtID, __FUNCTION__, GetExceptionCode()
