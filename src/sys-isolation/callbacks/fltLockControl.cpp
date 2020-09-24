@@ -47,8 +47,11 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreLockControl( PFLT_CALLBACK_DATA Data, 
     }
     __finally
     {
-        if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_RETURN_FLTSTATUS ) )
-            FltStatus = IrpContext->PreFltStatus;
+        if( IrpContext != NULLPTR )
+        {
+            if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_RETURN_FLTSTATUS ) )
+                FltStatus = IrpContext->PreFltStatus;
+        }
 
         CloseIrpContext( IrpContext );
     }
