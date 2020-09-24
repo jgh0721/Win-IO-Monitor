@@ -162,6 +162,20 @@ NTSTATUS CreateFileExistFCB( IRP_CONTEXT* IrpContext )
 
         AcquireCmnResource( IrpContext, FCB_MAIN_EXCLUSIVE );
 
+        if( FltCurrentBatchOplock( &IrpContext->Fcb->FileOplock ) )
+        {
+            AssignCmnResultInfo( IrpContext, FILE_OPBATCH_BREAK_UNDERWAY );
+
+            // 만약 OPLOCK BREAK 이 진행 중이라면 완료될 때 까지 대기한다
+            auto Ret = FltCheckOplock( &IrpContext->Fcb->FileOplock, IrpContext->Data, NULL, NULL, NULL );
+            if( Ret == FLT_PREOP_COMPLETE )
+            {
+                AssignCmnResult( IrpContext, STATUS_ACCESS_DENIED );
+                AssignCmnFltResult( IrpContext, Ret );
+                SetFlag( IrpContext->CompleteStatus, COMPLETE_DONT_CONT_PROCESS );
+            }
+        }
+
         // NOTE: MSDN 에 따르면, 쓰기 권한으로 파일을 열기 전에 IRP_MJ_CREATE 에서 MmFlushImageSection 을 MmFlushForWrite 로 호출해야한다
         if( BooleanFlagOn( Args->CreateDesiredAccess, FILE_WRITE_DATA ) )
         {

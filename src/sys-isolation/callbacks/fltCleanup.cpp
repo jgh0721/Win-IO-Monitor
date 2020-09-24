@@ -74,6 +74,9 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCleanup( PFLT_CALLBACK_DATA Data, PCFL
             }
         }
 
+        // File Oplock 점검, 완료될 때 까지 대기한다
+        FltCheckOplock( &IrpContext->Fcb->FileOplock, Data, NULL, NULL, NULL );
+
         // 해당 파일객체에 잡혀있던 Byte-Range Lock 을 모두 해제한다
         FsRtlFastUnlockAll( &Fcb->FileLock, FileObject, FltGetRequestorProcess( Data ), NULL );
 
