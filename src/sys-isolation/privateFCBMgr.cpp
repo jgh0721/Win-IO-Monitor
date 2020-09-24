@@ -42,6 +42,14 @@ void DeallocateCcb( CCB*& Ccb )
     if( Ccb == NULLPTR )
         return;
 
+    if( Ccb->LowerFileHandle != INVALID_HANDLE_VALUE )
+        FltClose( Ccb->LowerFileHandle );
+    Ccb->LowerFileHandle = INVALID_HANDLE_VALUE;
+
+    if( Ccb->LowerFileObject != NULLPTR )
+        ObDereferenceObject( Ccb->LowerFileObject );
+    Ccb->LowerFileObject = NULLPTR;
+
     DeallocateBuffer( &Ccb->ProcessFileFullPath );
     DeallocateBuffer( &Ccb->SrcFileFullPath );
 

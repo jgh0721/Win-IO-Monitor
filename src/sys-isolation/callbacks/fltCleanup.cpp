@@ -80,6 +80,16 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCleanup( PFLT_CALLBACK_DATA Data, PCFL
         // 해당 파일객체에 잡혀있던 Byte-Range Lock 을 모두 해제한다
         FsRtlFastUnlockAll( &Fcb->FileLock, FileObject, FltGetRequestorProcess( Data ), NULL );
 
+        if( IrpContext->Fcb->SectionObjects.DataSectionObject != NULLPTR )
+        {
+            CcFlushCache( &Fcb->SectionObjects, NULL, 0, NULL );
+
+            ExAcquireResourceExclusiveLite( IrpContext->Fcb->AdvFcbHeader.PagingIoResource, TRUE );
+            ExReleaseResourceLite( IrpContext->Fcb->AdvFcbHeader.PagingIoResource );
+
+            CcPurgeCacheSection( &IrpContext->Fcb->SectionObjects, NULL, 0, FALSE );
+        }
+
         CcUninitializeCacheMap( FileObject, NULLPTR, NULLPTR );
         IoRemoveShareAccess( FileObject, &Fcb->LowerShareAccess );
 
