@@ -42,6 +42,9 @@ void DeallocateCcb( CCB*& Ccb )
     if( Ccb == NULLPTR )
         return;
 
+    DeallocateBuffer( &Ccb->ProcessFileFullPath );
+    DeallocateBuffer( &Ccb->SrcFileFullPath );
+
     ExFreeToNPagedLookasideList( &GlobalContext.CcbLookasideList, Ccb );
     Ccb = NULLPTR;
 }
