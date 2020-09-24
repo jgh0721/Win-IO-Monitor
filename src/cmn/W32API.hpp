@@ -72,6 +72,8 @@ namespace nsW32API
 
     const char* ConvertCreateShareAccess( __in ULONG ShareAccess );
     const char* ConvertCreateDisposition( __in ULONG CreateDisposition );
+    const char* ConvertIRPMinorFunction( __in UCHAR MajorFunction, __in UCHAR MinorFunction );
+    const char* ConvertFsControlCode( __in ULONG FsControlCode );
 
     const char* ConvertCreateResultInformation( __in NTSTATUS Status, __in ULONG_PTR Information );
 

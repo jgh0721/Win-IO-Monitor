@@ -298,6 +298,281 @@ const char* nsW32API::ConvertCreateDisposition( __in ULONG CreateDisposition )
     return "Unk";
 }
 
+const char* nsW32API::ConvertIRPMinorFunction( UCHAR MajorFunction, UCHAR MinorFunction )
+{
+    switch( MajorFunction )
+    {
+        case IRP_MJ_READ:
+        case IRP_MJ_WRITE:
+        {
+            switch( MinorFunction )
+            {
+                case IRP_MN_NORMAL: return "NORMAL";
+                case IRP_MN_DPC: return "DPC";
+                case IRP_MN_MDL: return "MDL";
+                case IRP_MN_COMPLETE: return "COMPLETE";
+                case IRP_MN_COMPRESSED: return "COMPRESSED";
+
+                case IRP_MN_MDL_DPC: return "MDL_DPC";
+                case IRP_MN_COMPLETE_MDL: return "COMPLETE_MDL";
+                case IRP_MN_COMPLETE_MDL_DPC: return "COMPLETE_MDL_DPC";
+
+                case IRP_MN_QUERY_LEGACY_BUS_INFORMATION: return "QUERY_LEGACY_BUS";
+            }
+        } break;
+
+        case IRP_MJ_DIRECTORY_CONTROL:
+        {
+            switch( MinorFunction )
+            {
+                case IRP_MN_QUERY_DIRECTORY: return "QUERY_DIRECTORY";
+                case IRP_MN_NOTIFY_CHANGE_DIRECTORY: return "NOTIFY_CHANGE_DIRECTORY";
+            }
+        } break;
+
+        case IRP_MJ_FILE_SYSTEM_CONTROL:
+        {
+            switch( MinorFunction )
+            {
+                case IRP_MN_USER_FS_REQUEST: { return "USER_FS_REQUEST"; } break;
+                case IRP_MN_MOUNT_VOLUME: { return "MOUNT_VOLUME"; } break;
+                case IRP_MN_VERIFY_VOLUME: { return "VERIFY_VOLUME"; } break;
+                case IRP_MN_LOAD_FILE_SYSTEM: { return "LOAD_FILE_SYSTEM"; } break;
+                // case IRP_MN_TRACK_LINK: {} break;   
+                case IRP_MN_KERNEL_CALL: { return "KERNEL_CALL"; } break;
+            }
+        } break;
+        case IRP_MJ_LOCK_CONTROL: {
+            switch( MinorFunction )
+            {
+                case IRP_MN_LOCK: { return "LOCK"; } break;
+                case IRP_MN_UNLOCK_SINGLE: { return "UNLOCK_SINGLE"; } break;
+                case IRP_MN_UNLOCK_ALL: { return "UNLOCK_ALL"; } break;
+                case IRP_MN_UNLOCK_ALL_BY_KEY: { return "UNLOCK_ALL_BY_KEY"; } break;
+            }
+        } break;
+
+        case IRP_MJ_SYSTEM_CONTROL: {
+            switch( MinorFunction )
+            {
+                case IRP_MN_QUERY_ALL_DATA: { return "QUERY_ALL_DATA"; } break;
+                case IRP_MN_QUERY_SINGLE_INSTANCE: { return "QUERY_SINGLE_INSTANCE"; } break;
+                case IRP_MN_CHANGE_SINGLE_INSTANCE: { return "CHANGE_SINGLE_INSTANCE"; } break;
+                case IRP_MN_CHANGE_SINGLE_ITEM: { return "CHANGE_SINGLE_ITEM"; } break;
+                case IRP_MN_ENABLE_EVENTS: { return "ENABLE_EVENTS"; } break;
+                case IRP_MN_DISABLE_EVENTS: { return "DISABLE_EVENTS"; } break;
+                case IRP_MN_ENABLE_COLLECTION: { return "ENABLE_COLLECTION"; } break;
+                case IRP_MN_DISABLE_COLLECTION: { return "DISABLE_COLLECTION"; } break;
+                case IRP_MN_REGINFO: { return "REGINFO"; } break;
+                case IRP_MN_EXECUTE_METHOD: { return "EXECUTE_METHOD"; } break;
+                    // Minor code 0x0a is reserved
+                case 0x0a: { return "RESERVED(0x0a)"; } break;
+                case IRP_MN_REGINFO_EX: { return "REGINFO_EX"; } break;
+                    // Minor code 0x0c is reserved
+                case 0x0c: { return "RESERVED(0x0c)"; } break;
+            }
+        } break;
+        case IRP_MJ_PNP: {
+            switch( MinorFunction )
+            {
+                case IRP_MN_START_DEVICE: { return "START_DEVICE"; } break;
+                case IRP_MN_QUERY_REMOVE_DEVICE: { return "QUERY_REMOVE_DEVICE"; } break;
+                case IRP_MN_REMOVE_DEVICE: { return "REMOVE_DEVICE"; } break;
+                case IRP_MN_CANCEL_REMOVE_DEVICE: { return "CANCEL_REMOVE_DEVICE"; } break;
+                case IRP_MN_STOP_DEVICE: { return "STOP_DEVICE"; } break;
+                case IRP_MN_QUERY_STOP_DEVICE: { return "QUERY_STOP_DEVICE"; } break;
+                case IRP_MN_CANCEL_STOP_DEVICE: { return "CANCEL_STOP_DEVICE"; } break;
+                
+                case IRP_MN_QUERY_DEVICE_RELATIONS: { return "QUERY_DEVICE_RELATIONS"; } break;
+                case IRP_MN_QUERY_INTERFACE: { return "QUERY_INTERFACE"; } break;
+                case IRP_MN_QUERY_CAPABILITIES: { return "QUERY_CAPABILITIES"; } break;
+                case IRP_MN_QUERY_RESOURCES: { return "QUERY_RESOURCES"; } break;
+                case IRP_MN_QUERY_RESOURCE_REQUIREMENTS: { return "QUERY_RESOURCE_REQUIREMENTS"; } break;
+                case IRP_MN_QUERY_DEVICE_TEXT: { return "QUERY_DEVICE_TEXT"; } break;
+                case IRP_MN_FILTER_RESOURCE_REQUIREMENTS: { return "FILTER_RESOURCE_REQUIREMENTS"; } break;
+                
+                case IRP_MN_READ_CONFIG: { return "READ_CONFIG"; } break;
+                case IRP_MN_WRITE_CONFIG: { return "WRITE_CONFIG"; } break;
+                case IRP_MN_EJECT: { return "EJECT"; } break;
+                case IRP_MN_SET_LOCK: { return "SET_LOCK"; } break;
+                case IRP_MN_QUERY_ID: { return "QUERY_ID"; } break;
+                case IRP_MN_QUERY_PNP_DEVICE_STATE: { return "QUERY_PNP_DEVICE_STATE"; } break;
+                case IRP_MN_QUERY_BUS_INFORMATION: { return "QUERY_BUS_INFORMATION"; } break;
+                case IRP_MN_DEVICE_USAGE_NOTIFICATION: { return "DEVICE_USAGE_NOTIFICATION"; } break;
+                case IRP_MN_SURPRISE_REMOVAL: { return "SURPRISE_REMOVAL"; } break;
+                case IRP_MN_DEVICE_ENUMERATED: { return "DEVICE_ENUMERATED"; } break;
+            }
+        } break;
+        case IRP_MJ_POWER: {
+            switch( MinorFunction )
+            {
+                case IRP_MN_WAIT_WAKE: { return "WAIT_WAKE"; } break;
+                case IRP_MN_POWER_SEQUENCE: { return "POWER_SEQUENCE"; } break;
+                case IRP_MN_SET_POWER: { return "SET_POWER"; } break;
+                case IRP_MN_QUERY_POWER: { return "QUERY_POWER"; } break;
+            }
+        } break;
+    }
+
+    return "None";
+}
+
+const char* nsW32API::ConvertFsControlCode( ULONG FsControlCode )
+{
+    switch( FsControlCode )
+    {
+        case FSCTL_REQUEST_OPLOCK_LEVEL_1: { return "FSCTL_REQUEST_OPLOCK_LEVEL_1"; } break;
+        case FSCTL_REQUEST_OPLOCK_LEVEL_2: { return "FSCTL_REQUEST_OPLOCK_LEVEL_2"; } break;
+        case FSCTL_REQUEST_BATCH_OPLOCK: { return "FSCTL_REQUEST_BATCH_OPLOCK"; } break;
+        case FSCTL_OPLOCK_BREAK_ACKNOWLEDGE: { return "FSCTL_OPLOCK_BREAK_ACKNOWLEDGE"; } break;
+        case FSCTL_OPBATCH_ACK_CLOSE_PENDING: { return "FSCTL_OPBATCH_ACK_CLOSE_PENDING"; } break;
+        case FSCTL_OPLOCK_BREAK_NOTIFY: { return "FSCTL_OPLOCK_BREAK_NOTIFY"; } break;
+        case FSCTL_LOCK_VOLUME: { return "FSCTL_LOCK_VOLUME"; } break;
+        case FSCTL_UNLOCK_VOLUME: { return "FSCTL_UNLOCK_VOLUME"; } break;
+        case FSCTL_DISMOUNT_VOLUME: { return "FSCTL_DISMOUNT_VOLUME"; } break;
+
+        case FSCTL_IS_VOLUME_MOUNTED: { return "FSCTL_IS_VOLUME_MOUNTED"; } break;
+        case FSCTL_IS_PATHNAME_VALID: { return "FSCTL_IS_PATHNAME_VALID"; } break;
+        case FSCTL_MARK_VOLUME_DIRTY: { return "FSCTL_MARK_VOLUME_DIRTY"; } break;
+
+        case FSCTL_QUERY_RETRIEVAL_POINTERS: { return "FSCTL_QUERY_RETRIEVAL_POINTERS"; } break;
+        case FSCTL_GET_COMPRESSION: { return "FSCTL_GET_COMPRESSION"; } break;
+        case FSCTL_SET_COMPRESSION: { return "FSCTL_SET_COMPRESSION"; } break;
+
+
+        case FSCTL_SET_BOOTLOADER_ACCESSED: { return "FSCTL_SET_BOOTLOADER_ACCESSED"; } break;
+        case FSCTL_OPLOCK_BREAK_ACK_NO_2: { return "FSCTL_OPLOCK_BREAK_ACK_NO_2"; } break;
+        case FSCTL_INVALIDATE_VOLUMES: { return "FSCTL_INVALIDATE_VOLUMES"; } break;
+        case FSCTL_QUERY_FAT_BPB: { return "FSCTL_QUERY_FAT_BPB"; } break;
+        case FSCTL_REQUEST_FILTER_OPLOCK: { return "FSCTL_REQUEST_FILTER_OPLOCK"; } break;
+        case FSCTL_FILESYSTEM_GET_STATISTICS: { return "FSCTL_FILESYSTEM_GET_STATISTICS"; } break;
+
+        case FSCTL_GET_NTFS_VOLUME_DATA: { return "FSCTL_GET_NTFS_VOLUME_DATA"; } break;
+        case FSCTL_GET_NTFS_FILE_RECORD: { return "FSCTL_GET_NTFS_FILE_RECORD"; } break;
+        case FSCTL_GET_VOLUME_BITMAP: { return "FSCTL_GET_VOLUME_BITMAP"; } break;
+        case FSCTL_GET_RETRIEVAL_POINTERS: { return "FSCTL_GET_RETRIEVAL_POINTERS"; } break;
+        case FSCTL_MOVE_FILE: { return "FSCTL_MOVE_FILE"; } break;
+        case FSCTL_IS_VOLUME_DIRTY: { return "FSCTL_IS_VOLUME_DIRTY"; } break;
+
+        case FSCTL_ALLOW_EXTENDED_DASD_IO: { return "FSCTL_ALLOW_EXTENDED_DASD_IO"; } break;
+
+
+
+        case FSCTL_FIND_FILES_BY_SID: { return "FSCTL_FIND_FILES_BY_SID"; } break;
+
+
+        case FSCTL_SET_OBJECT_ID: { return "FSCTL_SET_OBJECT_ID"; } break;
+        case FSCTL_GET_OBJECT_ID: { return "FSCTL_GET_OBJECT_ID"; } break;
+        case FSCTL_DELETE_OBJECT_ID: { return "FSCTL_DELETE_OBJECT_ID"; } break;
+        case FSCTL_SET_REPARSE_POINT: { return "FSCTL_SET_REPARSE_POINT"; } break;
+        case FSCTL_GET_REPARSE_POINT: { return "FSCTL_GET_REPARSE_POINT"; } break;
+        case FSCTL_DELETE_REPARSE_POINT: { return "FSCTL_DELETE_REPARSE_POINT"; } break;
+        case FSCTL_ENUM_USN_DATA: { return "FSCTL_ENUM_USN_DATA"; } break;
+        case FSCTL_SECURITY_ID_CHECK: { return "FSCTL_SECURITY_ID_CHECK"; } break;
+        case FSCTL_READ_USN_JOURNAL: { return "FSCTL_READ_USN_JOURNAL"; } break;
+        case FSCTL_SET_OBJECT_ID_EXTENDED: { return "FSCTL_SET_OBJECT_ID_EXTENDED"; } break;
+        case FSCTL_CREATE_OR_GET_OBJECT_ID: { return "FSCTL_CREATE_OR_GET_OBJECT_ID"; } break;
+        case FSCTL_SET_SPARSE: { return "FSCTL_SET_SPARSE"; } break;
+        case FSCTL_SET_ZERO_DATA: { return "FSCTL_SET_ZERO_DATA"; } break;
+        case FSCTL_QUERY_ALLOCATED_RANGES: { return "FSCTL_QUERY_ALLOCATED_RANGES"; } break;
+        case FSCTL_ENABLE_UPGRADE: { return "FSCTL_ENABLE_UPGRADE"; } break;
+
+        case FSCTL_SET_ENCRYPTION: { return "FSCTL_SET_ENCRYPTION"; } break;
+        case FSCTL_ENCRYPTION_FSCTL_IO: { return "FSCTL_ENCRYPTION_FSCTL_IO"; } break;
+        case FSCTL_WRITE_RAW_ENCRYPTED: { return "FSCTL_WRITE_RAW_ENCRYPTED"; } break;
+        case FSCTL_READ_RAW_ENCRYPTED: { return "FSCTL_READ_RAW_ENCRYPTED"; } break;
+        case FSCTL_CREATE_USN_JOURNAL: { return "FSCTL_CREATE_USN_JOURNAL"; } break;
+        case FSCTL_READ_FILE_USN_DATA: { return "FSCTL_READ_FILE_USN_DATA"; } break;
+        case FSCTL_WRITE_USN_CLOSE_RECORD: { return "FSCTL_WRITE_USN_CLOSE_RECORD"; } break;
+        case FSCTL_EXTEND_VOLUME: { return "FSCTL_EXTEND_VOLUME"; } break;
+        case FSCTL_QUERY_USN_JOURNAL: { return "FSCTL_QUERY_USN_JOURNAL"; } break;
+        case FSCTL_DELETE_USN_JOURNAL: { return "FSCTL_DELETE_USN_JOURNAL"; } break;
+        case FSCTL_MARK_HANDLE: { return "FSCTL_MARK_HANDLE"; } break;
+        case FSCTL_SIS_COPYFILE: { return "FSCTL_SIS_COPYFILE"; } break;
+        case FSCTL_SIS_LINK_FILES: { return "FSCTL_SIS_LINK_FILES"; } break;
+
+
+
+        case FSCTL_RECALL_FILE: { return "FSCTL_RECALL_FILE"; } break;
+
+        case FSCTL_READ_FROM_PLEX: { return "FSCTL_READ_FROM_PLEX"; } break;
+        case FSCTL_FILE_PREFETCH: { return "FSCTL_FILE_PREFETCH"; } break;
+
+        case FSCTL_MAKE_MEDIA_COMPATIBLE: { return "FSCTL_MAKE_MEDIA_COMPATIBLE"; } break;
+        case FSCTL_SET_DEFECT_MANAGEMENT: { return "FSCTL_SET_DEFECT_MANAGEMENT"; } break;
+        case FSCTL_QUERY_SPARING_INFO: { return "FSCTL_QUERY_SPARING_INFO"; } break;
+        case FSCTL_QUERY_ON_DISK_VOLUME_INFO: { return "FSCTL_QUERY_ON_DISK_VOLUME_INFO"; } break;
+        case FSCTL_SET_VOLUME_COMPRESSION_STATE: { return "FSCTL_SET_VOLUME_COMPRESSION_STATE"; } break;
+
+        case FSCTL_TXFS_MODIFY_RM: { return "FSCTL_TXFS_MODIFY_RM"; } break;
+        case FSCTL_TXFS_QUERY_RM_INFORMATION: { return "FSCTL_TXFS_QUERY_RM_INFORMATION"; } break;
+
+        case FSCTL_TXFS_ROLLFORWARD_REDO: { return "FSCTL_TXFS_ROLLFORWARD_REDO"; } break;
+        case FSCTL_TXFS_ROLLFORWARD_UNDO: { return "FSCTL_TXFS_ROLLFORWARD_UNDO"; } break;
+        case FSCTL_TXFS_START_RM: { return "FSCTL_TXFS_START_RM"; } break;
+        case FSCTL_TXFS_SHUTDOWN_RM: { return "FSCTL_TXFS_SHUTDOWN_RM"; } break;
+        case FSCTL_TXFS_READ_BACKUP_INFORMATION: { return "FSCTL_TXFS_READ_BACKUP_INFORMATION"; } break;
+        case FSCTL_TXFS_WRITE_BACKUP_INFORMATION: { return "FSCTL_TXFS_WRITE_BACKUP_INFORMATION"; } break;
+        case FSCTL_TXFS_CREATE_SECONDARY_RM: { return "FSCTL_TXFS_CREATE_SECONDARY_RM"; } break;
+        case FSCTL_TXFS_GET_METADATA_INFO: { return "FSCTL_TXFS_GET_METADATA_INFO"; } break;
+        case FSCTL_TXFS_GET_TRANSACTED_VERSION: { return "FSCTL_TXFS_GET_TRANSACTED_VERSION"; } break;
+
+        case FSCTL_TXFS_SAVEPOINT_INFORMATION: { return "FSCTL_TXFS_SAVEPOINT_INFORMATION"; } break;
+        case FSCTL_TXFS_CREATE_MINIVERSION: { return "FSCTL_TXFS_CREATE_MINIVERSION"; } break;
+
+
+
+        case FSCTL_TXFS_TRANSACTION_ACTIVE: { return "FSCTL_TXFS_TRANSACTION_ACTIVE"; } break;
+        case FSCTL_SET_ZERO_ON_DEALLOCATION: { return "FSCTL_SET_ZERO_ON_DEALLOCATION"; } break;
+        case FSCTL_SET_REPAIR: { return "FSCTL_SET_REPAIR"; } break;
+        case FSCTL_GET_REPAIR: { return "FSCTL_GET_REPAIR"; } break;
+        case FSCTL_WAIT_FOR_REPAIR: { return "FSCTL_WAIT_FOR_REPAIR"; } break;
+
+        case FSCTL_INITIATE_REPAIR: { return "FSCTL_INITIATE_REPAIR"; } break;
+        case FSCTL_CSC_INTERNAL: { return "FSCTL_CSC_INTERNAL"; } break;
+        case FSCTL_SHRINK_VOLUME: { return "FSCTL_SHRINK_VOLUME"; } break;
+        case FSCTL_SET_SHORT_NAME_BEHAVIOR: { return "FSCTL_SET_SHORT_NAME_BEHAVIOR"; } break;
+        case FSCTL_DFSR_SET_GHOST_HANDLE_STATE: { return "FSCTL_DFSR_SET_GHOST_HANDLE_STATE"; } break;
+
+        case FSCTL_TXFS_LIST_TRANSACTION_LOCKED_FILES: { return "FSCTL_TXFS_LIST_TRANSACTION_LOCKED_FILES"; } break;
+
+        case FSCTL_TXFS_LIST_TRANSACTIONS: { return "FSCTL_TXFS_LIST_TRANSACTIONS"; } break;
+        case FSCTL_QUERY_PAGEFILE_ENCRYPTION: { return "FSCTL_QUERY_PAGEFILE_ENCRYPTION"; } break;
+
+        case FSCTL_RESET_VOLUME_ALLOCATION_HINTS: { return "FSCTL_RESET_VOLUME_ALLOCATION_HINTS"; } break;
+
+        case FSCTL_QUERY_DEPENDENT_VOLUME: { return "FSCTL_QUERY_DEPENDENT_VOLUME"; } break;
+        case FSCTL_SD_GLOBAL_CHANGE: { return "FSCTL_SD_GLOBAL_CHANGE"; } break;
+
+        case FSCTL_TXFS_READ_BACKUP_INFORMATION2: { return "FSCTL_TXFS_READ_BACKUP_INFORMATION2"; } break;
+
+        case FSCTL_LOOKUP_STREAM_FROM_CLUSTER: { return "FSCTL_LOOKUP_STREAM_FROM_CLUSTER"; } break;
+        case FSCTL_TXFS_WRITE_BACKUP_INFORMATION2: { return "FSCTL_TXFS_WRITE_BACKUP_INFORMATION2"; } break;
+        case FSCTL_FILE_TYPE_NOTIFICATION: { return "FSCTL_FILE_TYPE_NOTIFICATION"; } break;
+
+
+        case FSCTL_GET_BOOT_AREA_INFO: { return "FSCTL_GET_BOOT_AREA_INFO"; } break;
+        case FSCTL_GET_RETRIEVAL_POINTER_BASE: { return "FSCTL_GET_RETRIEVAL_POINTER_BASE"; } break;
+        case FSCTL_SET_PERSISTENT_VOLUME_STATE: { return "FSCTL_SET_PERSISTENT_VOLUME_STATE"; } break;
+        case FSCTL_QUERY_PERSISTENT_VOLUME_STATE: { return "FSCTL_QUERY_PERSISTENT_VOLUME_STATE"; } break;
+
+        case FSCTL_REQUEST_OPLOCK: { return "FSCTL_REQUEST_OPLOCK"; } break;
+
+        case FSCTL_CSV_TUNNEL_REQUEST: { return "FSCTL_CSV_TUNNEL_REQUEST"; } break;
+        case FSCTL_IS_CSV_FILE: { return "FSCTL_IS_CSV_FILE"; } break;
+
+        case FSCTL_QUERY_FILE_SYSTEM_RECOGNITION: { return "FSCTL_QUERY_FILE_SYSTEM_RECOGNITION"; } break;
+        case FSCTL_CSV_GET_VOLUME_PATH_NAME: { return "FSCTL_CSV_GET_VOLUME_PATH_NAME"; } break;
+        case FSCTL_CSV_GET_VOLUME_NAME_FOR_VOLUME_MOUNT_POINT: { return "FSCTL_CSV_GET_VOLUME_NAME_FOR_VOLUME_MOUNT_POINT"; } break;
+        case FSCTL_CSV_GET_VOLUME_PATH_NAMES_FOR_VOLUME_NAME: { return "FSCTL_CSV_GET_VOLUME_PATH_NAMES_FOR_VOLUME_NAME"; } break;
+        case FSCTL_IS_FILE_ON_CSV_VOLUME: { return "FSCTL_IS_FILE_ON_CSV_VOLUME"; } break;
+
+        default: return "";
+    }
+
+    return "";
+}
+
 const char* nsW32API::ConvertCreateResultInformation( NTSTATUS Status, ULONG_PTR Information )
 {
     if( !NT_SUCCESS( Status ) )
