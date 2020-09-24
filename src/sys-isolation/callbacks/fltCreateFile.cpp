@@ -176,6 +176,22 @@ NTSTATUS CreateFileExistFCB( IRP_CONTEXT* IrpContext )
             }
         }
 
+        // 파일을 정상적으로 열 수 있도록 권한 조정
+        switch( Args->CreateDesiredAccess )
+        {
+            case FILE_OVERWRITE:
+            case FILE_OVERWRITE_IF: {
+                SetFlag( Args->CreateDesiredAccess, FILE_WRITE_ATTRIBUTES | FILE_WRITE_EA | FILE_WRITE_DATA );
+            } break;
+            case FILE_SUPERSEDE: {
+                SetFlag( Args->CreateDesiredAccess, DELETE );
+            } break;
+        }
+
+        IoCheckShareAccess( Args->CreateDesiredAccess,
+                            Data->Iopb->Parameters.Create.ShareAccess, Args->FileObject,
+                            &IrpContext->Fcb->LowerShareAccess, FALSE );
+
         // NOTE: MSDN 에 따르면, 쓰기 권한으로 파일을 열기 전에 IRP_MJ_CREATE 에서 MmFlushImageSection 을 MmFlushForWrite 로 호출해야한다
         if( BooleanFlagOn( Args->CreateDesiredAccess, FILE_WRITE_DATA ) )
         {
@@ -192,19 +208,63 @@ NTSTATUS CreateFileExistFCB( IRP_CONTEXT* IrpContext )
         InterlockedIncrement( &IrpContext->Fcb->ClnCount );
         InterlockedIncrement( &IrpContext->Fcb->RefCount );
 
-        //    // 최초에 LowerFileObject/Handle 을 설정했다면 추가로 설정할 필요 없음
-        //    SetFlag( IrpContext->CompleteStatus, COMPLETE_FREE_LOWER_FILEOBJECT );
+        // 해당 파일을 열 때 버퍼링을 사용하지 않는 옵션이라면 기존 캐시된 내용을 모두 기록하도록 한다
+        if( BooleanFlagOn( Args->FileObject->Flags, FO_NO_INTERMEDIATE_BUFFERING ) )
+        {
+            CcFlushCache( &IrpContext->Fcb->SectionObjects, NULL, 0, NULL );
+            ExAcquireResourceExclusiveLite( IrpContext->Fcb->AdvFcbHeader.PagingIoResource, TRUE );
+            ExReleaseResourceLite( IrpContext->Fcb->AdvFcbHeader.PagingIoResource );
+            CcPurgeCacheSection( &IrpContext->Fcb->SectionObjects, NULL, 0, FALSE );
+        }
 
-        IoCheckShareAccess( Args->CreateDesiredAccess, 
-                            Data->Iopb->Parameters.Create.ShareAccess, Args->FileObject, 
-                            &IrpContext->Fcb->LowerShareAccess, FALSE );
+        IO_STATUS_BLOCK IoStatus;
+        Status = nsW32API::FltCreateFileEx( GlobalContext.Filter,
+                                            IrpContext->FltObjects->Instance,
+                                            &Args->LowerFileHandle, &Args->LowerFileObject,
+                                            Args->CreateDesiredAccess, &Args->CreateObjectAttributes, &IoStatus,
+                                            &Data->Iopb->Parameters.Create.AllocationSize,
+                                            Data->Iopb->Parameters.Create.FileAttributes,
+                                            Data->Iopb->Parameters.Create.ShareAccess,
+                                            Args->CreateDisposition, Args->CreateOptions,
+                                            Data->Iopb->Parameters.Create.EaBuffer, Data->Iopb->Parameters.Create.EaLength,
+                                            0
+        );
+
+        if( !NT_SUCCESS( Status ) )
+        {
+            KdPrint( ( "[WinIOSol] EvtID=%09d %s %s Status=0x%08x,%s\n"
+                       , IrpContext->EvtID, __FUNCTION__, "FltCreateFileEx FAILED"
+                       , Status, ntkernel_error_category::find_ntstatus( Status )->message
+                       ) );
+
+            AssignCmnResult( IrpContext, Status );
+            AssignCmnResultInfo( IrpContext, IoStatus.Information );
+            AssignCmnFltResult( IrpContext, FLT_PREOP_COMPLETE );
+            SetFlag( IrpContext->CompleteStatus, COMPLETE_DONT_CONT_PROCESS );
+            __leave;
+        }
+
+        IrpContext->Ccb = AllocateCcb();
+        if( IrpContext->Ccb != NULLPTR )
+        {
+            IrpContext->Ccb->ProcessId = IrpContext->ProcessId;
+            IrpContext->Ccb->ProcessFileFullPath = CloneBuffer( &IrpContext->ProcessFullPath );
+            IrpContext->Ccb->ProcessName = nsUtils::ReverseFindW( IrpContext->Ccb->ProcessFileFullPath.Buffer, L'\\' );
+
+            IrpContext->Ccb->SrcFileFullPath = CloneBuffer( &IrpContext->SrcFileFullPath );
+
+            IrpContext->Ccb->LowerFileHandle = Args->LowerFileHandle;
+            IrpContext->Ccb->LowerFileObject = Args->LowerFileObject;
+        }
 
         Args->FileObject->Vpb = Args->LowerFileObject->Vpb;
         Args->FileObject->FsContext = IrpContext->Fcb;
-        Args->FileObject->FsContext2 = NULLPTR;
+        Args->FileObject->FsContext2 = IrpContext->Ccb;
         Args->FileObject->SectionObjectPointer = &IrpContext->Fcb->SectionObjects;
         Args->FileObject->PrivateCacheMap = NULLPTR;               // 파일에 접근할 때 캐시를 초기화한다
         Args->FileObject->Flags |= FO_CACHE_SUPPORTED;
+
+        IoUpdateShareAccess( Args->FileObject, &IrpContext->Fcb->LowerShareAccess );
     }
     __finally
     {
@@ -244,6 +304,8 @@ NTSTATUS CreateFileNonExistFCB( IRP_CONTEXT* IrpContext )
 
             AssignCmnResult( IrpContext, Status );
             AssignCmnResultInfo( IrpContext, IoStatus.Information );
+            AssignCmnFltResult( IrpContext, FLT_PREOP_COMPLETE );
+            SetFlag( IrpContext->CompleteStatus, COMPLETE_DONT_CONT_PROCESS );
             __leave;
         }
 
