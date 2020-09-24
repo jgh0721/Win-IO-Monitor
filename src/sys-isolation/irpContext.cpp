@@ -62,10 +62,20 @@ PIRP_CONTEXT CreateIrpContext( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_
             IrpContext->Fcb = ( FCB* )FltObjects->FileObject->FsContext;
             IrpContext->Ccb = ( CCB* )FltObjects->FileObject->FsContext2;
             IrpContext->SrcFileFullPath = CloneBuffer( &IrpContext->Fcb->FileFullPath );
+
+            if( IrpContext->Ccb != NULLPTR )
+            {
+                IrpContext->ProcessId = IrpContext->Ccb->ProcessId;
+                IrpContext->ProcessFullPath = CloneBuffer( &IrpContext->Ccb->ProcessFileFullPath );
+                IrpContext->ProcessFileName = nsUtils::ReverseFindW( IrpContext->ProcessFullPath.Buffer, L'\\' );
+            }
         }
 
-        IrpContext->ProcessId       = FltGetRequestorProcessId( Data );
-        SearchProcessInfo( IrpContext->ProcessId, &IrpContext->ProcessFullPath, &IrpContext->ProcessFileName );
+        if( IrpContext->ProcessFullPath.Buffer == NULLPTR )
+        {
+            IrpContext->ProcessId = FltGetRequestorProcessId( Data );
+            SearchProcessInfo( IrpContext->ProcessId, &IrpContext->ProcessFullPath, &IrpContext->ProcessFileName );
+        }
 
         if( MajorFunction == IRP_MJ_CREATE && IsPreIO == true )
         {
