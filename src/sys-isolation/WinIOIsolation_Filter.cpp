@@ -43,7 +43,7 @@ CONST FLT_OPERATION_REGISTRATION FilterCallbacks[] = {
 
     { IRP_MJ_DIRECTORY_CONTROL,             0,      FilterPreDirectoryControl,          FilterPostDirectoryControl    },
 
-    { IRP_MJ_FILE_SYSTEM_CONTROL,           0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
+    { IRP_MJ_FILE_SYSTEM_CONTROL,           0,      FilterPreFileSystemControl,         FilterPostFileSystemControl    },
 
     { IRP_MJ_DEVICE_CONTROL,                0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
 

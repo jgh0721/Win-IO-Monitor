@@ -329,7 +329,21 @@ VOID PrintIrpContext( __in PIRP_CONTEXT IrpContext )
         } break;
         case IRP_MJ_SET_VOLUME_INFORMATION: {} break;
         case IRP_MJ_DIRECTORY_CONTROL: {} break;
-        case IRP_MJ_FILE_SYSTEM_CONTROL: {} break;
+        case IRP_MJ_FILE_SYSTEM_CONTROL: {
+            ULONG FsControlCode = 0;
+
+            if( MinorFunction == IRP_MN_KERNEL_CALL || MinorFunction == IRP_MN_USER_FS_REQUEST )
+                FsControlCode = IrpContext->Data->Iopb->Parameters.FileSystemControl.Common.FsControlCode;
+
+            KdPrint( ( "[WinIOSol] EvtID=%09d IRP=%s,%s FsControl=0x%08x,%s Proc=%06d,%ws Src=%ws\n"
+                       , IrpContext->EvtID
+                       , FltGetIrpName( MajorFunction ), nsW32API::ConvertIRPMinorFunction( MajorFunction, MinorFunction )
+                       , FsControlCode, FsControlCode == 0 ? "" : nsW32API::ConvertFsControlCode( FsControlCode )
+                       , IrpContext->ProcessId, IrpContext->ProcessFileName == NULLPTR ? L"(null)" : IrpContext->ProcessFileName
+                       , IrpContext->SrcFileFullPath.Buffer
+                       ) );
+
+        } break;
         case IRP_MJ_DEVICE_CONTROL: {} break;
         case IRP_MJ_INTERNAL_DEVICE_CONTROL: {} break;
         case IRP_MJ_SHUTDOWN: {} break;
