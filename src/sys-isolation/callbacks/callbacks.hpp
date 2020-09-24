@@ -15,6 +15,7 @@
 #include "fltFlushBuffers.hpp"
 #include "fltDirectoryControl.hpp"
 #include "fltFileSystemControl.hpp"
+#include "fltLockControl.hpp"
 #include "fltQueryInformation.hpp"
 #include "fltSetInformation.hpp"
 #include "fltNetworkQueryOpen.hpp"

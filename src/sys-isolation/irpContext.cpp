@@ -347,7 +347,29 @@ VOID PrintIrpContext( __in PIRP_CONTEXT IrpContext )
         case IRP_MJ_DEVICE_CONTROL: {} break;
         case IRP_MJ_INTERNAL_DEVICE_CONTROL: {} break;
         case IRP_MJ_SHUTDOWN: {} break;
-        case IRP_MJ_LOCK_CONTROL: {} break;
+        case IRP_MJ_LOCK_CONTROL: {
+
+            KdPrint( ( "[WinIOSol] EvtID=%09d IRP=%s,%s Proc=%06d,%ws Src=%ws\n"
+                       , IrpContext->EvtID
+                       , FltGetIrpName( MajorFunction ), nsW32API::ConvertIRPMinorFunction( MajorFunction, MinorFunction )
+                       , IrpContext->ProcessId, IrpContext->ProcessFileName == NULLPTR ? L"(null)" : IrpContext->ProcessFileName
+                       , IrpContext->SrcFileFullPath.Buffer
+                       ) );
+
+            auto Length = IrpContext->Data->Iopb->Parameters.LockControl.Length;
+            auto Key = IrpContext->Data->Iopb->Parameters.LockControl.Key;
+            auto ByteOffset = IrpContext->Data->Iopb->Parameters.LockControl.ByteOffset;
+            auto ProcessId = IrpContext->Data->Iopb->Parameters.LockControl.ProcessId;
+            auto FailImmediately = IrpContext->Data->Iopb->Parameters.LockControl.FailImmediately;
+            auto ExclusiveLock = IrpContext->Data->Iopb->Parameters.LockControl.ExclusiveLock;
+
+            KdPrint( ( "[WinIOSol] EvtID=%09d       >> Length=%I64d Key=%d ByteOffset=%I64d ProcessId=%d FailImmediately=%d ExclusiveLock=%d\n"
+                       , IrpContext->EvtID
+                       , IrpContext->DebugText
+                       , Length->QuadPart, Key, ByteOffset.QuadPart, IrpContext->ProcessId, FailImmediately, ExclusiveLock
+                       ) );
+
+        } break;
         case IRP_MJ_CREATE_MAILSLOT: {} break;
         case IRP_MJ_QUERY_SECURITY: {} break;
         case IRP_MJ_SET_SECURITY: {} break;

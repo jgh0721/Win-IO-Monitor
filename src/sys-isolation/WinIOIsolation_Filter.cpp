@@ -51,7 +51,7 @@ CONST FLT_OPERATION_REGISTRATION FilterCallbacks[] = {
 
     { IRP_MJ_SHUTDOWN,                      0,      FilterPreOperationPassThrough,      NULL    },                               //post operations not supported
 
-    { IRP_MJ_LOCK_CONTROL,                  0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
+    { IRP_MJ_LOCK_CONTROL,                  0,      FilterPreLockControl,               FilterPostLockControl    },
 
     { IRP_MJ_CLEANUP,                       0,      FilterPreCleanup,                   FilterPostCleanup    },
 
