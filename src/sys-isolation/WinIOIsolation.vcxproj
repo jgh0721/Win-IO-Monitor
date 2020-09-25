@@ -61,6 +61,7 @@
     <ClInclude Include="utilities\bufferMgr_Defs.hpp" />
     <ClInclude Include="utilities\contextMgr.hpp" />
     <ClInclude Include="utilities\contextMgr_Defs.hpp" />
+    <ClInclude Include="utilities\fltUtilities.hpp" />
     <ClInclude Include="utilities\osInfoMgr.hpp" />
     <ClInclude Include="utilities\procNameMgr.hpp" />
     <ClInclude Include="WinIOIsolation.hpp" />
@@ -97,6 +98,7 @@
     <ClCompile Include="privateFCBMgr.cpp" />
     <ClCompile Include="utilities\bufferMgr.cpp" />
     <ClCompile Include="utilities\contextMgr.cpp" />
+    <ClCompile Include="utilities\fltUtilities.cpp" />
     <ClCompile Include="utilities\osInfoMgr.cpp" />
     <ClCompile Include="utilities\procNameMgr.cpp" />
     <ClCompile Include="WinIOIsolation.cpp" />

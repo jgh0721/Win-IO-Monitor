@@ -162,6 +162,9 @@
     <ClInclude Include="callbacks\fltLockControl.hpp">
       <Filter>callbacks</Filter>
     </ClInclude>
+    <ClInclude Include="utilities\fltUtilities.hpp">
+      <Filter>utilities</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="WinIOIsolation.cpp">
@@ -265,6 +268,9 @@
     </ClCompile>
     <ClCompile Include="callbacks\fltLockControl.cpp">
       <Filter>callbacks</Filter>
+    </ClCompile>
+    <ClCompile Include="utilities\fltUtilities.cpp">
+      <Filter>utilities</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
