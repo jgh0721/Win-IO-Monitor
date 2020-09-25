@@ -108,7 +108,7 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
         IF_DONT_CONTINUE_PROCESS_LEAVE( IrpContext );
 
         if( BooleanFlagOn( Args.CreateOptions, FILE_DELETE_ON_CLOSE ) )
-            SetFlag( IrpContext->Fcb->Flags, FILE_DELETE_ON_CLOSE );
+            SetFlag( IrpContext->Fcb->Flags, FCB_STATE_DELETE_ON_CLOSE );
 
         AssignCmnFltResult( IrpContext, FLT_PREOP_COMPLETE );
     }

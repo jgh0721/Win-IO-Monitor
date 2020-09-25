@@ -168,7 +168,7 @@ NTSTATUS UninitializeFCB( IRP_CONTEXT* IrpContext )
         if( Fcb == NULLPTR )
             break;
 
-        if( BooleanFlagOn( Fcb->Flags, FILE_DELETE_ON_CLOSE ) )
+        if( BooleanFlagOn( Fcb->Flags, FCB_STATE_DELETE_ON_CLOSE ) )
         {
             FILE_DISPOSITION_INFORMATION fdi;
             fdi.DeleteFile = TRUE;

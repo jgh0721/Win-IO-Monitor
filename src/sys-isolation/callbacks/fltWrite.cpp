@@ -195,7 +195,8 @@ NTSTATUS WritePagingIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
         if( !BooleanFlagOn( Fcb->Flags, FCB_STATE_PGIO_SHARED ) && !BooleanFlagOn( Fcb->Flags, FCB_STATE_PGIO_EXCLUSIVE ) )
             AcquireCmnResource( IrpContext, FCB_PGIO_EXCLUSIVE );
 
-        SetFlag( Fcb->Flags, FO_FILE_MODIFIED );
+        
+        SetFlag( Fcb->Flags, FCB_STATE_FILE_MODIFIED );
 
         if( Fcb->AdvFcbHeader.ValidDataLength.QuadPart == Fcb->AdvFcbHeader.FileSize.QuadPart )
         {
@@ -275,7 +276,7 @@ NTSTATUS WritePagingIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
                         if( CcIsFileCached( FileObject ) )
                         {
                             CcSetFileSizes( FileObject, ( PCC_FILE_SIZES )( &( Fcb->AdvFcbHeader.AllocationSize ) ) );
-                            SetFlag( Fcb->Flags, FO_FILE_MODIFIED );
+                            SetFlag( Fcb->Flags, FCB_STATE_FILE_MODIFIED );
                         }
                     }
                 }
@@ -296,7 +297,7 @@ NTSTATUS WritePagingIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
                         if( CcIsFileCached( FileObject ) )
                         {
                             CcSetFileSizes( FileObject, ( PCC_FILE_SIZES )( &( Fcb->AdvFcbHeader.AllocationSize ) ) );
-                            SetFlag( Fcb->Flags, FO_FILE_MODIFIED );
+                            SetFlag( Fcb->Flags, FCB_STATE_FILE_MODIFIED );
                         }
                     }
                 }
@@ -322,7 +323,7 @@ NTSTATUS WritePagingIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
                         if( CcIsFileCached( FileObject ) )
                         {
                             CcSetFileSizes( FileObject, ( PCC_FILE_SIZES )( &( Fcb->AdvFcbHeader.AllocationSize ) ) );
-                            SetFlag( Fcb->Flags, FO_FILE_MODIFIED );
+                            SetFlag( Fcb->Flags, FCB_STATE_FILE_MODIFIED );
                         }
                     }
                 }
@@ -449,7 +450,7 @@ NTSTATUS WriteCachedIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
 
         AcquireCmnResource( IrpContext, FCB_MAIN_EXCLUSIVE );
 
-        SetFlag( Fcb->Flags, FO_FILE_MODIFIED );
+        SetFlag( Fcb->Flags, FCB_STATE_FILE_MODIFIED );
 
         if( Fcb->AdvFcbHeader.ValidDataLength.QuadPart == Fcb->AdvFcbHeader.FileSize.QuadPart )
         {
@@ -1085,7 +1086,7 @@ NTSTATUS WriteNonCachedIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
                             CcSetFileSizes( FileObject, ( PCC_FILE_SIZES )( &( Fcb->AdvFcbHeader.AllocationSize ) ) );
                         }
 
-                        SetFlag( Fcb->Flags, FO_FILE_MODIFIED );
+                        SetFlag( Fcb->Flags, FCB_STATE_FILE_MODIFIED );
                     }
                 }
                 else
@@ -1129,7 +1130,7 @@ NTSTATUS WriteNonCachedIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
                         CcSetFileSizes( FileObject, ( PCC_FILE_SIZES )( &( Fcb->AdvFcbHeader.AllocationSize ) ) );
                     }
 
-                    SetFlag( Fcb->Flags, FO_FILE_MODIFIED );
+                    SetFlag( Fcb->Flags, FCB_STATE_FILE_MODIFIED );
                 }
             }
             else
@@ -1177,7 +1178,7 @@ NTSTATUS WriteNonCachedIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
                             CcSetFileSizes( FileObject, ( PCC_FILE_SIZES )( &( Fcb->AdvFcbHeader.AllocationSize ) ) );
                         }
 
-                        SetFlag( Fcb->Flags, FO_FILE_MODIFIED );
+                        SetFlag( Fcb->Flags, FCB_STATE_FILE_MODIFIED );
                     }
                 }
                 else if( ByteOffset.QuadPart + Length > Fcb->AdvFcbHeader.FileSize.QuadPart )
@@ -1209,7 +1210,7 @@ NTSTATUS WriteNonCachedIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
                             CcSetFileSizes( FileObject, ( PCC_FILE_SIZES )( &( Fcb->AdvFcbHeader.AllocationSize ) ) );
                         }
 
-                        SetFlag( Fcb->Flags, FO_FILE_MODIFIED );
+                        SetFlag( Fcb->Flags, FCB_STATE_FILE_MODIFIED );
                     }
                 }
                 else
@@ -1248,7 +1249,7 @@ NTSTATUS WriteNonCachedIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
                             CcSetFileSizes( FileObject, ( PCC_FILE_SIZES )( &( Fcb->AdvFcbHeader.AllocationSize ) ) );
                         }
 
-                        SetFlag( Fcb->Flags, FO_FILE_MODIFIED );
+                        SetFlag( Fcb->Flags, FCB_STATE_FILE_MODIFIED );
                     }
                 }
                 else if( ByteOffset.QuadPart + Length > Fcb->AdvFcbHeader.FileSize.QuadPart )
@@ -1287,7 +1288,7 @@ NTSTATUS WriteNonCachedIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
                             CcSetFileSizes( FileObject, ( PCC_FILE_SIZES )( &( Fcb->AdvFcbHeader.AllocationSize ) ) );
                         }
 
-                        SetFlag( Fcb->Flags, FO_FILE_MODIFIED );
+                        SetFlag( Fcb->Flags, FCB_STATE_FILE_MODIFIED );
                     }
                 }
                 else
@@ -1330,7 +1331,7 @@ NTSTATUS WriteNonCachedIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
                         CcSetFileSizes( FileObject, ( PCC_FILE_SIZES )( &( Fcb->AdvFcbHeader.AllocationSize ) ) );
                     }
 
-                    SetFlag( Fcb->Flags, FO_FILE_MODIFIED );
+                    SetFlag( Fcb->Flags, FCB_STATE_FILE_MODIFIED );
                 }
             }
             else

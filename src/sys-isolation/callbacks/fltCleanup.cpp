@@ -46,6 +46,22 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCleanup( PFLT_CALLBACK_DATA Data, PCFL
                    , IrpContext->SrcFileFullPath.Buffer
                    ) );
 
+        if( BooleanFlagOn( FileObject->Flags, FO_CLEANUP_COMPLETE ) )
+        {
+            // NOTE: CcFlushCache 는 동기적으로 호출되어 IRP_MJ_WRITE 를 생성하고 대기한다.
+            // IRP_MJ_WRITE 는 Fcb 의 MainResource 를 배타적으로 획득한다
+            if( BooleanFlagOn( IrpContext->Fcb->Flags, FCB_STATE_FILE_MODIFIED ) )
+            {
+                if( IrpContext->Fcb->SectionObjects.DataSectionObject != NULLPTR )
+                {
+                    CcFlushCache( &Fcb->SectionObjects, NULL, 0, NULL );
+
+                    ExAcquireResourceExclusiveLite( IrpContext->Fcb->AdvFcbHeader.PagingIoResource, TRUE );
+                    ExReleaseResourceLite( IrpContext->Fcb->AdvFcbHeader.PagingIoResource );
+                }
+            }
+        }
+
         AcquireCmnResource( IrpContext, INST_EXCLUSIVE );
         AcquireCmnResource( IrpContext, FCB_MAIN_EXCLUSIVE );
 
@@ -131,7 +147,7 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCleanup( PFLT_CALLBACK_DATA Data, PCFL
         SetFlag( FileObject->Flags, FO_CLEANUP_COMPLETE );
 
         // NOTE: 파일이 삭제예약이 걸려있고, 모든 핸들이 닫혔다면 SFO 도 닫아서 파일이 삭제될 수 있도록 한다
-        if( BooleanFlagOn( Fcb->Flags, FILE_DELETE_ON_CLOSE ) && 
+        if( BooleanFlagOn( Fcb->Flags, FCB_STATE_DELETE_ON_CLOSE ) &&
             UncleanCount == 0 )
         {
             if( Fcb->LowerFileHandle != INVALID_HANDLE_VALUE )
