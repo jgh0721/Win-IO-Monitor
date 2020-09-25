@@ -3,8 +3,12 @@
 
 #include "fltBase.hpp"
 
+#include "privateFCBMgr_Defs.hpp"
+
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
 #endif
+
+FAST_IO_POSSIBLE CheckIsFastIOPossible( __in FCB* Fcb );
 
 #endif // HDR_DRIVER_UTILITIES

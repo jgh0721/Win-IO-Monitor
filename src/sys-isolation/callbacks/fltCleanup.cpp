@@ -1,9 +1,10 @@
 ﻿#include "fltCleanup.hpp"
 
-
 #include "fltWrite.hpp"
 #include "privateFCBMgr.hpp"
 #include "irpContext.hpp"
+
+#include "utilities/fltUtilities.hpp"
 
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
@@ -17,6 +18,8 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCleanup( PFLT_CALLBACK_DATA Data, PCFL
     IRP_CONTEXT*                                IrpContext = NULLPTR;
     FCB*                                        Fcb = NULLPTR;
     FILE_OBJECT*                                FileObject = NULLPTR;
+
+    UNREFERENCED_PARAMETER( CompletionContext );
 
     __try
     {
@@ -80,6 +83,8 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCleanup( PFLT_CALLBACK_DATA Data, PCFL
         // 해당 파일객체에 잡혀있던 Byte-Range Lock 을 모두 해제한다
         FsRtlFastUnlockAll( &Fcb->FileLock, FileObject, FltGetRequestorProcess( Data ), NULL );
 
+        Fcb->AdvFcbHeader.IsFastIoPossible = (UCHAR)CheckIsFastIOPossible( IrpContext->Fcb );
+
         if( IrpContext->Fcb->SectionObjects.DataSectionObject != NULLPTR )
         {
             CcFlushCache( &Fcb->SectionObjects, NULL, 0, NULL );
@@ -135,6 +140,11 @@ FLT_POSTOP_CALLBACK_STATUS FLTAPI FilterPostCleanup( PFLT_CALLBACK_DATA Data, PC
                                                     PVOID CompletionContext, FLT_POST_OPERATION_FLAGS Flags )
 {
     FLT_POSTOP_CALLBACK_STATUS                  FltStatus = FLT_POSTOP_FINISHED_PROCESSING;
+
+    UNREFERENCED_PARAMETER( Data );
+    UNREFERENCED_PARAMETER( FltObjects );
+    UNREFERENCED_PARAMETER( CompletionContext );
+    UNREFERENCED_PARAMETER( Flags );
 
     return FltStatus;
 }
