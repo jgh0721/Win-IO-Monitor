@@ -4,6 +4,7 @@
 #include "privateFCBMgr.hpp"
 #include "irpContext.hpp"
 
+#include "utilities/osInfoMgr.hpp"
 #include "utilities/fltUtilities.hpp"
 
 #if defined(_MSC_VER)
@@ -85,6 +86,21 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCleanup( PFLT_CALLBACK_DATA Data, PCFL
 
         Fcb->AdvFcbHeader.IsFastIoPossible = (UCHAR)CheckIsFastIOPossible( IrpContext->Fcb );
 
+        if( nsUtils::VerifyVersionInfoEx( 6, ">=" ) == true )
+        {
+            ULONG WritableRefs = GlobalNtOsKrnlMgr.MmDoesFileHaveUserWritableReferences( &Fcb->SectionObjects );
+
+            if( FileObject->WriteAccess != FALSE )
+            {
+                if( Fcb->SectionObjects.DataSectionObject != NULLPTR )
+                    GlobalNtOsKrnlMgr.FsRtlChangeBackingFileObject( NULLPTR, FileObject, nsW32API::ChangeDataControlArea, 0 );
+                if( Fcb->SectionObjects.ImageSectionObject != NULLPTR )
+                    GlobalNtOsKrnlMgr.FsRtlChangeBackingFileObject( NULLPTR, FileObject, nsW32API::ChangeImageControlArea, 0 );
+                if( Fcb->SectionObjects.SharedCacheMap != NULLPTR )
+                    GlobalNtOsKrnlMgr.FsRtlChangeBackingFileObject( NULLPTR, FileObject, nsW32API::ChangeSharedCacheMap, 0 );
+            }
+        }
+
         if( IrpContext->Fcb->SectionObjects.DataSectionObject != NULLPTR )
         {
             CcFlushCache( &Fcb->SectionObjects, NULL, 0, NULL );
@@ -121,6 +137,10 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCleanup( PFLT_CALLBACK_DATA Data, PCFL
             if( Fcb->LowerFileHandle != INVALID_HANDLE_VALUE )
                 FltClose( Fcb->LowerFileHandle );
             Fcb->LowerFileHandle = INVALID_HANDLE_VALUE;
+
+            if( Fcb->LowerFileObject != NULLPTR )
+                ObDereferenceObject( Fcb->LowerFileObject );
+            Fcb->LowerFileObject = NULLPTR;
         }
 
         Data->IoStatus.Status = STATUS_SUCCESS;

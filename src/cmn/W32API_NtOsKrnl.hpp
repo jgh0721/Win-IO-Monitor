@@ -41,6 +41,19 @@ namespace nsW32API
         */
         DYNLOAD_FUNC_WITH_03( STATUS_INVALID_PARAMETER, NTSTATUS, NTAPI, IoReplaceFileObjectName, __in PFILE_OBJECT, FileObject, __in PWSTR, NewFileName, __in USHORT, FileNameLength );
 
+        /*!
+            The MmDoesFileHaveUserWritableReferencesfunction returns the number of writable references for a file object.
+
+            Windows Vista ~
+        */
+        DYNLOAD_FUNC_WITH_01( 0, ULONG, NTAPI, MmDoesFileHaveUserWritableReferences, __in PSECTION_OBJECT_POINTERS, SectionPointer );
+        /*!
+            The FsRtlChangeBackingFileObject routine replaces the current file object with a new file object
+
+            Windows Vista ~
+        */
+        DYNLOAD_FUNC_WITH_04( STATUS_NOT_IMPLEMENTED, NTSTATUS, NTAPI, FsRtlChangeBackingFileObject, __in_opt PFILE_OBJECT, CurrentFileObject, __in PFILE_OBJECT, NewFileObject, __in FSRTL_CHANGE_BACKING_TYPE, ChangeBackingType, __in ULONG, Flags );
+
     DYNLOAD_END_CLASS();
 
 } // nsW32API

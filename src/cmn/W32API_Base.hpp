@@ -315,6 +315,13 @@ namespace nsW32API
         ULONG     BytesPerSector;
     } FILE_FS_FULL_SIZE_INFORMATION_EX, * PFILE_FS_FULL_SIZE_INFORMATION_EX;
 
+    typedef enum _FSRTL_CHANGE_BACKING_TYPE
+    {
+        ChangeDataControlArea,
+        ChangeImageControlArea,
+        ChangeSharedCacheMap
+    } FSRTL_CHANGE_BACKING_TYPE, * PFSRTL_CHANGE_BACKING_TYPE;
+
 #ifdef __cplusplus
     typedef struct _FSRTL_ADVANCED_FCB_HEADER_XP : FSRTL_COMMON_FCB_HEADER
     {
