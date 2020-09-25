@@ -319,10 +319,10 @@ VOID PrintIrpContext( __in PIRP_CONTEXT IrpContext )
                        , IrpContext->ProcessId, IrpContext->ProcessFileName == NULLPTR ? L"(null)" : IrpContext->ProcessFileName
                        , IrpContext->SrcFileFullPath.Buffer
                        ) );
-            
         } break;
         case IRP_MJ_SET_INFORMATION: {
-            auto FileInformationClass = ( nsW32API::FILE_INFORMATION_CLASS )IrpContext->Data->Iopb->Parameters.SetFileInformation.FileInformationClass;
+            const auto& Parameters = IrpContext->Data->Iopb->Parameters.SetFileInformation;
+            auto FileInformationClass = ( nsW32API::FILE_INFORMATION_CLASS )Parameters.FileInformationClass;
 
             KdPrint( ( "[WinIOSol] EvtID=%09d IRP=%s Thread=%p,%p Class=%s Length=%d Proc=%06d,%ws Src=%ws\n"
                        , IrpContext->EvtID
@@ -334,16 +334,104 @@ VOID PrintIrpContext( __in PIRP_CONTEXT IrpContext )
                        , IrpContext->SrcFileFullPath.Buffer
                        ) );
 
+            PVOID InputBuffer = Parameters.InfoBuffer;
+
             switch( FileInformationClass )
             {
-                case FileEndOfFileInformation: {
-                    KdPrint( ( "[WinIOSol] EvtID=%09d       >> EndOfFile=%I64d AdvanceOnly=%d \n"
+                case FileAllocationInformation: {
+                    auto AllocationFile = ( PFILE_ALLOCATION_INFORMATION )InputBuffer;
+
+                    KdPrint( ( "[WinIOSol] EvtID=%09d       >> InputBuffer=%p AllocationFile=%I64d\n"
                                , IrpContext->EvtID
-                               , ((PFILE_END_OF_FILE_INFORMATION) IrpContext->Data->Iopb->Parameters.SetFileInformation.InfoBuffer)->EndOfFile.QuadPart
-                               , IrpContext->Data->Iopb->Parameters.SetFileInformation.AdvanceOnly
+                               , Parameters.InfoBuffer
+                               , AllocationFile->AllocationSize.QuadPart
+                               ) );
+                } break;
+                case FileEndOfFileInformation: {
+                    auto EndOfFile = ( PFILE_END_OF_FILE_INFORMATION )InputBuffer;
+
+                    KdPrint( ( "[WinIOSol] EvtID=%09d       >> InputBuffer=%p AdvanceOnly=%d EndOfFile=%I64d\n"
+                               , IrpContext->EvtID
+                               , Parameters.InfoBuffer
+                               , Parameters.AdvanceOnly
+                               , EndOfFile->EndOfFile.QuadPart
+                               ) );
+                } break;
+                case FileValidDataLengthInformation: {
+                    auto ValidDataLength = ( PFILE_VALID_DATA_LENGTH_INFORMATION )InputBuffer;
+
+                    KdPrint( ( "[WinIOSol] EvtID=%09d       >> InputBuffer=%p ValidDataLength=%I64d\n"
+                               , IrpContext->EvtID
+                               , Parameters.InfoBuffer
+                               , ValidDataLength->ValidDataLength.QuadPart
+                               ) );
+                } break;
+                case FilePositionInformation: {
+                    auto Position = ( PFILE_POSITION_INFORMATION )InputBuffer;
+
+                    KdPrint( ( "[WinIOSol] EvtID=%09d       >> InputBuffer=%p CurrentByteOffset=%I64d\n"
+                               , IrpContext->EvtID
+                               , Parameters.InfoBuffer
+                               , Position->CurrentByteOffset.QuadPart
+                               ) );
+                } break;
+                case FileRenameInformation: {
+                    auto Rename = ( PFILE_RENAME_INFORMATION )InputBuffer;
+
+                    KdPrint( ( "[WinIOSol] EvtID=%09d       >> InputBuffer=%p ReplaceIfExists=%d RootDirectory=%p Dst=%ws\n"
+                               , IrpContext->EvtID
+                               , Parameters.InfoBuffer
+                               , Rename->ReplaceIfExists, Rename->RootDirectory
+                               , IrpContext->DstFileFullPath.Buffer
+                               ) );
+                } break;
+                case nsW32API::FileRenameInformationEx:
+                {
+                    auto Rename = ( nsW32API::PFILE_RENAME_INFORMATION_EX )InputBuffer;
+
+                    nsW32API::PrintOutFileRenameInformationEx( IrpContext->DebugText, 1024, Rename->Flags );
+                    RtlStringCbCatA( IrpContext->DebugText, 1024, " " );
+
+                    KdPrint( ( "[WinIOSol] EvtID=%09d       >> InputBuffer=%p Flags=0x%08x,%s RootDirectory=%p Dst=%ws\n"
+                               , IrpContext->EvtID
+                               , Parameters.InfoBuffer
+                               , Rename->Flags, IrpContext->DebugText
+                               , Rename->RootDirectory
+                               , IrpContext->DstFileFullPath.Buffer
+                               ) );
+                } break;
+                case FileDispositionInformation: {
+                    auto Disposition = ( PFILE_DISPOSITION_INFORMATION )InputBuffer;
+
+                    KdPrint( ( "[WinIOSol] EvtID=%09d       >> InputBuffer=%p DeleteFile=%d\n"
+                               , IrpContext->EvtID
+                               , Parameters.InfoBuffer
+                               , Disposition->DeleteFile
+                               ) );
+                } break;
+                case nsW32API::FileDispositionInformationEx: {
+                    auto Disposition = ( nsW32API::PFILE_DISPOSITION_INFORMATION_EX )InputBuffer;
+
+                    nsW32API::PrintOutFileDispositionInformationEx( IrpContext->DebugText, 1024, Disposition->Flags );
+                    RtlStringCbCatA( IrpContext->DebugText, 1024, " " );
+
+                    KdPrint( ( "[WinIOSol] EvtID=%09d       >> InputBuffer=%p Flags=0x%08x,%s\n"
+                               , IrpContext->EvtID
+                               , Parameters.InfoBuffer
+                               , Disposition->Flags, IrpContext->DebugText
+                               ) );
+                } break;
+                case FileBasicInformation: {
+                    auto Basic = ( PFILE_BASIC_INFORMATION )InputBuffer;
+                    
+                    KdPrint( ( "[WinIOSol] EvtID=%09d       >> InputBuffer=%p CreationTime=%I64d LastAccessTime=%I64d LastWriteTime=%I64d ChangeTime=%I64d FileAttributes=0x%08x\n"
+                               , IrpContext->EvtID
+                               , Parameters.InfoBuffer
+                               , Basic->CreationTime.QuadPart, Basic->LastAccessTime.QuadPart, Basic->LastWriteTime.QuadPart, Basic->ChangeTime.QuadPart, Basic->FileAttributes
                                ) );
                 } break;
             }
+
         } break;
         case IRP_MJ_QUERY_EA: {} break;
         case IRP_MJ_SET_EA: {} break;

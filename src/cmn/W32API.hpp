@@ -87,6 +87,9 @@ namespace nsW32API
     void PrintOutCreateDisposition( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in ULONG ShareAccess );
     void PrintOutCreateDesiredAccess( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in ULONG DesiredAccess );
 
+    void PrintOutFileRenameInformationEx( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in ULONG Flags );
+    void PrintOutFileDispositionInformationEx( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in ULONG Flags );
+
 } // nsW32API
 
 #endif // HDR_W32API

@@ -873,3 +873,49 @@ void nsW32API::PrintOutCreateDesiredAccess( char* PrintBuffer, ULONG BufferSize,
     if( BooleanFlagOn( DesiredAccess, FILE_EXECUTE ) )
         RtlStringCbCatA( PrintBuffer, BufferSize, "FILE_EXECUTE|" );
 }
+
+void nsW32API::PrintOutFileRenameInformationEx( char* PrintBuffer, ULONG BufferSize, ULONG Flags )
+{
+    if( PrintBuffer == NULLPTR || BufferSize == 0 ) return;
+
+    if( BooleanFlagOn( Flags, FILE_RENAME_REPLACE_IF_EXISTS ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "FILE_RENAME_REPLACE_IF_EXISTS|" );
+    if( BooleanFlagOn( Flags, FILE_RENAME_POSIX_SEMANTICS ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "FILE_RENAME_POSIX_SEMANTICS|" );
+    if( BooleanFlagOn( Flags, FILE_RENAME_SUPPRESS_PIN_STATE_INHERITANCE ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "FILE_RENAME_SUPPRESS_PIN_STATE_INHERITANCE|" );
+    if( BooleanFlagOn( Flags, FILE_RENAME_SUPPRESS_STORAGE_RESERVE_INHERITANCE ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "FILE_RENAME_SUPPRESS_STORAGE_RESERVE_INHERITANCE|" );
+    if( BooleanFlagOn( Flags, FILE_RENAME_NO_INCREASE_AVAILABLE_SPACE ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "FILE_RENAME_NO_INCREASE_AVAILABLE_SPACE|" );
+    if( BooleanFlagOn( Flags, FILE_RENAME_NO_DECREASE_AVAILABLE_SPACE ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "FILE_RENAME_NO_DECREASE_AVAILABLE_SPACE|" );
+    if( BooleanFlagOn( Flags, FILE_RENAME_PRESERVE_AVAILABLE_SPACE ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "FILE_RENAME_PRESERVE_AVAILABLE_SPACE|" );
+    if( BooleanFlagOn( Flags, FILE_RENAME_IGNORE_READONLY_ATTRIBUTE ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "FILE_RENAME_IGNORE_READONLY_ATTRIBUTE|" );
+    if( BooleanFlagOn( Flags, FILE_RENAME_FORCE_RESIZE_TARGET_SR ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "FILE_RENAME_FORCE_RESIZE_TARGET_SR|" );
+    if( BooleanFlagOn( Flags, FILE_RENAME_FORCE_RESIZE_SOURCE_SR ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "FILE_RENAME_FORCE_RESIZE_SOURCE_SR|" );
+    if( BooleanFlagOn( Flags, FILE_RENAME_FORCE_RESIZE_SR ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "FILE_RENAME_FORCE_RESIZE_SR|" );
+}
+
+void nsW32API::PrintOutFileDispositionInformationEx( char* PrintBuffer, ULONG BufferSize, ULONG Flags )
+{
+    if( PrintBuffer == NULLPTR || BufferSize == 0 ) return;
+
+    if( Flags == FILE_DISPOSITION_DO_NOT_DELETE )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "FILE_DISPOSITION_DO_NOT_DELETE|" );
+    if( BooleanFlagOn( Flags, FILE_DISPOSITION_DELETE ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "FILE_DISPOSITION_DELETE|" );
+    if( BooleanFlagOn( Flags, FILE_DISPOSITION_POSIX_SEMANTICS ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "FILE_DISPOSITION_POSIX_SEMANTICS|" );
+    if( BooleanFlagOn( Flags, FILE_DISPOSITION_FORCE_IMAGE_SECTION_CHECK ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "FILE_DISPOSITION_FORCE_IMAGE_SECTION_CHECK|" );
+    if( BooleanFlagOn( Flags, FILE_DISPOSITION_ON_CLOSE ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "FILE_DISPOSITION_ON_CLOSE|" );
+    if( BooleanFlagOn( Flags, FILE_DISPOSITION_IGNORE_READONLY_ATTRIBUTE ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "FILE_DISPOSITION_IGNORE_READONLY_ATTRIBUTE|" );
+}
