@@ -220,7 +220,7 @@ FCB* Vcb_SearchFCB( CTX_INSTANCE_CONTEXT* InstanceContext, const WCHAR* wszFileN
     {
         auto item = CONTAINING_RECORD( Current, FCB, ListEntry );
 
-        if( _wcsicmp( wszFileName, item->FileFullPath.Buffer ) != 0 )
+        if( _wcsicmp( wszFileName, item->FileFullPathWOVolume ) != 0 )
             continue;
 
         Fcb = item;

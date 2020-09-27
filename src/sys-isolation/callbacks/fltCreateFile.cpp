@@ -91,9 +91,13 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
 
         PrintIrpContext( IrpContext );
         AcquireCmnResource( IrpContext, INST_EXCLUSIVE );
+        IrpContext->Fcb = Vcb_SearchFCB( IrpContext->InstanceContext, IrpContext->SrcFileFullPathWOVolume );
 
-        if( IsOwnFileObject( Args.FileObject ) == false )
+        if( IsOwnFileObject( Args.FileObject ) == false && IrpContext->Fcb == NULLPTR )
         {
+            FltReleaseResource( &IrpContext->InstanceContext->VcbLock );
+            ClearFlag( IrpContext->CompleteStatus, COMPLETE_FREE_INST_RSRC );
+
             CreateFileNonExistFCB( IrpContext );
         }
         else
@@ -149,7 +153,6 @@ NTSTATUS CreateFileExistFCB( IRP_CONTEXT* IrpContext )
     NTSTATUS Status = STATUS_SUCCESS;
     auto Data = IrpContext->Data;
     auto Args = ( CREATE_ARGS* )IrpContext->Params;
-    IrpContext->Fcb = Vcb_SearchFCB( IrpContext->InstanceContext, IrpContext->SrcFileFullPathWOVolume );
 
     __try
     {
@@ -203,10 +206,6 @@ NTSTATUS CreateFileExistFCB( IRP_CONTEXT* IrpContext )
                 __leave;
             }
         }
-
-        InterlockedIncrement( &IrpContext->Fcb->OpnCount );
-        InterlockedIncrement( &IrpContext->Fcb->ClnCount );
-        InterlockedIncrement( &IrpContext->Fcb->RefCount );
 
         // 해당 파일을 열 때 버퍼링을 사용하지 않는 옵션이라면 기존 캐시된 내용을 모두 기록하도록 한다
         if( BooleanFlagOn( Args->FileObject->Flags, FO_NO_INTERMEDIATE_BUFFERING ) )
@@ -263,6 +262,10 @@ NTSTATUS CreateFileExistFCB( IRP_CONTEXT* IrpContext )
         Args->FileObject->SectionObjectPointer = &IrpContext->Fcb->SectionObjects;
         Args->FileObject->PrivateCacheMap = NULLPTR;               // 파일에 접근할 때 캐시를 초기화한다
         Args->FileObject->Flags |= FO_CACHE_SUPPORTED;
+
+        InterlockedIncrement( &IrpContext->Fcb->OpnCount );
+        InterlockedIncrement( &IrpContext->Fcb->ClnCount );
+        InterlockedIncrement( &IrpContext->Fcb->RefCount );
 
         IoUpdateShareAccess( Args->FileObject, &IrpContext->Fcb->LowerShareAccess );
     }
@@ -367,6 +370,8 @@ NTSTATUS CreateFileNonExistFCB( IRP_CONTEXT* IrpContext )
         //    } break;
         //} // switch CreateDisposition
         //
+
+        AcquireCmnResource( IrpContext, INST_EXCLUSIVE );
 
         Status = InitializeFcbAndCcb( IrpContext );
         if( !NT_SUCCESS( Status ) )
