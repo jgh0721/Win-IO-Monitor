@@ -233,9 +233,9 @@ VOID PrintIrpContext( __in PIRP_CONTEXT IrpContext )
             auto SecurityContext = IrpContext->Data->Iopb->Parameters.Create.SecurityContext;
             auto CreateDesiredAccess = SecurityContext->DesiredAccess;
 
-            KdPrint( ( "[WinIOSol] EvtID=%09d IRP=%s Proc=%06d,%ws Src=%ws\n"
-                       , IrpContext->EvtID
-                       , FltGetIrpName( MajorFunction )
+            KdPrint( ( "[WinIOSol] EvtID=%09d IRP=%s Thread=%p,%p Proc=%06d,%ws Src=%ws\n"
+                       , IrpContext->EvtID, FltGetIrpName( MajorFunction )
+                       , PsGetCurrentThread(), IrpContext->Data->Thread
                        , IrpContext->ProcessId, IrpContext->ProcessFileName == NULLPTR ? L"(null)" : IrpContext->ProcessFileName
                        , IrpContext->SrcFileFullPath.Buffer
                        ) );
@@ -260,13 +260,31 @@ VOID PrintIrpContext( __in PIRP_CONTEXT IrpContext )
 
         } break;
         case IRP_MJ_CREATE_NAMED_PIPE: {} break;
-        case IRP_MJ_CLOSE: {} break;
+        case IRP_MJ_CLEANUP: {
+            KdPrint( ( "[WinIOSol] EvtID=%09d IRP=%s Thread=%p,%p Proc=%06d,%ws Open=%d Clean=%d Ref=%d Src=%ws\n"
+                       , IrpContext->EvtID, FltGetIrpName( MajorFunction )
+                       , PsGetCurrentThread(), IrpContext->Data->Thread
+                       , IrpContext->ProcessId, IrpContext->ProcessFileName == NULLPTR ? L"(null)" : IrpContext->ProcessFileName
+                       , IrpContext->Fcb->OpnCount, IrpContext->Fcb->ClnCount, IrpContext->Fcb->RefCount
+                       , IrpContext->SrcFileFullPath.Buffer
+                       ) );
+        } break;
+        case IRP_MJ_CLOSE: {
+            KdPrint( ( "[WinIOSol] EvtID=%09d IRP=%s Thread=%p,%p Proc=%06d,%ws Open=%d Clean=%d Ref=%d Src=%ws\n"
+                       , IrpContext->EvtID, FltGetIrpName( MajorFunction )
+                       , PsGetCurrentThread(), IrpContext->Data->Thread
+                       , IrpContext->ProcessId, IrpContext->ProcessFileName == NULLPTR ? L"(null)" : IrpContext->ProcessFileName
+                       , IrpContext->Fcb->OpnCount, IrpContext->Fcb->ClnCount, IrpContext->Fcb->RefCount
+                       , IrpContext->SrcFileFullPath.Buffer
+                       ) );
+        } break;
         case IRP_MJ_READ: 
         case IRP_MJ_WRITE: {
 
-            KdPrint( ( "[WinIOSol] EvtID=%09d IRP=%s Proc=%06d,%ws Src=%ws\n"
+            KdPrint( ( "[WinIOSol] EvtID=%09d IRP=%s,%s Thread=%p,%p Proc=%06d,%ws Src=%ws\n"
                        , IrpContext->EvtID
-                       , FltGetIrpName( MajorFunction )
+                       , FltGetIrpName( MajorFunction ), nsW32API::ConvertIRPMinorFunction( MajorFunction, MinorFunction )
+                       , PsGetCurrentThread(), IrpContext->Data->Thread
                        , IrpContext->ProcessId, IrpContext->ProcessFileName == NULLPTR ? L"(null)" : IrpContext->ProcessFileName
                        , IrpContext->SrcFileFullPath.Buffer
                        ) );
@@ -279,38 +297,53 @@ VOID PrintIrpContext( __in PIRP_CONTEXT IrpContext )
             nsW32API::PrintOutOperationFlags( IrpContext->DebugText, 1024, IrpContext->Data->Iopb->OperationFlags );
             RtlStringCbCatA( IrpContext->DebugText, 1024, " " );
 
-            KdPrint( ( "[WinIOSol] EvtID=%09d       >> %s Key=%d Length=%d ByteOffset=%I64d\n"
+            KdPrint( ( "[WinIOSol] EvtID=%09d       >> %s Key=%d Length=%d ByteOffset=%I64d Buffer=%p\n"
                        , IrpContext->EvtID 
                        , IrpContext->DebugText
-                       , IrpContext->Data->Iopb->Parameters.Write.Key, IrpContext->Data->Iopb->Parameters.Write.Length, IrpContext->Data->Iopb->Parameters.Write.ByteOffset.QuadPart
+                       , MajorFunction == IRP_MJ_READ ? IrpContext->Data->Iopb->Parameters.Read.Key : IrpContext->Data->Iopb->Parameters.Write.Key
+                       , MajorFunction == IRP_MJ_READ ? IrpContext->Data->Iopb->Parameters.Read.Length : IrpContext->Data->Iopb->Parameters.Write.Length
+                       , MajorFunction == IRP_MJ_READ ? IrpContext->Data->Iopb->Parameters.Read.ByteOffset.QuadPart : IrpContext->Data->Iopb->Parameters.Write.ByteOffset.QuadPart
+                       , MajorFunction == IRP_MJ_READ ? IrpContext->Data->Iopb->Parameters.Read.ReadBuffer : IrpContext->Data->Iopb->Parameters.Write.WriteBuffer
                        ) );
 
         } break;
         case IRP_MJ_QUERY_INFORMATION: {
             auto FileInformationClass = ( nsW32API::FILE_INFORMATION_CLASS )IrpContext->Data->Iopb->Parameters.QueryFileInformation.FileInformationClass;
 
-            KdPrint( ( "[WinIOSol] EvtID=%09d IRP=%s Class=%s Length=%d Proc=%06d,%ws Src=%ws\n"
+            KdPrint( ( "[WinIOSol] EvtID=%09d IRP=%s Thread=%p,%p Class=%s Length=%d Proc=%06d,%ws Src=%ws\n"
                        , IrpContext->EvtID
                        , FltGetIrpName( MajorFunction )
+                       , PsGetCurrentThread(), IrpContext->Data->Thread
                        , nsW32API::ConvertFileInformationClassTo( FileInformationClass )
                        , IrpContext->Data->Iopb->Parameters.QueryFileInformation.Length
                        , IrpContext->ProcessId, IrpContext->ProcessFileName == NULLPTR ? L"(null)" : IrpContext->ProcessFileName
                        , IrpContext->SrcFileFullPath.Buffer
                        ) );
-
+            
         } break;
         case IRP_MJ_SET_INFORMATION: {
             auto FileInformationClass = ( nsW32API::FILE_INFORMATION_CLASS )IrpContext->Data->Iopb->Parameters.SetFileInformation.FileInformationClass;
 
-            KdPrint( ( "[WinIOSol] EvtID=%09d IRP=%s Class=%s Length=%d Proc=%06d,%ws Src=%ws\n"
+            KdPrint( ( "[WinIOSol] EvtID=%09d IRP=%s Thread=%p,%p Class=%s Length=%d Proc=%06d,%ws Src=%ws\n"
                        , IrpContext->EvtID
                        , FltGetIrpName( MajorFunction )
+                       , PsGetCurrentThread(), IrpContext->Data->Thread
                        , nsW32API::ConvertFileInformationClassTo( FileInformationClass )
                        , IrpContext->Data->Iopb->Parameters.SetFileInformation.Length
                        , IrpContext->ProcessId, IrpContext->ProcessFileName == NULLPTR ? L"(null)" : IrpContext->ProcessFileName
                        , IrpContext->SrcFileFullPath.Buffer
                        ) );
 
+            switch( FileInformationClass )
+            {
+                case FileEndOfFileInformation: {
+                    KdPrint( ( "[WinIOSol] EvtID=%09d       >> EndOfFile=%I64d AdvanceOnly=%d \n"
+                               , IrpContext->EvtID
+                               , ((PFILE_END_OF_FILE_INFORMATION) IrpContext->Data->Iopb->Parameters.SetFileInformation.InfoBuffer)->EndOfFile.QuadPart
+                               , IrpContext->Data->Iopb->Parameters.SetFileInformation.AdvanceOnly
+                               ) );
+                } break;
+            }
         } break;
         case IRP_MJ_QUERY_EA: {} break;
         case IRP_MJ_SET_EA: {} break;
@@ -394,7 +427,9 @@ VOID AcquireCmnResource( PIRP_CONTEXT IrpContext, LONG RsrcFlags )
 
     if( BooleanFlagOn( RsrcFlags, FCB_MAIN_EXCLUSIVE ) )
     {
-        if( BooleanFlagOn( RsrcFlags, FCB_MAIN_SHARED ) )
+        if( BooleanFlagOn( RsrcFlags, FCB_MAIN_SHARED ) || 
+            ( ExIsResourceAcquiredSharedLite( &IrpContext->Fcb->MainResource ) > 0 && ExIsResourceAcquiredExclusiveLite( &IrpContext->Fcb->MainResource ) == 0 ) 
+             )
         {
             KdBreakPoint();
             ASSERT( false );
@@ -421,7 +456,9 @@ VOID AcquireCmnResource( PIRP_CONTEXT IrpContext, LONG RsrcFlags )
 
     if( BooleanFlagOn( RsrcFlags, FCB_PGIO_EXCLUSIVE ) )
     {
-        if( BooleanFlagOn( RsrcFlags, FCB_PGIO_SHARED ) )
+        if( BooleanFlagOn( RsrcFlags, FCB_PGIO_SHARED ) || 
+            ( ExIsResourceAcquiredSharedLite( &IrpContext->Fcb->PagingIoResource ) > 0 && ExIsResourceAcquiredExclusiveLite( &IrpContext->Fcb->PagingIoResource ) == 0 )
+            )
         {
             KdBreakPoint();
             ASSERT( false );
@@ -448,7 +485,9 @@ VOID AcquireCmnResource( PIRP_CONTEXT IrpContext, LONG RsrcFlags )
 
     if( BooleanFlagOn( RsrcFlags, INST_EXCLUSIVE ) )
     {
-        if( BooleanFlagOn( RsrcFlags, INST_SHARED ) )
+        if( BooleanFlagOn( RsrcFlags, INST_SHARED ) || 
+            ( ExIsResourceAcquiredSharedLite( &IrpContext->InstanceContext->VcbLock ) > 0 && ExIsResourceAcquiredExclusiveLite( &IrpContext->InstanceContext->VcbLock ) == 0 )
+            )
         {
             KdBreakPoint();
             ASSERT( false );
