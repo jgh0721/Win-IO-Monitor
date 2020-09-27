@@ -95,7 +95,9 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreQueryInformation( PFLT_CALLBACK_DATA D
                 auto InputBuffer = Data->Iopb->Parameters.QueryFileInformation.InfoBuffer;
                 auto Length = Data->Iopb->Parameters.QueryFileInformation.Length;
 
-                IrpContext->Status = FltQueryInformationFile( FltObjects->Instance, Fcb->LowerFileObject,
+                FileObject = IrpContext->Ccb->LowerFileObject != NULLPTR ? IrpContext->Ccb->LowerFileObject : Fcb->LowerFileObject;
+
+                IrpContext->Status = FltQueryInformationFile( FltObjects->Instance, FileObject,
                                                               InputBuffer, Length,
                                                               Data->Iopb->Parameters.QueryFileInformation.FileInformationClass, &ReturnLength );
 

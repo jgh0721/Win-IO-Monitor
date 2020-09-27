@@ -32,7 +32,8 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreSetInformation( PFLT_CALLBACK_DATA Dat
 
         AcquireCmnResource( IrpContext, FCB_MAIN_SHARED );
 
-        Data->IoStatus.Status = FltSetInformationFile( FltObjects->Instance, Fcb->LowerFileObject, Data->Iopb->Parameters.SetFileInformation.InfoBuffer,
+        FileObject = IrpContext->Ccb->LowerFileObject != NULLPTR ? IrpContext->Ccb->LowerFileObject : Fcb->LowerFileObject;
+        Data->IoStatus.Status = FltSetInformationFile( FltObjects->Instance, FileObject, Data->Iopb->Parameters.SetFileInformation.InfoBuffer,
                                                        Data->Iopb->Parameters.SetFileInformation.Length,
                                                        Data->Iopb->Parameters.SetFileInformation.FileInformationClass );
 
