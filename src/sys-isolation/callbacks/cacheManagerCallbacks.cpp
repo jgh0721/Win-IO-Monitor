@@ -11,37 +11,92 @@ BOOLEAN CcAcquireForLazyWrite( PVOID Context, BOOLEAN Wait )
 {
     auto Fcb = ( FCB* )Context;
     UNREFERENCED_PARAMETER( Wait );
+    BOOLEAN bRet = FALSE;
 
-    return FALSE;
+    if( !BooleanFlagOn( Fcb->Flags, FCB_STATE_PGIO_SHARED ) &&
+        !BooleanFlagOn( Fcb->Flags, FCB_STATE_PGIO_EXCLUSIVE ) )
+    {
+        KeEnterCriticalRegion();
+
+        bRet = ExAcquireResourceSharedLite( &Fcb->PagingIoResource, Wait );
+
+        KeLeaveCriticalRegion();
+
+        if( bRet )
+            SetFlag( Fcb->Flags, FCB_STATE_PGIO_SHARED );
+    }
+
+    KdPrint( ( "[WinIOSol] %s Thread=%p Open=%d Clean=%d Ref=%d Acquired=%d Name=%ws\n"
+               , __FUNCTION__
+               , PsGetCurrentThread()
+               , Fcb->OpnCount, Fcb->ClnCount, Fcb->RefCount, bRet
+               , Fcb->FileFullPath.Buffer ) );
+
+    return bRet;
 }
 
 void CcReleaseFromLazyWrite( PVOID Context )
 {
+    auto Fcb = ( FCB* )Context;
+
+    if( BooleanFlagOn( Fcb->Flags, FCB_STATE_PGIO_SHARED ) ||
+        BooleanFlagOn( Fcb->Flags, FCB_STATE_PGIO_EXCLUSIVE ) )
+    {
+        FltReleaseResource( &Fcb->PagingIoResource );
+        ClearFlag( Fcb->Flags, FCB_STATE_PGIO_SHARED );
+        ClearFlag( Fcb->Flags, FCB_STATE_PGIO_EXCLUSIVE );
+    }
+
+    KdPrint( ( "[WinIOSol] %s Thread=%p Open=%d Clean=%d Ref=%d Name=%ws\n"
+               , __FUNCTION__
+               , PsGetCurrentThread()
+               , Fcb->OpnCount, Fcb->ClnCount, Fcb->RefCount
+               , Fcb->FileFullPath.Buffer ) );
 }
 
 BOOLEAN CcAcquireForReadAhead( PVOID Context, BOOLEAN Wait )
 {
     auto Fcb = ( FCB* )Context;
     UNREFERENCED_PARAMETER( Wait );
+    BOOLEAN bRet = FALSE;
 
-    FltAcquireResourceShared( &Fcb->MainResource );
+    if( !BooleanFlagOn( Fcb->Flags, FCB_STATE_MAIN_SHARED ) &&
+        !BooleanFlagOn( Fcb->Flags, FCB_STATE_MAIN_EXCLUSIVE ) )
+    {
+        KeEnterCriticalRegion();
 
-    KdPrint( ( "[WinIOSol] %s Open=%d Clean=%d Ref=%d Name=%ws\n"
+        bRet = ExAcquireResourceSharedLite( &Fcb->MainResource, Wait );
+
+        KeLeaveCriticalRegion();
+
+        if( bRet )
+            SetFlag( Fcb->Flags, FCB_STATE_MAIN_SHARED );
+    }
+
+    KdPrint( ( "[WinIOSol] %s Thread=%p Open=%d Clean=%d Ref=%d Acquired=%d Name=%ws\n"
                , __FUNCTION__
-               , Fcb->OpnCount, Fcb->ClnCount, Fcb->RefCount
+               , PsGetCurrentThread()
+               , Fcb->OpnCount, Fcb->ClnCount, Fcb->RefCount, bRet
                , Fcb->FileFullPath.Buffer ) );
 
-    return TRUE;
+    return bRet;
 }
 
 void CcReleaseFromReadAhead( PVOID Context )
 {
     auto Fcb = ( FCB* )Context;
 
-    FltReleaseResource( &Fcb->MainResource );
+    if( BooleanFlagOn( Fcb->Flags, FCB_STATE_MAIN_SHARED ) ||
+        BooleanFlagOn( Fcb->Flags, FCB_STATE_MAIN_EXCLUSIVE ) )
+    {
+        FltReleaseResource( &Fcb->MainResource );
+        ClearFlag( Fcb->Flags, FCB_STATE_MAIN_SHARED );
+        ClearFlag( Fcb->Flags, FCB_STATE_MAIN_EXCLUSIVE );
+    }
 
-    KdPrint( ( "[WinIOSol] %s Open=%d Clean=%d Ref=%d Name=%ws\n"
+    KdPrint( ( "[WinIOSol] %s Thread=%p Open=%d Clean=%d Ref=%d Name=%ws\n"
                , __FUNCTION__
+               , PsGetCurrentThread()
                , Fcb->OpnCount, Fcb->ClnCount, Fcb->RefCount
                , Fcb->FileFullPath.Buffer ) );
 }

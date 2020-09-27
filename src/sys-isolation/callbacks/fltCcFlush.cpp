@@ -28,19 +28,32 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreAcquireCcFlush( PFLT_CALLBACK_DATA Dat
             if( !ExIsResourceAcquiredSharedLite( Fcb->AdvFcbHeader.Resource ) )
             {
                 ExAcquireResourceExclusiveLite( Fcb->AdvFcbHeader.Resource, TRUE );
+                SetFlag( Fcb->Flags, FCB_STATE_MAIN_EXCLUSIVE );
             }
             else
             {
                 ExAcquireResourceSharedLite( Fcb->AdvFcbHeader.Resource, TRUE );
+                SetFlag( Fcb->Flags, FCB_STATE_MAIN_SHARED );
             }
         }
 
         if( Fcb->AdvFcbHeader.PagingIoResource )
         {
-            ExAcquireResourceSharedLite( Fcb->AdvFcbHeader.PagingIoResource, TRUE );
+            if( !BooleanFlagOn( Fcb->Flags, FCB_STATE_PGIO_SHARED ) &&
+                !BooleanFlagOn( Fcb->Flags, FCB_STATE_PGIO_EXCLUSIVE ) )
+            {
+                ExAcquireResourceExclusiveLite( Fcb->AdvFcbHeader.PagingIoResource, TRUE );
+                SetFlag( Fcb->Flags, FCB_STATE_PGIO_EXCLUSIVE );
+            }
         }
 
         FsRtlExitFileSystem();
+
+        KdPrint( ( "[WinIOSol] %s Thread=%p Open=%d Clean=%d Ref=%d Name=%ws\n"
+                   , __FUNCTION__
+                   , PsGetCurrentThread()
+                   , Fcb->OpnCount, Fcb->ClnCount, Fcb->RefCount
+                   , Fcb->FileFullPath.Buffer ) );
 
         Data->IoStatus.Status = STATUS_FSFILTER_OP_COMPLETED_SUCCESSFULLY;
         FltStatus = FLT_PREOP_COMPLETE;
@@ -84,12 +97,34 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreReleaseCcFlush( PFLT_CALLBACK_DATA Dat
         FsRtlEnterFileSystem();
 
         if( Fcb->AdvFcbHeader.Resource )
-            ExReleaseResourceLite( Fcb->AdvFcbHeader.Resource );
+        {
+            if( BooleanFlagOn( Fcb->Flags, FCB_STATE_MAIN_SHARED ) ||
+                BooleanFlagOn( Fcb->Flags, FCB_STATE_MAIN_EXCLUSIVE ) )
+            {
+                FltReleaseResource( &Fcb->MainResource );
+                ClearFlag( Fcb->Flags, FCB_STATE_MAIN_SHARED );
+                ClearFlag( Fcb->Flags, FCB_STATE_MAIN_EXCLUSIVE );
+            }
+        }
 
         if( Fcb->AdvFcbHeader.PagingIoResource )
-            ExReleaseResourceLite( Fcb->AdvFcbHeader.PagingIoResource );
+        {
+            if( BooleanFlagOn( Fcb->Flags, FCB_STATE_PGIO_SHARED ) ||
+                BooleanFlagOn( Fcb->Flags, FCB_STATE_PGIO_EXCLUSIVE ) )
+            {
+                FltReleaseResource( &Fcb->PagingIoResource );
+                ClearFlag( Fcb->Flags, FCB_STATE_PGIO_SHARED );
+                ClearFlag( Fcb->Flags, FCB_STATE_PGIO_EXCLUSIVE );
+            }
+        }
 
         FsRtlExitFileSystem();
+
+        KdPrint( ( "[WinIOSol] %s Thread=%p Open=%d Clean=%d Ref=%d Name=%ws\n"
+                   , __FUNCTION__
+                   , PsGetCurrentThread()
+                   , Fcb->OpnCount, Fcb->ClnCount, Fcb->RefCount
+                   , Fcb->FileFullPath.Buffer ) );
 
         Data->IoStatus.Status = STATUS_FSFILTER_OP_COMPLETED_SUCCESSFULLY;
         FltStatus = FLT_PREOP_COMPLETE;

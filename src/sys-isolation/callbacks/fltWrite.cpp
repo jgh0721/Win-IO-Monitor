@@ -53,6 +53,12 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreWrite( PFLT_CALLBACK_DATA Data, PCFLT_
             __leave;
         }
 
+        if( IrpContext->Fcb->LowerFileObject != NULLPTR && IrpContext->Fcb->LowerFileHandle == INVALID_HANDLE_VALUE )
+        {
+            IrpContext->Fcb->LowerFileObject = IrpContext->Ccb->LowerFileObject;
+            IrpContext->Fcb->LowerFileHandle = IrpContext->Ccb->LowerFileHandle;
+        }
+        
         if( PagingIo != FALSE )
         {
             WritePagingIO( IrpContext, WriteBuffer );
@@ -64,15 +70,6 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreWrite( PFLT_CALLBACK_DATA Data, PCFLT_
             else
                 WriteCachedIO( IrpContext, WriteBuffer );
         }
-
-        auto Fcb = ( FCB* )FltObjects->FileObject->FsContext;
-        auto& Params = Data->Iopb->Parameters.Write;
-        ULONG BytesWritten = 0;
-
-        Data->IoStatus.Status = FltWriteFile( FltObjects->Instance, Fcb->LowerFileObject, &Params.ByteOffset, Params.Length,
-                                              Params.WriteBuffer, FLTFL_IO_OPERATION_NON_CACHED, &BytesWritten, NULLPTR, NULLPTR );
-
-        Data->IoStatus.Information = BytesWritten;
 
         AssignCmnFltResult( IrpContext, FLT_PREOP_COMPLETE );
     }
@@ -185,9 +182,18 @@ NTSTATUS WritePagingIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
     NTSTATUS Status = STATUS_SUCCESS;
     TyGenericBuffer<BYTE> TySwapBuffer;
 
+    if( IsEndOfFile( ByteOffset ) )
+    {
+        ByteOffset.QuadPart = Fcb->AdvFcbHeader.FileSize.QuadPart;
+    }
+
+    if( Length > Fcb->AdvFcbHeader.FileSize.QuadPart - ByteOffset.QuadPart )
+        Length = Fcb->AdvFcbHeader.FileSize.QuadPart - ByteOffset.QuadPart;
+
     __try
     {
-        AcquireCmnResource( IrpContext, FCB_PGIO_EXCLUSIVE );
+        if( !BooleanFlagOn( Fcb->Flags, FCB_STATE_PGIO_SHARED ) && !BooleanFlagOn( Fcb->Flags, FCB_STATE_PGIO_EXCLUSIVE ) )
+            AcquireCmnResource( IrpContext, FCB_PGIO_EXCLUSIVE );
 
         SetFlag( Fcb->Flags, FO_FILE_MODIFIED );
 
@@ -200,7 +206,7 @@ NTSTATUS WritePagingIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
                     auto BytesToCopy = Length;
                     auto BytesToWrite = ALIGNED( ULONG, BytesToCopy, Fcb->InstanceContext->BytesPerSector );
 
-                    Status = WritePagingIO( IrpContext, WriteBuffer, BytesToCopy, BytesToWrite );
+                    Status = WritePagingIO( IrpContext, WriteBuffer, BytesToCopy, BytesToWrite, Length );
 
                     if( NT_SUCCESS( Status ) )
                     {
@@ -210,9 +216,12 @@ NTSTATUS WritePagingIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
                 else if( ByteOffset.QuadPart + Length > Fcb->AdvFcbHeader.FileSize.QuadPart )
                 {
                     auto BytesToCopy = Length;
+                    if( BooleanFlagOn( Fcb->Flags, FCB_STATE_PGIO_SHARED ) || BooleanFlagOn( Fcb->Flags, FCB_STATE_PGIO_EXCLUSIVE ) )
+                        BytesToCopy = Fcb->AdvFcbHeader.ValidDataLength.QuadPart - ByteOffset.QuadPart;
+
                     auto BytesToWrite = ALIGNED( ULONG, BytesToCopy, Fcb->InstanceContext->BytesPerSector );
 
-                    Status = WritePagingIO( IrpContext, WriteBuffer, BytesToCopy, BytesToWrite );
+                    Status = WritePagingIO( IrpContext, WriteBuffer, BytesToCopy, BytesToWrite, Length );
 
                     if( NT_SUCCESS( Status ) )
                     {
@@ -243,7 +252,7 @@ NTSTATUS WritePagingIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
                     auto BytesToCopy = Length;
                     auto BytesToWrite = ALIGNED( ULONG, BytesToCopy, Fcb->InstanceContext->BytesPerSector );
 
-                    Status = WritePagingIO( IrpContext, WriteBuffer, BytesToCopy, BytesToWrite );
+                    Status = WritePagingIO( IrpContext, WriteBuffer, BytesToCopy, BytesToWrite, Length );
 
                     if( NT_SUCCESS( Status ) )
                     {
@@ -256,7 +265,7 @@ NTSTATUS WritePagingIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
                     auto BytesToCopy = ( ULONG )( Fcb->AdvFcbHeader.ValidDataLength.QuadPart - ByteOffset.QuadPart );
                     auto BytesToWrite = ALIGNED( ULONG, BytesToCopy, Fcb->InstanceContext->BytesPerSector );
 
-                    Status = WritePagingIO( IrpContext, WriteBuffer, BytesToCopy, BytesToWrite );
+                    Status = WritePagingIO( IrpContext, WriteBuffer, BytesToCopy, BytesToWrite, Length );
 
                     if( NT_SUCCESS( Status ) )
                     {
@@ -275,7 +284,7 @@ NTSTATUS WritePagingIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
                     auto BytesToCopy = ( ULONG )( Fcb->AdvFcbHeader.FileSize.QuadPart - ByteOffset.QuadPart );
                     auto BytesToWrite = ALIGNED( ULONG, BytesToCopy, Fcb->InstanceContext->BytesPerSector );
 
-                    Status = WritePagingIO( IrpContext, WriteBuffer, BytesToCopy, BytesToWrite );
+                    Status = WritePagingIO( IrpContext, WriteBuffer, BytesToCopy, BytesToWrite, Length );
 
                     if( NT_SUCCESS( Status ) )
                     {
@@ -303,7 +312,7 @@ NTSTATUS WritePagingIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
                     auto BytesToCopy = Length;
                     auto BytesToWrite = ALIGNED( ULONG, BytesToCopy, Fcb->InstanceContext->BytesPerSector );
 
-                    Status = WritePagingIO( IrpContext, WriteBuffer, BytesToCopy, BytesToWrite );
+                    Status = WritePagingIO( IrpContext, WriteBuffer, BytesToCopy, BytesToWrite, Length );
 
                     if( NT_SUCCESS( Status ) )
                     {
@@ -322,7 +331,7 @@ NTSTATUS WritePagingIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
                     auto BytesToCopy = ( ULONG )( Fcb->AdvFcbHeader.FileSize.QuadPart - ByteOffset.QuadPart );
                     auto BytesToWrite = ALIGNED( ULONG, BytesToCopy, Fcb->InstanceContext->BytesPerSector );
 
-                    Status = WritePagingIO( IrpContext, WriteBuffer, BytesToCopy, BytesToWrite );
+                    Status = WritePagingIO( IrpContext, WriteBuffer, BytesToCopy, BytesToWrite, Length );
 
                     if( NT_SUCCESS( Status ) )
                     {
@@ -350,7 +359,7 @@ NTSTATUS WritePagingIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
                     auto BytesToCopy = Length;
                     auto BytesToWrite = ALIGNED( ULONG, BytesToCopy, Fcb->InstanceContext->BytesPerSector );
 
-                    Status = WritePagingIO( IrpContext, WriteBuffer, BytesToCopy, BytesToWrite );
+                    Status = WritePagingIO( IrpContext, WriteBuffer, BytesToCopy, BytesToWrite, Length );
 
                     if( NT_SUCCESS( Status ) )
                     {
@@ -368,7 +377,7 @@ NTSTATUS WritePagingIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
                     auto BytesToCopy = ( ULONG )( Fcb->AdvFcbHeader.FileSize.QuadPart - ByteOffset.QuadPart );
                     auto BytesToWrite = ALIGNED( ULONG, BytesToCopy, Fcb->InstanceContext->BytesPerSector );
 
-                    Status = WritePagingIO( IrpContext, WriteBuffer, BytesToCopy, BytesToWrite );
+                    Status = WritePagingIO( IrpContext, WriteBuffer, BytesToCopy, BytesToWrite, Length );
 
                     if( NT_SUCCESS( Status ) )
                     {
@@ -416,6 +425,11 @@ NTSTATUS WriteCachedIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
     auto Length = IrpContext->Data->Iopb->Parameters.Write.Length;
     auto ByteOffset = IrpContext->Data->Iopb->Parameters.Write.ByteOffset;
     auto FileObject = IrpContext->FltObjects->FileObject;
+
+    if( IsEndOfFile( ByteOffset ) )
+    {
+        ByteOffset.QuadPart = Fcb->AdvFcbHeader.FileSize.QuadPart;
+    }
 
     ULONG BytesWritten = 0;                // FltWriteFile 을 통해 기록한 바이트 수
     NTSTATUS Status = STATUS_SUCCESS;
@@ -1012,6 +1026,11 @@ NTSTATUS WriteNonCachedIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
     auto ByteOffset = IrpContext->Data->Iopb->Parameters.Write.ByteOffset;
     auto FileObject = IrpContext->FltObjects->FileObject;
 
+    if( IsEndOfFile( ByteOffset ) )
+    {
+        ByteOffset.QuadPart = Fcb->AdvFcbHeader.FileSize.QuadPart;
+    }
+
     ULONG BytesWritten = 0;                // FltWriteFile 을 통해 기록한 바이트 수
     NTSTATUS Status = STATUS_SUCCESS;
     TyGenericBuffer<BYTE> TySwapBuffer;
@@ -1328,11 +1347,15 @@ NTSTATUS WriteNonCachedIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
     return Status;
 }
 
-NTSTATUS WritePagingIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer, ULONG BytesToCopy, ULONG BytesToWrite )
+NTSTATUS WritePagingIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer, ULONG BytesToCopy, ULONG BytesToWrite, __in ULONG Length )
 {
     auto Fcb = IrpContext->Fcb;
-    auto Length = IrpContext->Data->Iopb->Parameters.Write.Length;
     auto ByteOffset = IrpContext->Data->Iopb->Parameters.Write.ByteOffset;
+
+    if( IsEndOfFile( ByteOffset ) )
+    {
+        ByteOffset.QuadPart = Fcb->AdvFcbHeader.FileSize.QuadPart;
+    }
 
     ULONG BytesWritten = 0;                // FltWriteFile 을 통해 기록한 바이트 수
     NTSTATUS Status = STATUS_SUCCESS;

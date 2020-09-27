@@ -10,6 +10,11 @@
 #   pragma execution_character_set( "utf-8" )
 #endif
 
+#define FCB_STATE_PGIO_SHARED       0x10000
+#define FCB_STATE_PGIO_EXCLUSIVE    0x20000
+#define FCB_STATE_MAIN_SHARED       0x40000
+#define FCB_STATE_MAIN_EXCLUSIVE    0x80000
+
 typedef struct _FCB_CUSTOM
 {
 

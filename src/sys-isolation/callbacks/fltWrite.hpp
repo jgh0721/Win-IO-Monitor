@@ -43,7 +43,7 @@ NTSTATUS WriteCachedIO( __in IRP_CONTEXT* IrpContext, __out PVOID WriteBuffer );
 NTSTATUS WriteNonCachedIO( __in IRP_CONTEXT* IrpContext, __out PVOID WriteBuffer );
 
 
-NTSTATUS WritePagingIO( __in IRP_CONTEXT* IrpContext, __out PVOID WriteBuffer, __in ULONG BytesToCopy, __in ULONG BytesToWrite );
+NTSTATUS WritePagingIO( __in IRP_CONTEXT* IrpContext, __out PVOID WriteBuffer, __in ULONG BytesToCopy, __in ULONG BytesToWrite, __in ULONG Length );
 NTSTATUS WriteCachedIO( __in IRP_CONTEXT* IrpContext, __out PVOID WriteBuffer, __in ULONG BytesToCopy, __in ULONG BytesToWrite );
 NTSTATUS WriteNonCachedIO( __in IRP_CONTEXT* IrpContext, __out PVOID WriteBuffer, __in ULONG BytesToCopy, __in ULONG BytesToWrite );
 

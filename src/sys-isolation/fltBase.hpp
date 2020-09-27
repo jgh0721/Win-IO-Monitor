@@ -37,6 +37,9 @@ do {                                                        \
     }                                                       \
 } while( false )
 
+#define IsEndOfFile(Pos) ((Pos.LowPart == FILE_WRITE_TO_END_OF_FILE) && \
+	(Pos.HighPart == -1 ))
+
 #define NULLPTR nullptr
 
 #define IF_FAILED_BREAK( var, expr ) if( !NT_SUCCESS( ( (var) = (expr) ) ) ) break;
