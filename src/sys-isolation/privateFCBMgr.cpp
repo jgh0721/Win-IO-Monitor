@@ -173,10 +173,17 @@ NTSTATUS UninitializeFCB( IRP_CONTEXT* IrpContext )
             FILE_DISPOSITION_INFORMATION fdi;
             fdi.DeleteFile = TRUE;
 
-            FltSetInformationFile( Fcb->InstanceContext->Instance,
-                                   Fcb->LowerFileObject,
-                                   &fdi, sizeof( fdi ),
-                                   (FILE_INFORMATION_CLASS)nsW32API::FileDispositionInformation );
+            Status = FltSetInformationFile( Fcb->InstanceContext->Instance,
+                                            Fcb->LowerFileObject,
+                                            &fdi, sizeof( fdi ),
+                                            ( FILE_INFORMATION_CLASS )nsW32API::FileDispositionInformation );
+            if( !NT_SUCCESS( Status ) )
+            {
+                KdPrint( ( "[WinIOSol] EvtID=%09d %s %s Status=0x%08x,%s Src=%ws\n"
+                           , IrpContext->EvtID, __FUNCTION__, "FltSetInformationFile FAILED"
+                           , Status, ntkernel_error_category::find_ntstatus( Status )->message
+                           , Fcb->FileFullPath.Buffer ) );
+            }
         }
 
         FltReleaseContext( Fcb->InstanceContext );
