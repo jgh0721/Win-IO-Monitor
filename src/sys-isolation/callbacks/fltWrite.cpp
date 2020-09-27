@@ -195,7 +195,6 @@ NTSTATUS WritePagingIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
         if( !BooleanFlagOn( Fcb->Flags, FCB_STATE_PGIO_SHARED ) && !BooleanFlagOn( Fcb->Flags, FCB_STATE_PGIO_EXCLUSIVE ) )
             AcquireCmnResource( IrpContext, FCB_PGIO_EXCLUSIVE );
 
-        
         SetFlag( Fcb->Flags, FCB_STATE_FILE_MODIFIED );
 
         if( Fcb->AdvFcbHeader.ValidDataLength.QuadPart == Fcb->AdvFcbHeader.FileSize.QuadPart )
@@ -512,8 +511,8 @@ NTSTATUS WriteCachedIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
                             CcSetFileSizes( FileObject, ( PCC_FILE_SIZES )( &Fcb->AdvFcbHeader.AllocationSize ) );
                         }
 
-                        SetFlag( FileObject->Flags, FO_FILE_MODIFIED );
-                        SetFlag( FileObject->Flags, FO_FILE_SIZE_CHANGED );
+                        SetFlag( FileObject->Flags, FCB_STATE_FILE_MODIFIED );
+                        SetFlag( FileObject->Flags, FCB_STATE_FILE_SIZE_CHANGED );
 
                         FileObject->CurrentByteOffset = Fcb->AdvFcbHeader.FileSize;
                     }
@@ -553,8 +552,8 @@ NTSTATUS WriteCachedIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
                 {
                     AssignCmnResultInfo( IrpContext, Length );
 
-                    SetFlag( FileObject->Flags, FO_FILE_MODIFIED );
-                    SetFlag( FileObject->Flags, FO_FILE_SIZE_CHANGED );
+                    SetFlag( FileObject->Flags, FCB_STATE_FILE_MODIFIED );
+                    SetFlag( FileObject->Flags, FCB_STATE_FILE_SIZE_CHANGED );
                     FileObject->CurrentByteOffset.QuadPart = ByteOffset.QuadPart + Length;
 
                     Fcb->AdvFcbHeader.ValidDataLength.QuadPart = ByteOffset.QuadPart + Length;
@@ -612,8 +611,8 @@ NTSTATUS WriteCachedIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
 
                     FileObject->CurrentByteOffset.QuadPart = ByteOffset.QuadPart + Length;
 
-                    SetFlag( FileObject->Flags, FO_FILE_MODIFIED );
-                    SetFlag( FileObject->Flags, FO_FILE_SIZE_CHANGED );
+                    SetFlag( FileObject->Flags, FCB_STATE_FILE_MODIFIED );
+                    SetFlag( FileObject->Flags, FCB_STATE_FILE_SIZE_CHANGED );
                 }
             }
             else
@@ -650,7 +649,7 @@ NTSTATUS WriteCachedIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
                         }
 
                         FileObject->CurrentByteOffset.QuadPart = ByteOffset.QuadPart + Length;
-                        SetFlag( FileObject->Flags, FO_FILE_MODIFIED );
+                        SetFlag( FileObject->Flags, FCB_STATE_FILE_MODIFIED );
                     }
                 }
                 else if( ByteOffset.QuadPart + Length > Fcb->AdvFcbHeader.ValidDataLength.QuadPart &&
@@ -680,7 +679,7 @@ NTSTATUS WriteCachedIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
                         }
 
                         FileObject->CurrentByteOffset.QuadPart = ByteOffset.QuadPart + Length;
-                        SetFlag( FileObject->Flags, FO_FILE_MODIFIED );
+                        SetFlag( FileObject->Flags, FCB_STATE_FILE_MODIFIED );
                     }
                 }
                 else if( ByteOffset.QuadPart + Length > Fcb->AdvFcbHeader.FileSize.QuadPart )
@@ -718,8 +717,8 @@ NTSTATUS WriteCachedIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
                             CcSetFileSizes( FileObject, ( PCC_FILE_SIZES )( &Fcb->AdvFcbHeader.AllocationSize ) );
                         }
 
-                        SetFlag( FileObject->Flags, FO_FILE_MODIFIED );
-                        SetFlag( FileObject->Flags, FO_FILE_SIZE_CHANGED );
+                        SetFlag( FileObject->Flags, FCB_STATE_FILE_MODIFIED );
+                        SetFlag( FileObject->Flags, FCB_STATE_FILE_SIZE_CHANGED );
 
                         FileObject->CurrentByteOffset.QuadPart = ByteOffset.QuadPart + Length;
                     }
@@ -755,8 +754,8 @@ NTSTATUS WriteCachedIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
                             CcSetFileSizes( FileObject, ( PCC_FILE_SIZES )( &Fcb->AdvFcbHeader.AllocationSize ) );
                         }
 
-                        SetFlag( FileObject->Flags, FO_FILE_MODIFIED );
-                        SetFlag( FileObject->Flags, FO_FILE_SIZE_CHANGED );
+                        SetFlag( FileObject->Flags, FCB_STATE_FILE_MODIFIED );
+                        SetFlag( FileObject->Flags, FCB_STATE_FILE_SIZE_CHANGED );
 
                         FileObject->CurrentByteOffset.QuadPart = ByteOffset.QuadPart + Length;
                     }
@@ -798,8 +797,8 @@ NTSTATUS WriteCachedIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
                             CcSetFileSizes( FileObject, ( PCC_FILE_SIZES )( &Fcb->AdvFcbHeader.AllocationSize ) );
                         }
 
-                        SetFlag( FileObject->Flags, FO_FILE_MODIFIED );
-                        SetFlag( FileObject->Flags, FO_FILE_SIZE_CHANGED );
+                        SetFlag( FileObject->Flags, FCB_STATE_FILE_MODIFIED );
+                        SetFlag( FileObject->Flags, FCB_STATE_FILE_SIZE_CHANGED );
 
                         FileObject->CurrentByteOffset.QuadPart = ByteOffset.QuadPart + Length;
                     }
@@ -844,8 +843,8 @@ NTSTATUS WriteCachedIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
                             CcSetFileSizes( FileObject, ( PCC_FILE_SIZES )( &Fcb->AdvFcbHeader.AllocationSize ) );
                         }
 
-                        SetFlag( FileObject->Flags, FO_FILE_MODIFIED );
-                        SetFlag( FileObject->Flags, FO_FILE_SIZE_CHANGED );
+                        SetFlag( FileObject->Flags, FCB_STATE_FILE_MODIFIED );
+                        SetFlag( FileObject->Flags, FCB_STATE_FILE_SIZE_CHANGED );
 
                         FileObject->CurrentByteOffset.QuadPart = ByteOffset.QuadPart + Length;
                     }
@@ -890,8 +889,8 @@ NTSTATUS WriteCachedIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
                             Fcb->AdvFcbHeader.ValidDataLength.QuadPart = ByteOffset.QuadPart + Length;
                             CcSetFileSizes( FileObject, ( PCC_FILE_SIZES )( &Fcb->AdvFcbHeader.AllocationSize ) );
                         }
-                        SetFlag( FileObject->Flags, FO_FILE_MODIFIED );
-                        SetFlag( FileObject->Flags, FO_FILE_SIZE_CHANGED );
+                        SetFlag( FileObject->Flags, FCB_STATE_FILE_MODIFIED );
+                        SetFlag( FileObject->Flags, FCB_STATE_FILE_SIZE_CHANGED );
 
                         FileObject->CurrentByteOffset.QuadPart = ByteOffset.QuadPart + Length;
                     }
@@ -951,8 +950,8 @@ NTSTATUS WriteCachedIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
                     Fcb->AdvFcbHeader.ValidDataLength.QuadPart = ByteOffset.QuadPart + Length;
                     CcSetFileSizes( FileObject, ( PCC_FILE_SIZES )( &Fcb->AdvFcbHeader.AllocationSize ) );
 
-                    SetFlag( FileObject->Flags, FO_FILE_MODIFIED );
-                    SetFlag( FileObject->Flags, FO_FILE_SIZE_CHANGED );
+                    SetFlag( FileObject->Flags, FCB_STATE_FILE_MODIFIED );
+                    SetFlag( FileObject->Flags, FCB_STATE_FILE_SIZE_CHANGED );
 
                     FileObject->CurrentByteOffset.QuadPart = ByteOffset.QuadPart + Length;
                 }
@@ -996,8 +995,8 @@ NTSTATUS WriteCachedIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
                     Fcb->AdvFcbHeader.ValidDataLength.QuadPart = ByteOffset.QuadPart + Length;
                     CcSetFileSizes( FileObject, ( PCC_FILE_SIZES )( &Fcb->AdvFcbHeader.AllocationSize ) );
 
-                    SetFlag( FileObject->Flags, FO_FILE_MODIFIED );
-                    SetFlag( FileObject->Flags, FO_FILE_SIZE_CHANGED );
+                    SetFlag( FileObject->Flags, FCB_STATE_FILE_MODIFIED );
+                    SetFlag( FileObject->Flags, FCB_STATE_FILE_SIZE_CHANGED );
 
                     FileObject->CurrentByteOffset.QuadPart = ByteOffset.QuadPart + Length;
                 }

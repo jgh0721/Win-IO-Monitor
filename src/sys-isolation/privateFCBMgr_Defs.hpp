@@ -10,6 +10,10 @@
 #   pragma execution_character_set( "utf-8" )
 #endif
 
+#define FCB_STATE_DELETE_ON_CLOSE   0x100
+#define FCB_STATE_FILE_MODIFIED     0x200
+#define FCB_STATE_FILE_SIZE_CHANGED 0x400
+
 #define FCB_STATE_PGIO_SHARED       0x10000
 #define FCB_STATE_PGIO_EXCLUSIVE    0x20000
 #define FCB_STATE_MAIN_SHARED       0x40000
