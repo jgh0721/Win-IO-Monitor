@@ -68,6 +68,8 @@ PIRP_CONTEXT CreateIrpContext( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_
                 IrpContext->ProcessId = IrpContext->Ccb->ProcessId;
                 IrpContext->ProcessFullPath = CloneBuffer( &IrpContext->Ccb->ProcessFileFullPath );
                 IrpContext->ProcessFileName = nsUtils::ReverseFindW( IrpContext->ProcessFullPath.Buffer, L'\\' );
+                if( IrpContext->ProcessFileName != NULLPTR )
+                    IrpContext->ProcessFileName++;
             }
         }
 
