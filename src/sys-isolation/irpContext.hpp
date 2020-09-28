@@ -12,7 +12,7 @@ LONG            CreateEvtID();
 
 PIRP_CONTEXT    CreateIrpContext( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_OBJECTS FltObjects );
 VOID            CloseIrpContext( __in PIRP_CONTEXT IrpContext );
-VOID            PrintIrpContext( __in PIRP_CONTEXT IrpContext );
+VOID            PrintIrpContext( __in PIRP_CONTEXT IrpContext, __in bool isForceResult = false  );
 
 enum TyEnCmnRsrc
 {

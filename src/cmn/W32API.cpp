@@ -846,6 +846,15 @@ void nsW32API::PrintOutCreateDesiredAccess( char* PrintBuffer, ULONG BufferSize,
 {
     if( PrintBuffer == NULLPTR || BufferSize == 0 ) return;
 
+    if( BooleanFlagOn( DesiredAccess, GENERIC_READ ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "GENERIC_READ|" );
+    if( BooleanFlagOn( DesiredAccess, GENERIC_WRITE ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "GENERIC_WRITE|" );
+    if( BooleanFlagOn( DesiredAccess, GENERIC_EXECUTE ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "GENERIC_EXECUTE|" );
+    if( BooleanFlagOn( DesiredAccess, GENERIC_ALL ) )
+        RtlStringCbCatA( PrintBuffer, BufferSize, "GENERIC_ALL|" );
+
     if( BooleanFlagOn( DesiredAccess, FILE_READ_DATA ) )
         RtlStringCbCatA( PrintBuffer, BufferSize, "FILE_READ_DATA|" );
     if( BooleanFlagOn( DesiredAccess, FILE_READ_ATTRIBUTES ) )

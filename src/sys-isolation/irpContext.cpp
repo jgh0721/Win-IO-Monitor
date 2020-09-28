@@ -217,13 +217,15 @@ VOID CloseIrpContext( __in PIRP_CONTEXT IrpContext )
     ExFreeToNPagedLookasideList( &GlobalContext.IrpContextLookasideList, IrpContext );
 }
 
-VOID PrintIrpContext( __in PIRP_CONTEXT IrpContext )
+VOID PrintIrpContext( __in PIRP_CONTEXT IrpContext, __in bool isForceResult /* = false */ )
 {
     if( IrpContext == NULLPTR ) return;
 
     const auto& IsPreIO = BooleanFlagOn( IrpContext->Data->Flags, FLTFL_CALLBACK_DATA_POST_OPERATION ) == FALSE;
     const auto& MajorFunction = IrpContext->Data->Iopb->MajorFunction;
     const auto& MinorFunction = IrpContext->Data->Iopb->MinorFunction;
+    bool IsResultMode = (IsPreIO == FALSE) || (isForceResult == true);
+    const auto& IoStatus = IrpContext->Data->IoStatus;
 
     switch( MajorFunction )
     {
@@ -257,7 +259,6 @@ VOID PrintIrpContext( __in PIRP_CONTEXT IrpContext )
                        , nsW32API::ConvertCreateShareAccess( IrpContext->Data->Iopb->Parameters.Create.ShareAccess )
                        , IrpContext->DebugText
                        ) );
-
         } break;
         case IRP_MJ_CREATE_NAMED_PIPE: {} break;
         case IRP_MJ_CLEANUP: {
@@ -308,17 +309,98 @@ VOID PrintIrpContext( __in PIRP_CONTEXT IrpContext )
 
         } break;
         case IRP_MJ_QUERY_INFORMATION: {
-            auto FileInformationClass = ( nsW32API::FILE_INFORMATION_CLASS )IrpContext->Data->Iopb->Parameters.QueryFileInformation.FileInformationClass;
+            const auto& Parameters = IrpContext->Data->Iopb->Parameters.QueryFileInformation;
+            auto FileInformationClass = ( nsW32API::FILE_INFORMATION_CLASS )Parameters.FileInformationClass;
 
-            KdPrint( ( "[WinIOSol] EvtID=%09d IRP=%s Thread=%p,%p Class=%s Length=%d Proc=%06d,%ws Src=%ws\n"
-                       , IrpContext->EvtID
-                       , FltGetIrpName( MajorFunction )
-                       , PsGetCurrentThread(), IrpContext->Data->Thread
-                       , nsW32API::ConvertFileInformationClassTo( FileInformationClass )
-                       , IrpContext->Data->Iopb->Parameters.QueryFileInformation.Length
-                       , IrpContext->ProcessId, IrpContext->ProcessFileName == NULLPTR ? L"(null)" : IrpContext->ProcessFileName
-                       , IrpContext->SrcFileFullPath.Buffer
-                       ) );
+            if( IsResultMode == false )
+            {
+                KdPrint( ( "[WinIOSol] EvtID=%09d IRP=%s Thread=%p,%p Class=%s Length=%d Proc=%06d,%ws Src=%ws\n"
+                           , IrpContext->EvtID
+                           , FltGetIrpName( MajorFunction )
+                           , PsGetCurrentThread(), IrpContext->Data->Thread
+                           , nsW32API::ConvertFileInformationClassTo( FileInformationClass )
+                           , Parameters.Length
+                           , IrpContext->ProcessId, IrpContext->ProcessFileName == NULLPTR ? L"(null)" : IrpContext->ProcessFileName
+                           , IrpContext->SrcFileFullPath.Buffer
+                           ) );
+            }
+            else
+            {
+                KdPrint( ( "[WinIOSol] EvtID=%09d RET=%s Thread=%p,%p Class=%s Status=0x%08x,%ws Information=%d\n"
+                           , IrpContext->EvtID
+                           , FltGetIrpName( MajorFunction )
+                           , PsGetCurrentThread(), IrpContext->Data->Thread
+                           , nsW32API::ConvertFileInformationClassTo( FileInformationClass )
+                           , IoStatus.Status, ntkernel_error_category::find_ntstatus( IoStatus.Status )->message
+                           , IoStatus.Information
+                           ) );
+
+                if( !NT_SUCCESS( IoStatus.Status ) )
+                    break;
+
+                PVOID OutputBuffer = Parameters.InfoBuffer;
+
+                switch( FileInformationClass )
+                {
+                    case FileAccessInformation: {
+
+                        RtlStringCbCatA( IrpContext->DebugText, 1024, "AccessMask=" );
+                        nsW32API::PrintOutCreateDesiredAccess( IrpContext->DebugText, 1024, ((PFILE_ACCESS_INFORMATION)OutputBuffer)->AccessFlags );
+                        RtlStringCbCatA( IrpContext->DebugText, 1024, " " );
+
+                        KdPrint( ( "[WinIOSol] EvtID=%09d       >> Buffer=%p %s \n"
+                                   , IrpContext->EvtID, OutputBuffer
+                                   , IrpContext->DebugText
+                                   ) );
+
+                    } break;
+                    case FileAlignmentInformation: {
+
+                        KdPrint( ( "[WinIOSol] EvtID=%09d       >> Buffer=%p Alignment=%d \n"
+                                   , IrpContext->EvtID, OutputBuffer
+                                   , ((PFILE_ALIGNMENT_INFORMATION)OutputBuffer)->AlignmentRequirement
+                                   ) );
+
+                    } break;
+                    case FileAllInformation: {} break;
+                    case FileAttributeTagInformation: {} break;
+                    case FileBasicInformation: {
+                        const auto BasicInformation = ( PFILE_BASIC_INFORMATION )OutputBuffer;
+
+                        KdPrint( ( "[WinIOSol] EvtID=%09d       >> Buffer=%p CreationTime=%I64d LastAccessTime=%I64d LastWriteTime=%I64d ChangeTime=%I64d FileAttributes=0x%08x\n"
+                                   , IrpContext->EvtID, OutputBuffer
+                                   , BasicInformation->CreationTime.QuadPart
+                                   , BasicInformation->LastAccessTime.QuadPart
+                                   , BasicInformation->LastWriteTime.QuadPart
+                                   , BasicInformation->ChangeTime.QuadPart
+                                   , BasicInformation->FileAttributes
+                                   ) );
+                    } break;
+                    case FileCompressionInformation: {} break;
+                    case FileEaInformation: {} break;
+                    case FileInternalInformation: {} break;
+                    case FileIoPriorityHintInformation: {} break;
+                    case FileModeInformation: {} break;
+                    case FileMoveClusterInformation: {} break;
+                    case FileNameInformation: {} break;
+                    case FileNetworkOpenInformation: {} break;
+                    case FilePositionInformation: {} break;
+                    case FileStandardInformation: {
+                        const auto StanardInformation = ( PFILE_STANDARD_INFORMATION )OutputBuffer;
+
+                        KdPrint( ( "[WinIOSol] EvtID=%09d       >> Buffer=%p AllocationSize=%I64d EndOfFile=%I64d NumberOfLinks=%d DeletePending=%d Directory=%d\n"
+                                   , IrpContext->EvtID, OutputBuffer
+                                   , StanardInformation->AllocationSize.QuadPart
+                                   , StanardInformation->EndOfFile.QuadPart
+                                   , StanardInformation->NumberOfLinks
+                                   , StanardInformation->DeletePending
+                                   , StanardInformation->Directory
+                                   ) );
+                    } break;
+                    case FileStreamInformation: {} break;
+                }
+            }
+
         } break;
         case IRP_MJ_SET_INFORMATION: {
             const auto& Parameters = IrpContext->Data->Iopb->Parameters.SetFileInformation;

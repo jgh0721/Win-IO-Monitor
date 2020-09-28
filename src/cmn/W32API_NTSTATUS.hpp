@@ -130,6 +130,13 @@ namespace ntkernel_error_category
 
     static inline const field* find_ntstatus( int ntstatus ) noexcept
     {
+        static const field empty = {
+            STATUS_NOT_FOUND,
+            0,
+            0,
+            ""
+        };
+
         static const field table[] = {
   #include "W32API_NTSTATUS_Impl.ipp"
         };
@@ -142,7 +149,7 @@ namespace ntkernel_error_category
             }
         }
 
-        return nullptr;
+        return &empty;
     }
 }
 
