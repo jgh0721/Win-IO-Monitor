@@ -38,8 +38,10 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreFlushBuffers( PFLT_CALLBACK_DATA Data,
                        ) );
         }
 
+        FsRtlEnterFileSystem();
         ExAcquireResourceExclusiveLite( IrpContext->Fcb->AdvFcbHeader.PagingIoResource, TRUE );
         ExReleaseResourceLite( IrpContext->Fcb->AdvFcbHeader.PagingIoResource );
+        FsRtlExitFileSystem();
 
         if( IrpContext->Ccb != NULLPTR && IrpContext->Ccb->LowerFileObject != NULLPTR )
             FltFlushBuffers( FltObjects->Instance, IrpContext->Ccb->LowerFileObject );

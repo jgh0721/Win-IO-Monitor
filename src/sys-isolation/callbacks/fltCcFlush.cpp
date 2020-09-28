@@ -101,7 +101,7 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreReleaseCcFlush( PFLT_CALLBACK_DATA Dat
             if( BooleanFlagOn( Fcb->Flags, FCB_STATE_MAIN_SHARED ) ||
                 BooleanFlagOn( Fcb->Flags, FCB_STATE_MAIN_EXCLUSIVE ) )
             {
-                FltReleaseResource( &Fcb->MainResource );
+                ExReleaseResourceLite( &Fcb->MainResource );
                 ClearFlag( Fcb->Flags, FCB_STATE_MAIN_SHARED );
                 ClearFlag( Fcb->Flags, FCB_STATE_MAIN_EXCLUSIVE );
             }
@@ -112,7 +112,7 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreReleaseCcFlush( PFLT_CALLBACK_DATA Dat
             if( BooleanFlagOn( Fcb->Flags, FCB_STATE_PGIO_SHARED ) ||
                 BooleanFlagOn( Fcb->Flags, FCB_STATE_PGIO_EXCLUSIVE ) )
             {
-                FltReleaseResource( &Fcb->PagingIoResource );
+                ExReleaseResourceLite( &Fcb->PagingIoResource );
                 ClearFlag( Fcb->Flags, FCB_STATE_PGIO_SHARED );
                 ClearFlag( Fcb->Flags, FCB_STATE_PGIO_EXCLUSIVE );
             }

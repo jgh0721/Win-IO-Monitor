@@ -16,11 +16,11 @@ BOOLEAN CcAcquireForLazyWrite( PVOID Context, BOOLEAN Wait )
     if( !BooleanFlagOn( Fcb->Flags, FCB_STATE_PGIO_SHARED ) &&
         !BooleanFlagOn( Fcb->Flags, FCB_STATE_PGIO_EXCLUSIVE ) )
     {
-        KeEnterCriticalRegion();
+        FsRtlEnterFileSystem();
 
         bRet = ExAcquireResourceSharedLite( &Fcb->PagingIoResource, Wait );
 
-        KeLeaveCriticalRegion();
+        FsRtlExitFileSystem();
 
         if( bRet )
             SetFlag( Fcb->Flags, FCB_STATE_PGIO_SHARED );
@@ -42,7 +42,9 @@ void CcReleaseFromLazyWrite( PVOID Context )
     if( BooleanFlagOn( Fcb->Flags, FCB_STATE_PGIO_SHARED ) ||
         BooleanFlagOn( Fcb->Flags, FCB_STATE_PGIO_EXCLUSIVE ) )
     {
-        FltReleaseResource( &Fcb->PagingIoResource );
+        FsRtlEnterFileSystem();
+        ExReleaseResourceLite( &Fcb->PagingIoResource );
+        FsRtlExitFileSystem();
         ClearFlag( Fcb->Flags, FCB_STATE_PGIO_SHARED );
         ClearFlag( Fcb->Flags, FCB_STATE_PGIO_EXCLUSIVE );
     }
@@ -89,7 +91,9 @@ void CcReleaseFromReadAhead( PVOID Context )
     if( BooleanFlagOn( Fcb->Flags, FCB_STATE_MAIN_SHARED ) ||
         BooleanFlagOn( Fcb->Flags, FCB_STATE_MAIN_EXCLUSIVE ) )
     {
-        FltReleaseResource( &Fcb->MainResource );
+        FsRtlEnterFileSystem();
+        ExReleaseResourceLite( &Fcb->MainResource );
+        FsRtlExitFileSystem();
         ClearFlag( Fcb->Flags, FCB_STATE_MAIN_SHARED );
         ClearFlag( Fcb->Flags, FCB_STATE_MAIN_EXCLUSIVE );
     }

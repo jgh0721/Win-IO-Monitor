@@ -56,8 +56,10 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCleanup( PFLT_CALLBACK_DATA Data, PCFL
                 {
                     CcFlushCache( &Fcb->SectionObjects, NULL, 0, NULL );
 
+                    FsRtlEnterFileSystem();
                     ExAcquireResourceExclusiveLite( IrpContext->Fcb->AdvFcbHeader.PagingIoResource, TRUE );
                     ExReleaseResourceLite( IrpContext->Fcb->AdvFcbHeader.PagingIoResource );
+                    FsRtlExitFileSystem();
                 }
             }
         }
@@ -83,9 +85,11 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCleanup( PFLT_CALLBACK_DATA Data, PCFL
                            , IrpContext->EvtID, __FUNCTION__, "CcZeroData", __LINE__
                            , Fcb->AdvFcbHeader.ValidDataLength.QuadPart, Fcb->AdvFcbHeader.FileSize.QuadPart ) );
 
+                FsRtlEnterFileSystem();
                 FltAcquireResourceExclusive( &Fcb->PagingIoResource );
                 Fcb->AdvFcbHeader.ValidDataLength.QuadPart = Fcb->AdvFcbHeader.FileSize.QuadPart;
                 FltReleaseResource( &Fcb->PagingIoResource );
+                FsRtlExitFileSystem();
 
                 if( CcIsFileCached( FileObject ) )
                 {
@@ -121,8 +125,10 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCleanup( PFLT_CALLBACK_DATA Data, PCFL
         {
             CcFlushCache( &Fcb->SectionObjects, NULL, 0, NULL );
 
+            FsRtlEnterFileSystem();
             ExAcquireResourceExclusiveLite( IrpContext->Fcb->AdvFcbHeader.PagingIoResource, TRUE );
             ExReleaseResourceLite( IrpContext->Fcb->AdvFcbHeader.PagingIoResource );
+            FsRtlExitFileSystem();
 
             CcPurgeCacheSection( &IrpContext->Fcb->SectionObjects, NULL, 0, FALSE );
         }
