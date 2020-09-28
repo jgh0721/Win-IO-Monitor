@@ -25,6 +25,7 @@
     <ClInclude Include="..\cmn\fltCmnLibs_string.hpp" />
     <ClInclude Include="..\cmn\W32API.hpp" />
     <ClInclude Include="..\cmn\W32API_Base.hpp" />
+    <ClInclude Include="..\cmn\W32API_DBGHelper.hpp" />
     <ClInclude Include="..\cmn\W32API_FltMgr.hpp" />
     <ClInclude Include="..\cmn\W32API_LibMgr.hpp" />
     <ClInclude Include="..\cmn\W32API_NtOsKrnl.hpp" />
@@ -73,6 +74,7 @@
     <ClCompile Include="..\cmn\fltCmnLibs_path.cpp" />
     <ClCompile Include="..\cmn\fltCmnLibs_string.cpp" />
     <ClCompile Include="..\cmn\W32API.cpp" />
+    <ClCompile Include="..\cmn\W32API_DBGHelper.cpp" />
     <ClCompile Include="callbacks\cacheManagerCallbacks.cpp" />
     <ClCompile Include="callbacks\callbacks.cpp" />
     <ClCompile Include="callbacks\fltCcFlush.cpp" />

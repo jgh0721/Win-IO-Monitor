@@ -117,16 +117,7 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
         if( IrpContext != NULLPTR )
         {
             if( IrpContext->IsAudit == true )
-            {
-                KdPrint( ( "[WinIOSol] EvtID=%09d %s Status=0x%08x,%s Information=%s Open=%d Clean=%d Ref=%d Name=%ws\n",
-                           IrpContext->EvtID, __FUNCTION__
-                           , IrpContext->Status, ntkernel_error_category::find_ntstatus( IrpContext->Status )->message
-                           , nsW32API::ConvertCreateResultInformation( IrpContext->Status, IrpContext->Information )
-                           , IrpContext->Fcb != NULLPTR ? IrpContext->Fcb->OpnCount : 0
-                           , IrpContext->Fcb != NULLPTR ? IrpContext->Fcb->ClnCount : 0
-                           , IrpContext->Fcb != NULLPTR ? IrpContext->Fcb->RefCount : 0
-                           , IrpContext->SrcFileFullPath.Buffer ) );
-            }
+                PrintIrpContext( IrpContext, true );
 
             if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_FREE_LOWER_FILEOBJECT ) )
             {

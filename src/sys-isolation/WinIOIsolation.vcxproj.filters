@@ -165,6 +165,9 @@
     <ClInclude Include="utilities\fltUtilities.hpp">
       <Filter>utilities</Filter>
     </ClInclude>
+    <ClInclude Include="..\cmn\W32API_DBGHelper.hpp">
+      <Filter>common files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="WinIOIsolation.cpp">
@@ -271,6 +274,9 @@
     </ClCompile>
     <ClCompile Include="utilities\fltUtilities.cpp">
       <Filter>utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="..\cmn\W32API_DBGHelper.cpp">
+      <Filter>common files</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

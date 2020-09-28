@@ -11,6 +11,7 @@
 #include "W32API_NtOsKrnl.hpp"
 #include "W32API_FltMgr.hpp"
 #include "W32API_NTSTATUS.hpp"
+#include "W32API_DBGHelper.hpp"
 
 namespace nsW32API
 {
@@ -66,29 +67,6 @@ namespace nsW32API
                                __in ULONG                         Flags,
                                __in_opt PIO_DRIVER_CREATE_CONTEXT DriverContext
     );
-
-    ///////////////////////////////////////////////////////////////////////////
-    /// Debug Helper
-
-    const char* ConvertCreateShareAccess( __in ULONG ShareAccess );
-    const char* ConvertCreateDisposition( __in ULONG CreateDisposition );
-    const char* ConvertIRPMinorFunction( __in UCHAR MajorFunction, __in UCHAR MinorFunction );
-    const char* ConvertFsControlCode( __in ULONG FsControlCode );
-
-    const char* ConvertCreateResultInformation( __in NTSTATUS Status, __in ULONG_PTR Information );
-
-    const char* ConvertFileInformationClassTo( __in const FILE_INFORMATION_CLASS FileInformationClass );
-    const char* ConvertFsInformationClassTo( __in const FS_INFORMATION_CLASS FsInformationClass );
-
-    void PrintOutIrpFlags( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in ULONG IrpFlags );
-    void PrintOutOperationFlags( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in ULONG OperationFlags );
-    void PrintOutCreateOptions( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in ULONG CreateOptions );
-    void PrintOutCreateShareAccess( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in ULONG ShareAccess );
-    void PrintOutCreateDisposition( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in ULONG ShareAccess );
-    void PrintOutCreateDesiredAccess( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in ULONG DesiredAccess );
-
-    void PrintOutFileRenameInformationEx( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in ULONG Flags );
-    void PrintOutFileDispositionInformationEx( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in ULONG Flags );
 
 } // nsW32API
 
