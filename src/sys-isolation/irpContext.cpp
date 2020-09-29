@@ -561,7 +561,7 @@ void PrintIrpContextSET_INFORMATION( PIRP_CONTEXT IrpContext, bool IsResultMode 
     char* DebugText = IrpContext->DebugText;
     static const int DebugTextSize = 1024 * sizeof( CHAR );
 
-    const auto& Parameters = Data->Iopb->Parameters.QueryFileInformation;
+    const auto& Parameters = Data->Iopb->Parameters.SetFileInformation;
 
     if( IsResultMode == false )
     {
