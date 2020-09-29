@@ -45,9 +45,9 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreSetInformation( PFLT_CALLBACK_DATA Dat
             case FileValidDataLengthInformation: {
                 ProcessSetFileValidDataLengthInformation( IrpContext );
             } break;
-            //case FilePositionInformation: {
-            //    ProcessSetFilePositionInformation( IrpContext );
-            //} break;
+            case FilePositionInformation: {
+                ProcessSetFilePositionInformation( IrpContext );
+            } break;
             //case FileRenameInformation: {
             //    ProcessSetFileRenameInformation( IrpContext );
             //} break;
@@ -385,7 +385,7 @@ NTSTATUS ProcessSetFilePositionInformation( IRP_CONTEXT* IrpContext )
     NTSTATUS Status = STATUS_SUCCESS;
 
     auto FileObject = IrpContext->FltObjects->FileObject;
-    auto Fcb = ( FCB* )FileObject->FsContext;
+    FileObject = ( ( CCB* )FileObject->FsContext2 )->LowerFileObject;
 
     auto Length = IrpContext->Data->Iopb->Parameters.SetFileInformation.Length;
     auto FileInformationClass = ( nsW32API::FILE_INFORMATION_CLASS )IrpContext->Data->Iopb->Parameters.SetFileInformation.FileInformationClass;
@@ -395,7 +395,16 @@ NTSTATUS ProcessSetFilePositionInformation( IRP_CONTEXT* IrpContext )
 
     __try
     {
+        Status = FltSetInformationFile( IrpContext->FltObjects->Instance,
+                                        FileObject,
+                                        InfoBuffer, Length, (FILE_INFORMATION_CLASS)FileInformationClass );
 
+        AssignCmnResult( IrpContext, Status );
+
+        if( NT_SUCCESS( Status ) )
+        {
+            FileObject->CurrentByteOffset = ( ( PFILE_POSITION_INFORMATION )InfoBuffer )->CurrentByteOffset;
+        }
     }
     __finally
     {
