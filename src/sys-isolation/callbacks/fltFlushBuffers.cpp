@@ -26,9 +26,21 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreFlushBuffers( PFLT_CALLBACK_DATA Data,
 
         IrpContext = CreateIrpContext( Data, FltObjects );
 
+        KdPrint( ( "[WinIOSol] >> EvtID=%09d %s Thread=%p Open=%d Clean=%d Ref=%d Src=%ws\n"
+                   , IrpContext->EvtID, __FUNCTION__
+                   , PsGetCurrentThread()
+                   , IrpContext->Fcb->OpnCount, IrpContext->Fcb->ClnCount, IrpContext->Fcb->RefCount
+                   , IrpContext->Fcb->FileFullPath.Buffer
+                   ) );
+
         AcquireCmnResource( IrpContext, FCB_MAIN_EXCLUSIVE );
 
         CcFlushCache( &IrpContext->Fcb->SectionObjects, NULL, 0, &Data->IoStatus );
+
+        if( NT_SUCCESS( Data->IoStatus.Status ) )
+        {
+            SetFlag( IrpContext->Fcb->Flags, FCB_STATE_FILE_SIZE_CHANGED );
+        }
 
         if( !NT_SUCCESS( Data->IoStatus.Status ) )
         {
@@ -45,6 +57,14 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreFlushBuffers( PFLT_CALLBACK_DATA Data,
 
         if( IrpContext->Ccb != NULLPTR && IrpContext->Ccb->LowerFileObject != NULLPTR )
             FltFlushBuffers( FltObjects->Instance, IrpContext->Ccb->LowerFileObject );
+
+        KdPrint( ( "[WinIOSol] << EvtID=%09d %s Thread=%p Open=%d Clean=%d Ref=%d Status=0x%08x,%s Information=%Id Src=%ws\n"
+                   , IrpContext->EvtID, __FUNCTION__
+                   , PsGetCurrentThread()
+                   , IrpContext->Fcb->OpnCount, IrpContext->Fcb->ClnCount, IrpContext->Fcb->RefCount
+                   , Data->IoStatus.Status, ntkernel_error_category::find_ntstatus( Data->IoStatus.Status )->message, Data->IoStatus.Information
+                   , IrpContext->Fcb->FileFullPath.Buffer
+                   ) );
 
         AssignCmnFltResult( IrpContext, FLT_PREOP_COMPLETE );
     }

@@ -387,7 +387,7 @@ void PrintIrpContextREAD( PIRP_CONTEXT IrpContext, bool IsResultMode )
     }
     else
     {
-        KdPrint( ( "[WinIOSol] %s EvtID=%09d IRP=%s,%s Thread=%p Proc=%06d,%ws Status=0x%08x,%s Information=%zd\n"
+        KdPrint( ( "[WinIOSol] %s EvtID=%09d IRP=%s,%s Thread=%p Proc=%06d,%ws Status=0x%08x,%s Information=%Id\n"
                    , IsResultMode == false ? ">>" : "<<"
                    , IrpContext->EvtID
                    , nsW32API::ConvertIrpMajorFuncTo( MajorFunction ), nsW32API::ConvertIrpMinorFuncTo( MajorFunction, MinorFunction )
@@ -445,7 +445,7 @@ void PrintIrpContextWRITE( PIRP_CONTEXT IrpContext, bool IsResultMode )
     }
     else
     {
-        KdPrint( ( "[WinIOSol] %s EvtID=%09d IRP=%s,%s Thread=%p Proc=%06d,%ws Status=0x%08x,%s Information=%zd\n"
+        KdPrint( ( "[WinIOSol] %s EvtID=%09d IRP=%s,%s Thread=%p Proc=%06d,%ws Status=0x%08x,%s Information=%Id\n"
                    , IsResultMode == false ? ">>" : "<<"
                    , IrpContext->EvtID
                    , nsW32API::ConvertIrpMajorFuncTo( MajorFunction ), nsW32API::ConvertIrpMinorFuncTo( MajorFunction, MinorFunction )
@@ -485,7 +485,7 @@ void PrintIrpContextQUERY_INFORMATION( PIRP_CONTEXT IrpContext, bool IsResultMod
     }
     else
     {
-        KdPrint( ( "[WinIOSol] %s EvtID=%09d IRP=%s,%s Thread=%p Proc=%06d,%ws Status=0x%08x,%s Information=%zd\n"
+        KdPrint( ( "[WinIOSol] %s EvtID=%09d IRP=%s,%s Thread=%p Proc=%06d,%ws Status=0x%08x,%s Information=%Id\n"
                    , IsResultMode == false ? ">>" : "<<"
                    , IrpContext->EvtID
                    , nsW32API::ConvertIrpMajorFuncTo( MajorFunction ), nsW32API::ConvertIrpMinorFuncTo( MajorFunction, MinorFunction )
@@ -570,7 +570,7 @@ void PrintIrpContextSET_INFORMATION( PIRP_CONTEXT IrpContext, bool IsResultMode 
     }
     else
     {
-        KdPrint( ( "[WinIOSol] %s EvtID=%09d IRP=%s,%s Thread=%p Proc=%06d,%ws Status=0x%08x,%s Information=%zd\n"
+        KdPrint( ( "[WinIOSol] %s EvtID=%09d IRP=%s,%s Thread=%p Proc=%06d,%ws Status=0x%08x,%s Information=%Id\n"
                    , IsResultMode == false ? ">>" : "<<"
                    , IrpContext->EvtID
                    , nsW32API::ConvertIrpMajorFuncTo( MajorFunction ), nsW32API::ConvertIrpMinorFuncTo( MajorFunction, MinorFunction )
