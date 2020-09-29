@@ -204,6 +204,35 @@ namespace nsW32API
         RtlStringCbCatA( PrintBuffer, BufferSize, ConvertIrpMinorFuncTo( MajorFunction, MinorFunction ) );
     }
 
+    void FormatTopLevelIrp( char* PrintBuffer, ULONG BufferSize )
+    {
+        if( PrintBuffer == NULLPTR || BufferSize == 0 ) return;
+
+        PIRP Top = IoGetTopLevelIrp();
+
+        if( (LONG_PTR)Top == FSRTL_FSP_TOP_LEVEL_IRP )
+        {
+            RtlStringCbCatA( PrintBuffer, BufferSize, "FSP" );
+        }
+        else if( ( LONG_PTR )Top == FSRTL_CACHE_TOP_LEVEL_IRP )
+        {
+            RtlStringCbCatA( PrintBuffer, BufferSize, "CACHE" );
+        }
+        else if( ( LONG_PTR )Top == FSRTL_MOD_WRITE_TOP_LEVEL_IRP )
+        {
+            RtlStringCbCatA( PrintBuffer, BufferSize, "MOD_WRITE" );
+        }
+        else if( ( LONG_PTR )Top == FSRTL_FAST_IO_TOP_LEVEL_IRP )
+        {
+            RtlStringCbCatA( PrintBuffer, BufferSize, "FAST_IO" );
+        }
+        else
+        {
+            auto len = strlen( PrintBuffer );
+            RtlStringCbPrintfA( &PrintBuffer[ len ], BufferSize - len, "%p", Top );
+        }
+    }
+
     void FormatOperationFlags( char* PrintBuffer, ULONG BufferSize, ULONG OperationFlags )
     {
         if( PrintBuffer == NULLPTR || BufferSize == 0 ) return;
@@ -743,7 +772,7 @@ namespace nsW32API
         FormatCreateDesiredAccess( PrintBuffer, BufferSize, Info->AccessFlags );
     }
 
-    void FormatFileRenameInformation( char* PrintBuffer, ULONG BufferSize, FILE_RENAME_INFORMATION* Info )
+    void FormatFileRenameInformation( char* PrintBuffer, ULONG BufferSize, __in_z_opt WCHAR* Destination, FILE_RENAME_INFORMATION* Info )
     {
         if( Info == NULLPTR )
             return;
@@ -752,7 +781,7 @@ namespace nsW32API
         RtlStringCbPrintfA( &PrintBuffer[ len ], BufferSize - len, "ReplaceIfExists=%d RootDirectory=%p Dst=%ws"
                             , Info->ReplaceIfExists
                             , Info->RootDirectory
-                            , Info->FileName
+                            , Destination == NULLPTR ? Info->FileName : Destination
         );
     }
 
@@ -817,7 +846,7 @@ namespace nsW32API
                             , Info->ValidDataLength.QuadPart );
     }
 
-    void FormatFileRenameInformationEx( char* PrintBuffer, ULONG BufferSize, nsW32API::FILE_RENAME_INFORMATION_EX* Info )
+    void FormatFileRenameInformationEx( char* PrintBuffer, ULONG BufferSize, __in_z_opt WCHAR* Destination, nsW32API::FILE_RENAME_INFORMATION_EX* Info )
     {
         if( Info == NULLPTR )
             return;
@@ -828,7 +857,7 @@ namespace nsW32API
         auto len = strlen( PrintBuffer );
         RtlStringCbPrintfA( &PrintBuffer[ len ], BufferSize - len, " RootDirectory=%p Dst=%ws\n"
                             , Info->RootDirectory
-                            , Info->FileName
+                            , Destination == NULLPTR ? Info->FileName : Destination
         );
     }
 

@@ -30,8 +30,7 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreQueryInformation( PFLT_CALLBACK_DATA D
         }
 
         IrpContext = CreateIrpContext( Data, FltObjects );
-        if( IrpContext != NULLPTR )
-            PrintIrpContext( IrpContext );
+        PrintIrpContext( IrpContext );
 
         AcquireCmnResource( IrpContext, FCB_MAIN_SHARED );
         auto FileInformationClass = ( nsW32API::FILE_INFORMATION_CLASS )IrpContext->Data->Iopb->Parameters.QueryFileInformation.FileInformationClass;
@@ -124,6 +123,8 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreQueryInformation( PFLT_CALLBACK_DATA D
 
             if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_RETURN_FLTSTATUS ) )
                 FltStatus = IrpContext->PreFltStatus;
+
+            PrintIrpContext( IrpContext, true );
         }
 
         CloseIrpContext( IrpContext );

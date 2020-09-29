@@ -39,12 +39,7 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCleanup( PFLT_CALLBACK_DATA Data, PCFL
         FileObject = FltObjects->FileObject;
         Fcb = ( FCB* )FileObject->FsContext;
         IrpContext = CreateIrpContext( Data, FltObjects );
-
-        KdPrint( ( "[WinIOSol] EvtID=%09d %s Open=%d Clean=%d Ref=%d Name=%ws\n"
-                   , IrpContext->EvtID, __FUNCTION__
-                   , Fcb->OpnCount, Fcb->ClnCount, Fcb->RefCount
-                   , IrpContext->SrcFileFullPath.Buffer
-                   ) );
+        PrintIrpContext( IrpContext );
 
         if( BooleanFlagOn( FileObject->Flags, FO_CLEANUP_COMPLETE ) )
         {
@@ -133,10 +128,12 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCleanup( PFLT_CALLBACK_DATA Data, PCFL
             CcPurgeCacheSection( &IrpContext->Fcb->SectionObjects, NULL, 0, FALSE );
         }
 
-        CcUninitializeCacheMap( FileObject, NULLPTR, NULLPTR );
+        auto TruncateSize = Fcb->AdvFcbHeader.FileSize;
+        CcUninitializeCacheMap( FileObject, &TruncateSize, NULLPTR );
         IoRemoveShareAccess( FileObject, &Fcb->LowerShareAccess );
 
-        MmForceSectionClosed( &Fcb->SectionObjects, TRUE );
+        if( !BooleanFlagOn( FileObject->Flags, FO_CLEANUP_COMPLETE ) )
+            MmForceSectionClosed( &Fcb->SectionObjects, TRUE );
 
         if( IrpContext->Ccb->LowerFileHandle != INVALID_HANDLE_VALUE )
         {
@@ -172,6 +169,9 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCleanup( PFLT_CALLBACK_DATA Data, PCFL
     }
     __finally
     {
+        if( IrpContext != NULLPTR )
+            PrintIrpContext( IrpContext, true );
+
         CloseIrpContext( IrpContext );
     }
 

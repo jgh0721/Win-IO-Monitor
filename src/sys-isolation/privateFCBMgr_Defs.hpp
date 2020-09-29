@@ -24,11 +24,6 @@ typedef struct _FCB_CUSTOM
 
 } FCB_CUSTOM, *PFCB_CUSTOM;
 
-#define FCB_STATE_FILE_MODIFIED 0x100
-#define FCB_STATE_DELETE_ON_CLOSE 0x1000
-
-#define FCB_STATE_CC_FLUSH 0x100000
-
 typedef struct _FCB
 {
     FSRTL_ADVANCED_FCB_HEADER                   AdvFcbHeader;

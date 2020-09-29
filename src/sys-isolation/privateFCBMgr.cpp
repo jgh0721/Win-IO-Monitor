@@ -205,7 +205,7 @@ NTSTATUS UninitializeFCB( IRP_CONTEXT* IrpContext )
 
         ///////////////////////////////////////////////////////////////////////
 
-        KdPrint( ( "[WinIOSol] EvtID=%09d %s Src=%ws\n"
+        KdPrint( ( "[WinIOSol] << EvtID=%09d %s Src=%ws\n"
                    , IrpContext->EvtID, __FUNCTION__
                    , Fcb->FileFullPath.Buffer ) );
 

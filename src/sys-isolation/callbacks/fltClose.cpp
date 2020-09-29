@@ -33,12 +33,7 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreClose( PFLT_CALLBACK_DATA Data, PCFLT_
         FileObject = FltObjects->FileObject;
         Fcb = ( FCB* )FileObject->FsContext;
         IrpContext = CreateIrpContext( Data, FltObjects );
-
-        KdPrint( ( "[WinIOSol] EvtID=%09d %s Open=%d Clean=%d Ref=%d Name=%ws\n"
-                   , IrpContext->EvtID, __FUNCTION__
-                   , Fcb->OpnCount, Fcb->ClnCount, Fcb->RefCount
-                   , IrpContext->SrcFileFullPath.Buffer
-                   ) );
+        PrintIrpContext( IrpContext );
 
         AcquireCmnResource( IrpContext, INST_EXCLUSIVE );
         AcquireCmnResource( IrpContext, FCB_MAIN_EXCLUSIVE );
@@ -83,6 +78,9 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreClose( PFLT_CALLBACK_DATA Data, PCFLT_
     }
     __finally
     {
+        if( IrpContext != NULLPTR )
+            PrintIrpContext( IrpContext, true );
+
         CloseIrpContext( IrpContext );
     }
 

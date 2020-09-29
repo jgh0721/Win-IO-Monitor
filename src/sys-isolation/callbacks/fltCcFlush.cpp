@@ -1,5 +1,7 @@
 ﻿#include "fltCcFlush.hpp"
 
+
+#include "irpContext.hpp"
 #include "privateFCBMgr.hpp"
 
 #if defined(_MSC_VER)
@@ -20,6 +22,14 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreAcquireCcFlush( PFLT_CALLBACK_DATA Dat
             __leave;
 
         auto Fcb = ( FCB* )FileObject->FsContext;
+
+        auto EvtID = CreateEvtID();
+        KdPrint( ( "[WinIOSol] >> EvtID=%09d %s Thread=%p Open=%d Clean=%d Ref=%d Src=%ws\n"
+                   , EvtID, __FUNCTION__
+                   , PsGetCurrentThread()
+                   , Fcb->OpnCount, Fcb->ClnCount, Fcb->RefCount
+                   , Fcb->FileFullPath.Buffer 
+                   ) );
 
         FsRtlEnterFileSystem();
 
@@ -49,14 +59,15 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreAcquireCcFlush( PFLT_CALLBACK_DATA Dat
 
         FsRtlExitFileSystem();
 
-        KdPrint( ( "[WinIOSol] %s Thread=%p Open=%d Clean=%d Ref=%d Name=%ws\n"
-                   , __FUNCTION__
-                   , PsGetCurrentThread()
-                   , Fcb->OpnCount, Fcb->ClnCount, Fcb->RefCount
-                   , Fcb->FileFullPath.Buffer ) );
-
         Data->IoStatus.Status = STATUS_FSFILTER_OP_COMPLETED_SUCCESSFULLY;
         FltStatus = FLT_PREOP_COMPLETE;
+
+        KdPrint( ( "[WinIOSol] << EvtID=%09d %s Thread=%p Open=%d Clean=%d Ref=%d Src=%ws\n"
+                   , EvtID, __FUNCTION__
+                   , PsGetCurrentThread()
+                   , Fcb->OpnCount, Fcb->ClnCount, Fcb->RefCount
+                   , Fcb->FileFullPath.Buffer
+                   ) );
     }
     __finally
     {
@@ -94,6 +105,14 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreReleaseCcFlush( PFLT_CALLBACK_DATA Dat
 
         auto Fcb = ( FCB* )FileObject->FsContext;
 
+        auto EvtID = CreateEvtID();
+        KdPrint( ( "[WinIOSol] >> EvtID=%09d %s Thread=%p Open=%d Clean=%d Ref=%d Src=%ws\n"
+                   , EvtID, __FUNCTION__
+                   , PsGetCurrentThread()
+                   , Fcb->OpnCount, Fcb->ClnCount, Fcb->RefCount
+                   , Fcb->FileFullPath.Buffer
+                   ) );
+
         FsRtlEnterFileSystem();
 
         if( Fcb->AdvFcbHeader.Resource )
@@ -117,17 +136,18 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreReleaseCcFlush( PFLT_CALLBACK_DATA Dat
                 ClearFlag( Fcb->Flags, FCB_STATE_PGIO_EXCLUSIVE );
             }
         }
-
+        
         FsRtlExitFileSystem();
-
-        KdPrint( ( "[WinIOSol] %s Thread=%p Open=%d Clean=%d Ref=%d Name=%ws\n"
-                   , __FUNCTION__
-                   , PsGetCurrentThread()
-                   , Fcb->OpnCount, Fcb->ClnCount, Fcb->RefCount
-                   , Fcb->FileFullPath.Buffer ) );
 
         Data->IoStatus.Status = STATUS_FSFILTER_OP_COMPLETED_SUCCESSFULLY;
         FltStatus = FLT_PREOP_COMPLETE;
+
+        KdPrint( ( "[WinIOSol] << EvtID=%09d %s Thread=%p Open=%d Clean=%d Ref=%d Src=%ws\n"
+                   , EvtID, __FUNCTION__
+                   , PsGetCurrentThread()
+                   , Fcb->OpnCount, Fcb->ClnCount, Fcb->RefCount
+                   , Fcb->FileFullPath.Buffer
+                   ) );
     }
     __finally
     {

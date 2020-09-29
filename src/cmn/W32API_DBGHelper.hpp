@@ -20,6 +20,9 @@ namespace nsW32API
     void FormatIrpMajorFunc( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in UCHAR MajorFunction );
     const char* ConvertIrpMinorFuncTo( __in UCHAR MajorFunction, __in UCHAR MinorFunction );
     void FormatIrpMinorFunc( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in UCHAR MajorFunction, __in UCHAR MinorFunction );
+
+    void FormatTopLevelIrp( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize );
+
     /*!
         In FLT_CALLBACK_DATA->FLT_IO_PARAMETER_BLOCK->OperationFlags
     */
@@ -43,7 +46,7 @@ namespace nsW32API
     void FormatFileBasicInformation( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in FILE_BASIC_INFORMATION* Info );
     void FormatFileStandardInformation( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in FILE_STANDARD_INFORMATION* Info );
     void FormatFileAccessInformation( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in FILE_ACCESS_INFORMATION* Info );
-    void FormatFileRenameInformation( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in FILE_RENAME_INFORMATION* Info );
+    void FormatFileRenameInformation( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in_z_opt WCHAR* Destination, __in FILE_RENAME_INFORMATION* Info );
     void FormatFileDispositionInformation( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in FILE_DISPOSITION_INFORMATION* Info );
     void FormatFilePositionInformation( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in FILE_POSITION_INFORMATION* Info );
     void FormatFileAlignmentInformation( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in FILE_ALIGNMENT_INFORMATION* Info );
@@ -51,7 +54,7 @@ namespace nsW32API
     void FormatFileAllocationInformation( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in FILE_ALLOCATION_INFORMATION* Info );
     void FormatFileEndOfFileInformation( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in FILE_END_OF_FILE_INFORMATION* Info );
     void FormatFileValidDataLengthInformation( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in FILE_VALID_DATA_LENGTH_INFORMATION* Info );
-    void FormatFileRenameInformationEx( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in nsW32API::FILE_RENAME_INFORMATION_EX* Info );
+    void FormatFileRenameInformationEx( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in_z_opt WCHAR* Destination, __in nsW32API::FILE_RENAME_INFORMATION_EX* Info );
     void FormatFileRenameInformationEx( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in ULONG Flags );
     void FormatFileDispositionInformationEx( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in nsW32API::FILE_DISPOSITION_INFORMATION_EX* Info );
     void FormatFileDispositionInformationEx( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in ULONG Flags );

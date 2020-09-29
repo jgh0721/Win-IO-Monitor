@@ -1,5 +1,7 @@
 ﻿#include "cacheManagerCallbacks.hpp"
 
+
+#include "irpContext.hpp"
 #include "privateFCBMgr.hpp"
 #include "privateFCBMgr_Defs.hpp"
 
@@ -12,6 +14,14 @@ BOOLEAN CcAcquireForLazyWrite( PVOID Context, BOOLEAN Wait )
     auto Fcb = ( FCB* )Context;
     UNREFERENCED_PARAMETER( Wait );
     BOOLEAN bRet = FALSE;
+
+    auto EvtID = CreateEvtID();
+    KdPrint( ( "[WinIOSol] >> EvtID=%09d %s Thread=%p Open=%d Clean=%d Ref=%d Src=%ws\n"
+               , EvtID, __FUNCTION__
+               , PsGetCurrentThread()
+               , Fcb->OpnCount, Fcb->ClnCount, Fcb->RefCount
+               , Fcb->FileFullPath.Buffer
+               ) );
 
     if( !BooleanFlagOn( Fcb->Flags, FCB_STATE_PGIO_SHARED ) &&
         !BooleanFlagOn( Fcb->Flags, FCB_STATE_PGIO_EXCLUSIVE ) )
@@ -26,11 +36,13 @@ BOOLEAN CcAcquireForLazyWrite( PVOID Context, BOOLEAN Wait )
             SetFlag( Fcb->Flags, FCB_STATE_PGIO_SHARED );
     }
 
-    KdPrint( ( "[WinIOSol] %s Thread=%p Open=%d Clean=%d Ref=%d Acquired=%d Name=%ws\n"
-               , __FUNCTION__
+    KdPrint( ( "[WinIOSol] << EvtID=%09d %s Thread=%p Open=%d Clean=%d Ref=%d Acquired=%d Src=%ws\n"
+               , EvtID, __FUNCTION__
                , PsGetCurrentThread()
-               , Fcb->OpnCount, Fcb->ClnCount, Fcb->RefCount, bRet
-               , Fcb->FileFullPath.Buffer ) );
+               , Fcb->OpnCount, Fcb->ClnCount, Fcb->RefCount
+               , bRet
+               , Fcb->FileFullPath.Buffer
+               ) );
 
     return bRet;
 }
@@ -38,6 +50,14 @@ BOOLEAN CcAcquireForLazyWrite( PVOID Context, BOOLEAN Wait )
 void CcReleaseFromLazyWrite( PVOID Context )
 {
     auto Fcb = ( FCB* )Context;
+
+    auto EvtID = CreateEvtID();
+    KdPrint( ( "[WinIOSol] >> EvtID=%09d %s Thread=%p Open=%d Clean=%d Ref=%d Src=%ws\n"
+               , EvtID, __FUNCTION__
+               , PsGetCurrentThread()
+               , Fcb->OpnCount, Fcb->ClnCount, Fcb->RefCount
+               , Fcb->FileFullPath.Buffer
+               ) );
 
     if( BooleanFlagOn( Fcb->Flags, FCB_STATE_PGIO_SHARED ) ||
         BooleanFlagOn( Fcb->Flags, FCB_STATE_PGIO_EXCLUSIVE ) )
@@ -49,11 +69,12 @@ void CcReleaseFromLazyWrite( PVOID Context )
         ClearFlag( Fcb->Flags, FCB_STATE_PGIO_EXCLUSIVE );
     }
 
-    KdPrint( ( "[WinIOSol] %s Thread=%p Open=%d Clean=%d Ref=%d Name=%ws\n"
-               , __FUNCTION__
+    KdPrint( ( "[WinIOSol] << EvtID=%09d %s Thread=%p Open=%d Clean=%d Ref=%d Src=%ws\n"
+               , EvtID, __FUNCTION__
                , PsGetCurrentThread()
                , Fcb->OpnCount, Fcb->ClnCount, Fcb->RefCount
-               , Fcb->FileFullPath.Buffer ) );
+               , Fcb->FileFullPath.Buffer
+               ) );
 }
 
 BOOLEAN CcAcquireForReadAhead( PVOID Context, BOOLEAN Wait )
@@ -61,6 +82,14 @@ BOOLEAN CcAcquireForReadAhead( PVOID Context, BOOLEAN Wait )
     auto Fcb = ( FCB* )Context;
     UNREFERENCED_PARAMETER( Wait );
     BOOLEAN bRet = FALSE;
+
+    auto EvtID = CreateEvtID();
+    KdPrint( ( "[WinIOSol] >> EvtID=%09d %s Thread=%p Open=%d Clean=%d Ref=%d Src=%ws\n"
+               , EvtID, __FUNCTION__
+               , PsGetCurrentThread()
+               , Fcb->OpnCount, Fcb->ClnCount, Fcb->RefCount
+               , Fcb->FileFullPath.Buffer
+               ) );
 
     if( !BooleanFlagOn( Fcb->Flags, FCB_STATE_MAIN_SHARED ) &&
         !BooleanFlagOn( Fcb->Flags, FCB_STATE_MAIN_EXCLUSIVE ) )
@@ -75,11 +104,13 @@ BOOLEAN CcAcquireForReadAhead( PVOID Context, BOOLEAN Wait )
             SetFlag( Fcb->Flags, FCB_STATE_MAIN_SHARED );
     }
 
-    KdPrint( ( "[WinIOSol] %s Thread=%p Open=%d Clean=%d Ref=%d Acquired=%d Name=%ws\n"
-               , __FUNCTION__
+    KdPrint( ( "[WinIOSol] << EvtID=%09d %s Thread=%p Open=%d Clean=%d Ref=%d Acquired=%d Src=%ws\n"
+               , EvtID, __FUNCTION__
                , PsGetCurrentThread()
-               , Fcb->OpnCount, Fcb->ClnCount, Fcb->RefCount, bRet
-               , Fcb->FileFullPath.Buffer ) );
+               , Fcb->OpnCount, Fcb->ClnCount, Fcb->RefCount
+               , bRet
+               , Fcb->FileFullPath.Buffer
+               ) );
 
     return bRet;
 }
@@ -87,6 +118,14 @@ BOOLEAN CcAcquireForReadAhead( PVOID Context, BOOLEAN Wait )
 void CcReleaseFromReadAhead( PVOID Context )
 {
     auto Fcb = ( FCB* )Context;
+
+    auto EvtID = CreateEvtID();
+    KdPrint( ( "[WinIOSol] >> EvtID=%09d %s Thread=%p Open=%d Clean=%d Ref=%d Src=%ws\n"
+               , EvtID, __FUNCTION__
+               , PsGetCurrentThread()
+               , Fcb->OpnCount, Fcb->ClnCount, Fcb->RefCount
+               , Fcb->FileFullPath.Buffer
+               ) );
 
     if( BooleanFlagOn( Fcb->Flags, FCB_STATE_MAIN_SHARED ) ||
         BooleanFlagOn( Fcb->Flags, FCB_STATE_MAIN_EXCLUSIVE ) )
@@ -98,9 +137,10 @@ void CcReleaseFromReadAhead( PVOID Context )
         ClearFlag( Fcb->Flags, FCB_STATE_MAIN_EXCLUSIVE );
     }
 
-    KdPrint( ( "[WinIOSol] %s Thread=%p Open=%d Clean=%d Ref=%d Name=%ws\n"
-               , __FUNCTION__
+    KdPrint( ( "[WinIOSol] << EvtID=%09d %s Thread=%p Open=%d Clean=%d Ref=%d Src=%ws\n"
+               , EvtID, __FUNCTION__
                , PsGetCurrentThread()
                , Fcb->OpnCount, Fcb->ClnCount, Fcb->RefCount
-               , Fcb->FileFullPath.Buffer ) );
+               , Fcb->FileFullPath.Buffer
+               ) );
 }

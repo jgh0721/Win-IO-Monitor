@@ -23,6 +23,10 @@ void            PrintIrpContextSET_INFORMATION( __in PIRP_CONTEXT IrpContext, __
 void            PrintIrpContextCLEANUP( __in PIRP_CONTEXT IrpContext, __in bool IsResultMode = false );
 void            PrintIrpContextCLOSE( __in PIRP_CONTEXT IrpContext, __in bool IsResultMode = false );
 
+void            PrintIrpContextQUERY_VOLUME_INFORMATION( __in PIRP_CONTEXT IrpContext, __in bool IsResultMode = false );
+void            PrintIrpContextFILE_SYSTEM_CONTROL( __in PIRP_CONTEXT IrpContext, __in bool IsResultMode = false );
+void            PrintIrpContextLOCK_CONTROL( __in PIRP_CONTEXT IrpContext, __in bool IsResultMode = false );
+
 enum TyEnCmnRsrc
 {
     FCB_MAIN_EXCLUSIVE          = 0x1,
