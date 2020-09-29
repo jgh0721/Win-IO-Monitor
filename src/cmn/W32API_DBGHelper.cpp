@@ -836,6 +836,23 @@ namespace nsW32API
         );
     }
 
+    void FormatFileNetworkOpenInformation( char* PrintBuffer, ULONG BufferSize, FILE_NETWORK_OPEN_INFORMATION* Info )
+    {
+        if( Info == NULLPTR )
+            return;
+
+        auto len = strlen( PrintBuffer );
+        RtlStringCbPrintfA( &PrintBuffer[ len ], BufferSize - len, "CreationTime=%I64d LastAccessTime=%I64d LastWriteTime=%I64d ChangeTime=%I64d AllocationSize=%I64d EndOfFile=%I64d FileAttributes=0x%08x"
+                            , Info->CreationTime.QuadPart
+                            , Info->LastAccessTime.QuadPart
+                            , Info->LastWriteTime.QuadPart
+                            , Info->ChangeTime.QuadPart
+                            , Info->AllocationSize.QuadPart
+                            , Info->EndOfFile.QuadPart
+                            , Info->FileAttributes
+        );
+    }
+
     void FormatFileValidDataLengthInformation( char* PrintBuffer, ULONG BufferSize, FILE_VALID_DATA_LENGTH_INFORMATION* Info )
     {
         if( Info == NULLPTR )

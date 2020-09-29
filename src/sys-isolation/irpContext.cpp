@@ -529,8 +529,16 @@ void PrintIrpContextQUERY_INFORMATION( PIRP_CONTEXT IrpContext, bool IsResultMod
             case FileModeInformation: {} break;
             case FileMoveClusterInformation: {} break;
             case FileNameInformation: {} break;
-            case FileNetworkOpenInformation: {} break;
-            case FilePositionInformation: {} break;
+            case FileNetworkOpenInformation: {
+                RtlStringCbCatA( DebugText, 1024, "NetworkOpen[ " );
+                nsW32API::FormatFileNetworkOpenInformation( IrpContext->DebugText, 1024, ( PFILE_NETWORK_OPEN_INFORMATION )Parameters.InfoBuffer );
+                RtlStringCbCatA( DebugText, 1024, " ] " );
+            } break;
+            case FilePositionInformation: {
+                RtlStringCbCatA( DebugText, 1024, "" );
+                nsW32API::FormatFilePositionInformation( IrpContext->DebugText, 1024, ( PFILE_POSITION_INFORMATION )Parameters.InfoBuffer );
+                RtlStringCbCatA( DebugText, 1024, " " );
+            } break;
             case FileStreamInformation: {} break;
         }
 

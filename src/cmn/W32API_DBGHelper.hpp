@@ -53,6 +53,7 @@ namespace nsW32API
     void FormatFileAllInformation( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in FILE_ALL_INFORMATION* Info );
     void FormatFileAllocationInformation( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in FILE_ALLOCATION_INFORMATION* Info );
     void FormatFileEndOfFileInformation( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in FILE_END_OF_FILE_INFORMATION* Info );
+    void FormatFileNetworkOpenInformation( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in FILE_NETWORK_OPEN_INFORMATION* Info );
     void FormatFileValidDataLengthInformation( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in FILE_VALID_DATA_LENGTH_INFORMATION* Info );
     void FormatFileRenameInformationEx( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in_z_opt WCHAR* Destination, __in nsW32API::FILE_RENAME_INFORMATION_EX* Info );
     void FormatFileRenameInformationEx( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in ULONG Flags );
