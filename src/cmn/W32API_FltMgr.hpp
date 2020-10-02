@@ -472,6 +472,15 @@ namespace nsW32API
 
     #define FLTFL_IO_OPERATION_SYNCHRONOUS_PAGING           0x00000008
 
+    // Allows an opportunistic lock break to proceed without blocking or pending the operation that caused the oplock break.
+    #define OPLOCK_FLAG_COMPLETE_IF_OPLOCKED                0x00000001 
+    // Specifies that FltCheckOplockEx should only check for an opportunistic lock key on the FILE_OBJECT that is associated with the I / O operation.This I / O operations is represented by the callback data that the CallbackData parameter points to.FltCheckOplockExmust then add the key if one is provided in the I / O operation.No other oplock processing occurs; that is, no opportunistic lock break will occur.
+    #define OPLOCK_FLAG_OPLOCK_KEY_CHECK_ONLY               0x00000002
+    // Specifies that FsRtlCheckOplockEx should revert any state that was previously set up through a call to the FltOplockFsctrl routine.FltOplockFsctrl is called when an IRP_MJ_CREATE request is processed.This IRP_MJ_CREATE request specifies the FILE_OPEN_REQUIRING_OPLOCK flag in the create options parameter.The OPLOCK_FLAG_BACK_OUT_ATOMIC_OPLOCK flag is typically used in final processing of such a create request when it previously failed.
+    #define OPLOCK_FLAG_BACK_OUT_ATOMIC_OPLOCK              0x00000004 
+    // Allows all opportunistic lock breaks to proceed regardless of the opportunistic lock key.
+    #define OPLOCK_FLAG_IGNORE_OPLOCK_KEYS                  0x00000008
+
     DYNLOAD_BEGIN_CLASS( CFltMgrAPI, L"FltMgr.exe" )
 
         /**
@@ -510,6 +519,19 @@ namespace nsW32API
             Windows Vista~
         */
         DYNLOAD_FUNC_WITH_09( STATUS_INSUFFICIENT_RESOURCES, NTSTATUS, FLTAPI, FltQueryDirectoryFile, __in PFLT_INSTANCE, Instance, __in PFILE_OBJECT, FileObject, __out PVOID, FileInformation, __in ULONG, Length, __in FILE_INFORMATION_CLASS, FileInformationClass, __in BOOLEAN, ReturnSingleEntry, __in_opt PUNICODE_STRING, FileName, __in BOOLEAN, RestartScan, __out_opt PULONG, LengthReturned );
+
+        /*!
+         * A minifilter driver calls the FltCheckOplockEx routine to synchronize the callback data structure for an IRP-based file I/O operation that has the current opportunistic lock (oplock) state of the file
+         */
+        DYNLOAD_FUNC_WITH_06( FLT_PREOP_COMPLETE, FLT_PREOP_CALLBACK_STATUS, FLTAPI, FltCheckOplockEx,
+                              __in POPLOCK, Oplock,
+                              __in PFLT_CALLBACK_DATA, CallbackData,
+                              __in ULONG, Flags,
+                              __in_opt PVOID, Context,
+                              __in_opt PFLTOPLOCK_WAIT_COMPLETE_ROUTINE, WaitCompletionRoutine,
+                              __in_opt PFLTOPLOCK_PREPOST_CALLBACKDATA_ROUTINE, PrePostCallbackDataRoutine
+        );
+
 
     DYNLOAD_END_CLASS();
 
