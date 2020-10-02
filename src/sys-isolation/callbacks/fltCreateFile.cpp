@@ -2,9 +2,12 @@
 
 #include "irpContext.hpp"
 #include "privateFCBMgr.hpp"
-#include "utilities/bufferMgr.hpp"
 
 #include "fltCmnLibs.hpp"
+#include "utilities/osInfoMgr.hpp"
+#include "utilities/bufferMgr.hpp"
+
+#include "W32API.hpp"
 
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
@@ -35,6 +38,8 @@
         관련 파일 객체는 FileObject(ADS) 의 주 파일스트림에 대한 파일객체가 될 수 있다
 */
 
+static LARGE_INTEGER ZERO = { 0, 0 };
+
 FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects,
                                                   PVOID* CompletionContext )
 {
@@ -62,6 +67,7 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
         Args.CreateOptions = Data->Iopb->Parameters.Create.Options & 0x00FFFFFF;
         Args.CreateDisposition = ( Data->Iopb->Parameters.Create.Options >> 24 ) & 0x000000ff;
         Args.CreateDesiredAccess = SecurityContext->DesiredAccess;
+        Args.DeleteOnClose = FlagOn( Args.CreateOptions, FILE_DELETE_ON_CLOSE ) > 0;
 
         if( BooleanFlagOn( Args.CreateOptions, FILE_DIRECTORY_FILE ) )
             __leave;
@@ -156,6 +162,25 @@ NTSTATUS CreateFileExistFCB( IRP_CONTEXT* IrpContext )
 
         AcquireCmnResource( IrpContext, FCB_MAIN_EXCLUSIVE );
 
+        if( nsUtils::VerifyVersionInfoEx( 6, 1, ">=") == true )
+        {
+            auto Ret = GlobalFltMgr.FltCheckOplockEx( &IrpContext->Fcb->FileOplock, IrpContext->Data, OPLOCK_FLAG_OPLOCK_KEY_CHECK_ONLY,
+                                                      NULL, NULL, NULL );
+
+            if( Ret == FLT_PREOP_COMPLETE )
+            {
+                KdPrint( ( "[WinIOSol] >> EvtID=%09d %s %s Status=0x%08x,%s\n"
+                           , IrpContext->EvtID, __FUNCTION__, "FltCheckOplockEx FAILED"
+                           , Data->IoStatus.Status, ntkernel_error_category::find_ntstatus( Data->IoStatus.Status )->message
+                           ) );
+
+                AssignCmnResult( IrpContext, IrpContext->Data->IoStatus.Status );
+                AssignCmnFltResult( IrpContext, Ret );
+                SetFlag( IrpContext->CompleteStatus, COMPLETE_DONT_CONT_PROCESS );
+                __leave;
+            }
+        }
+
         if( FltCurrentBatchOplock( &IrpContext->Fcb->FileOplock ) )
         {
             AssignCmnResultInfo( IrpContext, FILE_OPBATCH_BREAK_UNDERWAY );
@@ -187,11 +212,11 @@ NTSTATUS CreateFileExistFCB( IRP_CONTEXT* IrpContext )
                             &IrpContext->Fcb->LowerShareAccess, FALSE );
 
         // NOTE: MSDN 에 따르면, 쓰기 권한으로 파일을 열기 전에 IRP_MJ_CREATE 에서 MmFlushImageSection 을 MmFlushForWrite 로 호출해야한다
-        if( BooleanFlagOn( Args->CreateDesiredAccess, FILE_WRITE_DATA ) )
+        if( BooleanFlagOn( Args->CreateDesiredAccess, FILE_WRITE_DATA ) || Args->DeleteOnClose )
         {
             if( MmFlushImageSection( &IrpContext->Fcb->SectionObjects, MmFlushForWrite ) == FALSE )
             {
-                Status = STATUS_SHARING_VIOLATION;
+                Status = Args->DeleteOnClose ? STATUS_CANNOT_DELETE : STATUS_SHARING_VIOLATION;
                 AssignCmnResult( IrpContext, Status );
                 SetFlag( IrpContext->CompleteStatus, COMPLETE_DONT_CONT_PROCESS );
                 __leave;
@@ -205,6 +230,18 @@ NTSTATUS CreateFileExistFCB( IRP_CONTEXT* IrpContext )
             ExAcquireResourceExclusiveLite( IrpContext->Fcb->AdvFcbHeader.PagingIoResource, TRUE );
             ExReleaseResourceLite( IrpContext->Fcb->AdvFcbHeader.PagingIoResource );
             CcPurgeCacheSection( &IrpContext->Fcb->SectionObjects, NULL, 0, FALSE );
+        }
+
+        if( Args->CreateDisposition == FILE_SUPERSEDE || 
+            Args->CreateDisposition == FILE_OVERWRITE || 
+            Args->CreateDisposition == FILE_OVERWRITE_IF )
+        {
+            if( MmCanFileBeTruncated( &IrpContext->Fcb->SectionObjects, &ZERO ) == FALSE )
+            {
+                AssignCmnResult( IrpContext, STATUS_USER_MAPPED_FILE );
+                SetFlag( IrpContext->CompleteStatus, COMPLETE_DONT_CONT_PROCESS );
+                __leave;
+            }
         }
 
         IO_STATUS_BLOCK IoStatus;
@@ -259,6 +296,38 @@ NTSTATUS CreateFileExistFCB( IRP_CONTEXT* IrpContext )
         InterlockedIncrement( &IrpContext->Fcb->RefCount );
 
         IoUpdateShareAccess( Args->FileObject, &IrpContext->Fcb->LowerShareAccess );
+
+        if( Args->CreateDisposition == FILE_SUPERSEDE || 
+            Args->CreateDisposition == FILE_OVERWRITE || 
+            Args->CreateDisposition == FILE_OVERWRITE_IF )
+        {
+            // 파일 크기를 잘라낼 수 있는지 확인한다
+            if( MmCanFileBeTruncated( &IrpContext->Fcb->SectionObjects, &ZERO ) )
+            {
+                // 캐시 데이터를 비운다. IRP_MJ_CLOSE 호출됨
+                CcPurgeCacheSection( &IrpContext->Fcb->SectionObjects, NULL, 0, FALSE ); 
+
+                // 캐시의 파일크기를 재설정, 파일크기를 변경하려면 Paging IO 리소스를 획득해야한다
+                AcquireCmnResource( IrpContext, FCB_PGIO_EXCLUSIVE );
+
+                IrpContext->Fcb->AdvFcbHeader.FileSize.QuadPart = 0;
+                IrpContext->Fcb->AdvFcbHeader.ValidDataLength.QuadPart = 0;
+                IrpContext->Fcb->AdvFcbHeader.AllocationSize.QuadPart = IrpContext->Data->Iopb->Parameters.Create.AllocationSize.QuadPart;
+
+                CcSetFileSizes( Args->FileObject, ( PCC_FILE_SIZES )&IrpContext->Fcb->AdvFcbHeader.AllocationSize );
+
+                FltReleaseResource( &IrpContext->Fcb->PagingIoResource );
+                ClearFlag( IrpContext->CompleteStatus, COMPLETE_FREE_PGIO_RSRC );
+
+                Status = STATUS_SUCCESS;
+            }
+            else
+            {
+                AssignCmnResult( IrpContext, STATUS_USER_MAPPED_FILE );
+                SetFlag( IrpContext->CompleteStatus, COMPLETE_DONT_CONT_PROCESS );
+                __leave;
+            }
+        }
     }
     __finally
     {

@@ -70,6 +70,7 @@ typedef struct _CREATE_ARGS
     TyGenericBuffer<WCHAR>  CreateFileName;     // FltCreateFileEx 를 호출하기 위한 디바이스이름\경로\이름
     UNICODE_STRING          CreateFileNameUS;
     OBJECT_ATTRIBUTES       CreateObjectAttributes;
+    bool                    DeleteOnClose;
 
     FCB*                    Fcb;
     FILE_OBJECT*            LowerFileObject;
