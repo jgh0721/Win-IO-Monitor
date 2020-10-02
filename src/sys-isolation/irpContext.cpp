@@ -103,8 +103,45 @@ PIRP_CONTEXT CreateIrpContext( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_
 
         if( IrpContext->SrcFileFullPath.Buffer == NULLPTR )
         {
-            IrpContext->SrcFileFullPath = nsUtils::ExtractFileFullPath( FltObjects->FileObject, InstanceContext,
-                                                                        ( MajorFunction == IRP_MJ_CREATE ) && ( IsPreIO == true ) );
+            if( !FlagOn( IrpContext->Data->Iopb->Parameters.Create.Options, FILE_OPEN_BY_FILE_ID ) )
+            {
+                IrpContext->SrcFileFullPath = nsUtils::ExtractFileFullPath( FltObjects->FileObject, InstanceContext,
+                                                                            ( MajorFunction == IRP_MJ_CREATE ) && ( IsPreIO == true ) );
+            }
+            else
+            {
+                PFLT_FILE_NAME_INFORMATION fni = NULLPTR;
+
+                do
+                {
+                    // FltGetFileNameInformation return volume path not driver letter
+                    auto Ret = FltGetFileNameInformation( Data, FLT_FILE_NAME_NORMALIZED | FLT_FILE_NAME_QUERY_FILESYSTEM_ONLY, &fni );
+
+                    if( !NT_SUCCESS( Ret ) )
+                    {
+                        KdPrint( ( "[WinIOSol] >> EvtID=%09d %s %s Status=0x%08x,%s\n"
+                                   , IrpContext->EvtID, __FUNCTION__, "FltGetFileNameInformation(FILE_OPEN_BY_FILE_ID) FAILED"
+                                   , Ret, ntkernel_error_category::find_ntstatus( Ret )->message
+                                   ) );
+                    }
+
+                    IrpContext->SrcFileFullPath = AllocateBuffer<WCHAR>( BUFFER_FILENAME, fni->Name.MaximumLength );
+                    if( InstanceContext->DriveLetter != L'\0' )
+                    {
+                        IrpContext->SrcFileFullPath.Buffer[ 0 ] = InstanceContext->DriveLetter;
+                        IrpContext->SrcFileFullPath.Buffer[ 1 ] = L':';
+
+                        auto DeviceNameLength = nsUtils::strlength( InstanceContext->DeviceNameBuffer ) * sizeof( WCHAR );
+                        RtlStringCbCatW( &IrpContext->SrcFileFullPath.Buffer[ 2 ],
+                                         fni->Name.Length - ( DeviceNameLength * sizeof(WCHAR) ) + sizeof(WCHAR),
+                                         &fni->Name.Buffer[ DeviceNameLength ] );
+                    }
+
+                } while( false );
+
+                if( fni != NULLPTR )
+                    FltReleaseFileNameInformation( fni );
+            }
         }
 
         if( IrpContext->SrcFileFullPath.Buffer != NULLPTR )

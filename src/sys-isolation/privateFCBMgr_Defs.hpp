@@ -89,9 +89,13 @@ typedef struct _FCB
 
 } FCB, * PFCB;
 
+#define CCB_STATE_OPEN_BY_FILEID                0x1000
+
 // Free on IRP_MJ_CLEANUP
 typedef struct _CCB
 {
+    ULONG                                       Flags;
+
     ULONG                                       ProcessId;
     WCHAR*                                      ProcessName;            // ProcessFileFullPath 에 대한 포인터, 직접 해제하지 말 것!!!
     TyGenericBuffer<WCHAR>                      ProcessFileFullPath;
@@ -102,6 +106,5 @@ typedef struct _CCB
     HANDLE                                      LowerFileHandle;
 
 } CCB, *PCCB;
-
 
 #endif // HDR_PRIVATE_FCB_MGR_DEFS
