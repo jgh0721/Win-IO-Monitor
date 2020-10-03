@@ -9,7 +9,8 @@ NTSTATUS AllocateGenericBuffer( TyGenericBuffer<VOID>* GenericBuffer, ULONG Requ
     NTSTATUS Status = STATUS_SUCCESS;
 
     ASSERT( GenericBuffer != NULLPTR );
-    ASSERT( LookasideList != NULLPTR );
+    if( PoolSize != 1)
+        ASSERT( LookasideList != NULLPTR );
     ASSERT( PoolSize > 0 );
 
     do
@@ -129,36 +130,36 @@ TyGenericBuffer<BYTE> AllocateSwapBuffer( TyEnBufferType eBufferType, ULONG uReq
             {
                 uPoolSize = BUFFER_SWAP_WRITE_1024_SIZE;
                 pagedLookasideList = &GlobalContext.SwapWriteLookasideList_1024;
-                eAllocateType = BUFFER_SWAP_READ_1024;
+                eAllocateType = BUFFER_SWAP_WRITE_1024;
             }
             else if( uRequiredSize <= BUFFER_SWAP_WRITE_4096_SIZE )
             {
                 uPoolSize = BUFFER_SWAP_WRITE_4096_SIZE;
                 pagedLookasideList = &GlobalContext.SwapWriteLookasideList_4096;
-                eAllocateType = BUFFER_SWAP_READ_4096;
+                eAllocateType = BUFFER_SWAP_WRITE_4096;
             }
             else if( uRequiredSize <= BUFFER_SWAP_WRITE_8192_SIZE )
             {
                 uPoolSize = BUFFER_SWAP_WRITE_8192_SIZE;
                 pagedLookasideList = &GlobalContext.SwapWriteLookasideList_8192;
-                eAllocateType = BUFFER_SWAP_READ_8192;
+                eAllocateType = BUFFER_SWAP_WRITE_8192;
             }
             else if( uRequiredSize <= BUFFER_SWAP_WRITE_16384_SIZE )
             {
                 uPoolSize = BUFFER_SWAP_WRITE_16384_SIZE;
                 pagedLookasideList = &GlobalContext.SwapWriteLookasideList_16384;
-                eAllocateType = BUFFER_SWAP_READ_16384;
+                eAllocateType = BUFFER_SWAP_WRITE_16384;
             }
             else if( uRequiredSize <= BUFFER_SWAP_WRITE_65536_SIZE )
             {
                 uPoolSize = BUFFER_SWAP_WRITE_65536_SIZE;
                 pagedLookasideList = &GlobalContext.SwapWriteLookasideList_65536;
-                eAllocateType = BUFFER_SWAP_READ_65536;
+                eAllocateType = BUFFER_SWAP_WRITE_65536;
             }
             else
             {
                 uPoolSize = 1;  // 밑의 함수에서 uPoolSize 의 최소값을 지정해야한다 
-                eAllocateType = BUFFER_SWAP_READ;
+                eAllocateType = BUFFER_SWAP_WRITE;
             }
 
             ASSERT( uPoolSize > 0 );
