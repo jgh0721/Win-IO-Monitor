@@ -68,6 +68,7 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
         Args.CreateDisposition = ( Data->Iopb->Parameters.Create.Options >> 24 ) & 0x000000ff;
         Args.CreateDesiredAccess = SecurityContext->DesiredAccess;
         Args.DeleteOnClose = FlagOn( Args.CreateOptions, FILE_DELETE_ON_CLOSE ) > 0;
+        Args.RequiringOplock = FlagOn( Args.CreateOptions, FILE_OPEN_REQUIRING_OPLOCK ) > 0;
 
         if( BooleanFlagOn( Args.CreateOptions, FILE_DIRECTORY_FILE ) )
             __leave;
@@ -96,6 +97,9 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
         InitializeObjectAttributes( &Args.CreateObjectAttributes, &Args.CreateFileNameUS, OBJ_CASE_INSENSITIVE | OBJ_KERNEL_HANDLE, NULL, NULL );
 
         PrintIrpContext( IrpContext );
+
+        ClearFlag( Args.CreateOptions, FILE_OPEN_REQUIRING_OPLOCK );
+
         AcquireCmnResource( IrpContext, INST_EXCLUSIVE );
         IrpContext->Fcb = Vcb_SearchFCB( IrpContext->InstanceContext, IrpContext->SrcFileFullPathWOVolume );
 
@@ -201,6 +205,14 @@ NTSTATUS CreateFileExistFCB( IRP_CONTEXT* IrpContext )
         // 파일을 정상적으로 열 수 있도록 권한 조정
         switch( Args->CreateDesiredAccess )
         {
+            case FILE_CREATE: {
+                if( IrpContext->Fcb->OpnCount != 0 )
+                {
+                    AssignCmnResult( IrpContext, STATUS_OBJECT_NAME_COLLISION );
+                    SetFlag( IrpContext->CompleteStatus, COMPLETE_DONT_CONT_PROCESS );
+                    __leave;
+                }
+            } break;
             case FILE_OVERWRITE:
             case FILE_OVERWRITE_IF: {
                 SetFlag( Args->CreateDesiredAccess, FILE_WRITE_ATTRIBUTES | FILE_WRITE_EA | FILE_WRITE_DATA );
@@ -210,9 +222,66 @@ NTSTATUS CreateFileExistFCB( IRP_CONTEXT* IrpContext )
             } break;
         }
 
-        IoCheckShareAccess( Args->CreateDesiredAccess,
-                            Data->Iopb->Parameters.Create.ShareAccess, Args->FileObject,
-                            &IrpContext->Fcb->LowerShareAccess, FALSE );
+        Status = IoCheckShareAccess( Args->CreateDesiredAccess,
+                                     Data->Iopb->Parameters.Create.ShareAccess, Args->FileObject,
+                                     &IrpContext->Fcb->LowerShareAccess, FALSE );
+        // from X70FSD, Support Oplock
+        if( !NT_SUCCESS( Status ) )
+        {
+            if( nsUtils::VerifyVersionInfoEx( 6, 1, ">=" ) == true )
+            {
+                
+            }
+
+            AssignCmnResult( IrpContext, Status );
+            SetFlag( IrpContext->CompleteStatus, COMPLETE_DONT_CONT_PROCESS );
+            __leave;
+        }
+
+        if( nsUtils::VerifyVersionInfoEx( 6, 1, ">=" ) == true )
+        {
+            if( IrpContext->Fcb->OpnCount != 0 )
+            {
+                auto Ret = FltCheckOplock( &IrpContext->Fcb->FileOplock, Data, IrpContext, NULL, NULL );
+
+                if( Ret == FLT_PREOP_COMPLETE )
+                {
+                    AssignCmnResult( IrpContext, IrpContext->Data->IoStatus.Status );
+                    AssignCmnFltResult( IrpContext, Ret );
+                    SetFlag( IrpContext->CompleteStatus, COMPLETE_DONT_CONT_PROCESS );
+                    __leave;
+                }
+            }
+
+            if( Args->RequiringOplock == true )
+            {
+                auto Ret = FltOplockFsctrl( &IrpContext->Fcb->FileOplock, Data, IrpContext->Fcb->OpnCount );
+
+                if( Data->IoStatus.Status != STATUS_SUCCESS &&
+                    Data->IoStatus.Status != STATUS_OPLOCK_BREAK_IN_PROGRESS )
+                {
+                    AssignCmnResult( IrpContext, Data->IoStatus.Status );
+                    AssignCmnFltResult( IrpContext, FLT_PREOP_COMPLETE );
+
+                    SetFlag( IrpContext->CompleteStatus, COMPLETE_DONT_CONT_PROCESS );
+                    SetFlag( IrpContext->CompleteStatus, COMPLETE_FREE_LOWER_FILEOBJECT );
+
+                    __leave;
+                }
+            }
+        }
+        else
+        {
+            auto Ret = FltCheckOplock( &IrpContext->Fcb->FileOplock, Data, IrpContext, NULL, NULL );
+
+            if( Ret == FLT_PREOP_COMPLETE )
+            {
+                AssignCmnResult( IrpContext, IrpContext->Data->IoStatus.Status );
+                AssignCmnFltResult( IrpContext, Ret );
+                SetFlag( IrpContext->CompleteStatus, COMPLETE_DONT_CONT_PROCESS );
+                __leave;
+            }
+        }
 
         // NOTE: MSDN 에 따르면, 쓰기 권한으로 파일을 열기 전에 IRP_MJ_CREATE 에서 MmFlushImageSection 을 MmFlushForWrite 로 호출해야한다
         if( BooleanFlagOn( Args->CreateDesiredAccess, FILE_WRITE_DATA ) || Args->DeleteOnClose )
@@ -260,6 +329,9 @@ NTSTATUS CreateFileExistFCB( IRP_CONTEXT* IrpContext )
                                             0
         );
 
+        AssignCmnResult( IrpContext, Status );
+        AssignCmnResultInfo( IrpContext, IoStatus.Information );
+
         if( !NT_SUCCESS( Status ) )
         {
             KdPrint( ( "[WinIOSol] EvtID=%09d %s %s Status=0x%08x,%s\n"
@@ -267,8 +339,6 @@ NTSTATUS CreateFileExistFCB( IRP_CONTEXT* IrpContext )
                        , Status, ntkernel_error_category::find_ntstatus( Status )->message
                        ) );
 
-            AssignCmnResult( IrpContext, Status );
-            AssignCmnResultInfo( IrpContext, IoStatus.Information );
             AssignCmnFltResult( IrpContext, FLT_PREOP_COMPLETE );
             SetFlag( IrpContext->CompleteStatus, COMPLETE_DONT_CONT_PROCESS );
             __leave;
@@ -474,6 +544,41 @@ NTSTATUS CreateFileNonExistFCB( IRP_CONTEXT* IrpContext )
                 SetFlag( IrpContext->CompleteStatus, COMPLETE_FREE_LOWER_FILEOBJECT);
 
                 __leave;
+            }
+        }
+
+        if( nsUtils::VerifyVersionInfoEx( 6, 1, ">=" ) == true )
+        {
+            auto Ret = GlobalFltMgr.FltCheckOplockEx( &IrpContext->Fcb->FileOplock,
+                                                      Data, OPLOCK_FLAG_OPLOCK_KEY_CHECK_ONLY,
+                                                      NULL, NULL, NULL );
+
+            if( Ret == FLT_PREOP_COMPLETE )
+            {
+                AssignCmnResult( IrpContext, Data->IoStatus.Status );
+                AssignCmnFltResult( IrpContext, FLT_PREOP_COMPLETE );
+
+                SetFlag( IrpContext->CompleteStatus, COMPLETE_DONT_CONT_PROCESS );
+                SetFlag( IrpContext->CompleteStatus, COMPLETE_FREE_LOWER_FILEOBJECT );
+
+                __leave;
+            }
+
+            if( Args->RequiringOplock == true )
+            {
+                Ret = FltOplockFsctrl( &IrpContext->Fcb->FileOplock, Data, IrpContext->Fcb->OpnCount );
+
+                if( Data->IoStatus.Status != STATUS_SUCCESS && 
+                    Data->IoStatus.Status != STATUS_OPLOCK_BREAK_IN_PROGRESS )
+                {
+                    AssignCmnResult( IrpContext, Data->IoStatus.Status );
+                    AssignCmnFltResult( IrpContext, FLT_PREOP_COMPLETE );
+
+                    SetFlag( IrpContext->CompleteStatus, COMPLETE_DONT_CONT_PROCESS );
+                    SetFlag( IrpContext->CompleteStatus, COMPLETE_FREE_LOWER_FILEOBJECT );
+
+                    __leave;
+                }
             }
         }
 

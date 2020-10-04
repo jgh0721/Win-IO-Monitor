@@ -71,6 +71,7 @@ typedef struct _CREATE_ARGS
     UNICODE_STRING          CreateFileNameUS;
     OBJECT_ATTRIBUTES       CreateObjectAttributes;
     bool                    DeleteOnClose;
+    bool                    RequiringOplock;
 
     FCB*                    Fcb;
     FILE_OBJECT*            LowerFileObject;

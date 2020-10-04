@@ -115,7 +115,7 @@ PIRP_CONTEXT CreateIrpContext( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_
                 do
                 {
                     // FltGetFileNameInformation return volume path not driver letter
-                    auto Ret = FltGetFileNameInformation( Data, FLT_FILE_NAME_NORMALIZED | FLT_FILE_NAME_QUERY_FILESYSTEM_ONLY, &fni );
+                    auto Ret = FltGetFileNameInformation( Data, FLT_FILE_NAME_OPENED | FLT_FILE_NAME_QUERY_DEFAULT, &fni );
 
                     if( !NT_SUCCESS( Ret ) )
                     {
@@ -123,6 +123,7 @@ PIRP_CONTEXT CreateIrpContext( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_
                                    , IrpContext->EvtID, __FUNCTION__, "FltGetFileNameInformation(FILE_OPEN_BY_FILE_ID) FAILED"
                                    , Ret, ntkernel_error_category::find_ntstatus( Ret )->message
                                    ) );
+                        break;
                     }
 
                     IrpContext->SrcFileFullPath = AllocateBuffer<WCHAR>( BUFFER_FILENAME, fni->Name.MaximumLength );
@@ -143,7 +144,7 @@ PIRP_CONTEXT CreateIrpContext( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_
                     FltReleaseFileNameInformation( fni );
             }
         }
-
+        
         if( IrpContext->SrcFileFullPath.Buffer != NULLPTR )
         {
             if( IrpContext->SrcFileFullPath.Buffer[ 1 ] == L':' )
