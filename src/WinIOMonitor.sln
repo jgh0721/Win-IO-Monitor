@@ -11,6 +11,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WinIOMonitorAPI", "api\WinI
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "documentation", "documentation", "{F41645C6-5F27-4CAC-89AE-367303768414}"
 	ProjectSection(SolutionItems) = preProject
+		..\documentation\ChangeLog.md = ..\documentation\ChangeLog.md
 		..\README.md = ..\README.md
 	EndProjectSection
 EndProject
@@ -64,9 +65,9 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {DB9E5585-CC7E-4D4B-8E2A-8556242A28C9}
-		        SolutionGuid = {AE1EA6B0-A734-4C05-80B8-BFB036F0E1F3}
-		                        SolutionGuid = {0FD2E202-E7ED-40F7-A874-60849329379D}
 		                SolutionGuid = {54FB1274-30D8-4FBE-99CB-AE040C26E40A}
+		                        SolutionGuid = {0FD2E202-E7ED-40F7-A874-60849329379D}
+		        SolutionGuid = {AE1EA6B0-A734-4C05-80B8-BFB036F0E1F3}
+		SolutionGuid = {DB9E5585-CC7E-4D4B-8E2A-8556242A28C9}
 	EndGlobalSection
 EndGlobal
