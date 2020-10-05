@@ -309,7 +309,11 @@ void PrintIrpContextCREATE( PIRP_CONTEXT IrpContext, bool IsResultMode )
     const auto& Data = IrpContext->Data;
     const auto& MajorFunction = IrpContext->Data->Iopb->MajorFunction;
     const auto& MinorFunction = IrpContext->Data->Iopb->MinorFunction;
-    const auto& IoStatus = IrpContext->Data->IoStatus;
+    auto IoStatus = IrpContext->Data->IoStatus;
+    if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_IOSTATUS_STATUS ) )
+        IoStatus.Status = IrpContext->Status;
+    if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_IOSTATUS_INFORMATION ) )
+        IoStatus.Information = IrpContext->Information;
 
     char* DebugText = IrpContext->DebugText;
     static const int DebugTextSize = 1024 * sizeof( CHAR );
@@ -385,7 +389,11 @@ void PrintIrpContextREAD( PIRP_CONTEXT IrpContext, bool IsResultMode )
     const auto& Data = IrpContext->Data;
     const auto& MajorFunction = IrpContext->Data->Iopb->MajorFunction;
     const auto& MinorFunction = IrpContext->Data->Iopb->MinorFunction;
-    const auto& IoStatus = IrpContext->Data->IoStatus;
+    auto IoStatus = IrpContext->Data->IoStatus;
+    if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_IOSTATUS_STATUS ) )
+        IoStatus.Status = IrpContext->Status;
+    if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_IOSTATUS_INFORMATION ) )
+        IoStatus.Information = IrpContext->Information;
 
     char* DebugText = IrpContext->DebugText;
     static const int DebugTextSize = 1024 * sizeof( CHAR );
@@ -443,7 +451,11 @@ void PrintIrpContextWRITE( PIRP_CONTEXT IrpContext, bool IsResultMode )
     const auto& Data = IrpContext->Data;
     const auto& MajorFunction = IrpContext->Data->Iopb->MajorFunction;
     const auto& MinorFunction = IrpContext->Data->Iopb->MinorFunction;
-    const auto& IoStatus = IrpContext->Data->IoStatus;
+    auto IoStatus = IrpContext->Data->IoStatus;
+    if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_IOSTATUS_STATUS ) )
+        IoStatus.Status = IrpContext->Status;
+    if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_IOSTATUS_INFORMATION ) )
+        IoStatus.Information = IrpContext->Information;
 
     char* DebugText = IrpContext->DebugText;
     static const int DebugTextSize = 1024 * sizeof( CHAR );
@@ -501,7 +513,11 @@ void PrintIrpContextQUERY_INFORMATION( PIRP_CONTEXT IrpContext, bool IsResultMod
     const auto& Data = IrpContext->Data;
     const auto& MajorFunction = IrpContext->Data->Iopb->MajorFunction;
     const auto& MinorFunction = IrpContext->Data->Iopb->MinorFunction;
-    const auto& IoStatus = IrpContext->Data->IoStatus;
+    auto IoStatus = IrpContext->Data->IoStatus;
+    if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_IOSTATUS_STATUS ) )
+        IoStatus.Status = IrpContext->Status;
+    if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_IOSTATUS_INFORMATION ) )
+        IoStatus.Information = IrpContext->Information;
 
     char* DebugText = IrpContext->DebugText;
     static const int DebugTextSize = 1024 * sizeof( CHAR );
@@ -594,7 +610,11 @@ void PrintIrpContextSET_INFORMATION( PIRP_CONTEXT IrpContext, bool IsResultMode 
     const auto& Data = IrpContext->Data;
     const auto& MajorFunction = IrpContext->Data->Iopb->MajorFunction;
     const auto& MinorFunction = IrpContext->Data->Iopb->MinorFunction;
-    const auto& IoStatus = IrpContext->Data->IoStatus;
+    auto IoStatus = IrpContext->Data->IoStatus;
+    if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_IOSTATUS_STATUS ) )
+        IoStatus.Status = IrpContext->Status;
+    if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_IOSTATUS_INFORMATION ) )
+        IoStatus.Information = IrpContext->Information;
 
     char* DebugText = IrpContext->DebugText;
     static const int DebugTextSize = 1024 * sizeof( CHAR );
@@ -694,7 +714,11 @@ void PrintIrpContextCLEANUP( PIRP_CONTEXT IrpContext, bool IsResultMode )
     const auto& Data = IrpContext->Data;
     const auto& MajorFunction = IrpContext->Data->Iopb->MajorFunction;
     const auto& MinorFunction = IrpContext->Data->Iopb->MinorFunction;
-    const auto& IoStatus = IrpContext->Data->IoStatus;
+    auto IoStatus = IrpContext->Data->IoStatus;
+    if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_IOSTATUS_STATUS ) )
+        IoStatus.Status = IrpContext->Status;
+    if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_IOSTATUS_INFORMATION ) )
+        IoStatus.Information = IrpContext->Information;
 
     char* DebugText = IrpContext->DebugText;
     static const int DebugTextSize = 1024 * sizeof( CHAR );
@@ -730,7 +754,11 @@ void PrintIrpContextCLOSE( PIRP_CONTEXT IrpContext, bool IsResultMode )
     const auto& Data = IrpContext->Data;
     const auto& MajorFunction = IrpContext->Data->Iopb->MajorFunction;
     const auto& MinorFunction = IrpContext->Data->Iopb->MinorFunction;
-    const auto& IoStatus = IrpContext->Data->IoStatus;
+    auto IoStatus = IrpContext->Data->IoStatus;
+    if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_IOSTATUS_STATUS ) )
+        IoStatus.Status = IrpContext->Status;
+    if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_IOSTATUS_INFORMATION ) )
+        IoStatus.Information = IrpContext->Information;
 
     char* DebugText = IrpContext->DebugText;
     static const int DebugTextSize = 1024 * sizeof( CHAR );
@@ -865,7 +893,11 @@ void PrintIrpContextQUERY_VOLUME_INFORMATION( PIRP_CONTEXT IrpContext, bool IsRe
     const auto& Data = IrpContext->Data;
     const auto& MajorFunction = IrpContext->Data->Iopb->MajorFunction;
     const auto& MinorFunction = IrpContext->Data->Iopb->MinorFunction;
-    const auto& IoStatus = IrpContext->Data->IoStatus;
+    auto IoStatus = IrpContext->Data->IoStatus;
+    if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_IOSTATUS_STATUS ) )
+        IoStatus.Status = IrpContext->Status;
+    if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_IOSTATUS_INFORMATION ) )
+        IoStatus.Information = IrpContext->Information;
 
     char* DebugText = IrpContext->DebugText;
     static const int DebugTextSize = 1024 * sizeof( CHAR );
@@ -904,7 +936,11 @@ void PrintIrpContextFILE_SYSTEM_CONTROL( PIRP_CONTEXT IrpContext, bool IsResultM
     const auto& Data = IrpContext->Data;
     const auto& MajorFunction = IrpContext->Data->Iopb->MajorFunction;
     const auto& MinorFunction = IrpContext->Data->Iopb->MinorFunction;
-    const auto& IoStatus = IrpContext->Data->IoStatus;
+    auto IoStatus = IrpContext->Data->IoStatus;
+    if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_IOSTATUS_STATUS ) )
+        IoStatus.Status = IrpContext->Status;
+    if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_IOSTATUS_INFORMATION ) )
+        IoStatus.Information = IrpContext->Information;
 
     char* DebugText = IrpContext->DebugText;
     static const int DebugTextSize = 1024 * sizeof( CHAR );
@@ -946,7 +982,11 @@ void PrintIrpContextLOCK_CONTROL( PIRP_CONTEXT IrpContext, bool IsResultMode )
     const auto& Data = IrpContext->Data;
     const auto& MajorFunction = IrpContext->Data->Iopb->MajorFunction;
     const auto& MinorFunction = IrpContext->Data->Iopb->MinorFunction;
-    const auto& IoStatus = IrpContext->Data->IoStatus;
+    auto IoStatus = IrpContext->Data->IoStatus;
+    if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_IOSTATUS_STATUS ) )
+        IoStatus.Status = IrpContext->Status;
+    if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_IOSTATUS_INFORMATION ) )
+        IoStatus.Information = IrpContext->Information;
 
     char* DebugText = IrpContext->DebugText;
     static const int DebugTextSize = 1024 * sizeof( CHAR );

@@ -631,19 +631,19 @@ namespace nsW32API
         {
             return "FILE_SHARE_DELETE";
         }
-        else if( ShareAccess & ( FILE_SHARE_READ & FILE_SHARE_WRITE ) )
+        else if( ShareAccess & ( FILE_SHARE_READ | FILE_SHARE_WRITE ) )
         {
             return "FILE_SHARE_READ|FILE_SHARE_WRITE";
         }
-        else if( ShareAccess & ( FILE_SHARE_READ & FILE_SHARE_WRITE & FILE_SHARE_DELETE ) )
+        else if( ShareAccess & ( FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE ) )
         {
             return "FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE";
         }
-        else if( ShareAccess & ( FILE_SHARE_WRITE & FILE_SHARE_DELETE ) )
+        else if( ShareAccess & ( FILE_SHARE_WRITE | FILE_SHARE_DELETE ) )
         {
             return "FILE_SHARE_WRITE|FILE_SHARE_DELETE";
         }
-        else if( ShareAccess & ( FILE_SHARE_READ & FILE_SHARE_DELETE ) )
+        else if( ShareAccess & ( FILE_SHARE_READ | FILE_SHARE_DELETE ) )
         {
             return "FILE_SHARE_READ|FILE_SHARE_DELETE";
         }
@@ -718,7 +718,7 @@ namespace nsW32API
 
     const char* ConvertCreateResultInformationTo( NTSTATUS Status, ULONG_PTR Information )
     {
-        if( !NT_SUCCESS( Status ) && Information != FILE_DOES_NOT_EXIST )
+        if( !NT_SUCCESS( Status ) && Information != FILE_DOES_NOT_EXIST && Information != FILE_EXISTS )
             return "FAILED";
 
         switch( Information )
