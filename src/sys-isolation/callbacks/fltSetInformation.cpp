@@ -223,6 +223,8 @@ NTSTATUS ProcessSetFileEndOfFileInformation( IRP_CONTEXT* IrpContext )
 
     auto InfoBuffer = IrpContext->Data->Iopb->Parameters.SetFileInformation.InfoBuffer;
     BOOLEAN bAdvanceOnly = IrpContext->Data->Iopb->Parameters.SetFileInformation.AdvanceOnly;
+    BOOLEAN bCacheMapInitialized = FALSE;
+    auto EndOfFile = ( PFILE_END_OF_FILE_INFORMATION )InfoBuffer;
 
     __try
     {
@@ -240,19 +242,82 @@ NTSTATUS ProcessSetFileEndOfFileInformation( IRP_CONTEXT* IrpContext )
         AcquireCmnResource( IrpContext, FCB_MAIN_EXCLUSIVE );
         AcquireCmnResource( IrpContext, FCB_PGIO_EXCLUSIVE );
 
-        if( bAdvanceOnly == TRUE )
-            __leave;
-
-        LARGE_INTEGER HelperFileSize;
-        PFILE_END_OF_FILE_INFORMATION EndOfFile = ( PFILE_END_OF_FILE_INFORMATION )InfoBuffer;
-
-        if( EndOfFile->EndOfFile.QuadPart < Fcb->AdvFcbHeader.FileSize.QuadPart )
+        if( FileObject->SectionObjectPointer->DataSectionObject != NULLPTR && 
+            FileObject->SectionObjectPointer->SharedCacheMap == NULLPTR && 
+            !BooleanFlagOn( IrpContext->Data->Iopb->IrpFlags, IRP_PAGING_IO ) )
         {
-            if( Fcb->SectionObjects.ImageSectionObject )
+            if( FlagOn( FileObject->Flags, FO_CLEANUP_COMPLETE ) )
             {
-                if( !MmCanFileBeTruncated( &Fcb->SectionObjects, &EndOfFile->EndOfFile ) )
+                Status = STATUS_FILE_CLOSED;
+                AssignCmnResult( IrpContext, Status );
+                __leave;
+            }
+
+            CcInitializeCacheMap( FileObject, (PCC_FILE_SIZES)&Fcb->AdvFcbHeader.AllocationSize,
+                                  FALSE, 
+                                  &GlobalContext.CacheMgrCallbacks, 
+                                  Fcb );
+
+            bCacheMapInitialized = TRUE;
+        }
+
+        // LazyWriteCallback 에 의해 호출될 때 AdvanceOnly 가 1 로 설정되어 호출된다 
+        if( bAdvanceOnly != FALSE )
+        {
+            if( EndOfFile->EndOfFile.QuadPart <= Fcb->AdvFcbHeader.FileSize.QuadPart )
+            {
+                Status = STATUS_SUCCESS;
+                AssignCmnResult( IrpContext, Status );
+                __leave;
+            }
+
+            // 지연된 쓰기 호출에서는 파일 크기를 변경할 수 없다
+            EndOfFile->EndOfFile.QuadPart = Fcb->AdvFcbHeader.FileSize.QuadPart;
+
+            Status = FltSetInformationFile( IrpContext->FltObjects->Instance, 
+                                            Ccb->LowerFileObject != NULLPTR ? Ccb->LowerFileObject : Fcb->LowerFileObject,
+                                            EndOfFile, sizeof( FILE_END_OF_FILE_INFORMATION ),
+                                            FileEndOfFileInformation );
+            
+            AssignCmnResult( IrpContext, Status );
+        }
+        else
+        {
+            LARGE_INTEGER HelperFileSize;
+
+            if( EndOfFile->EndOfFile.QuadPart < Fcb->AdvFcbHeader.FileSize.QuadPart )
+            {
+                if( Fcb->SectionObjects.ImageSectionObject )
                 {
-                    Status = STATUS_USER_MAPPED_FILE;
+                    if( !MmCanFileBeTruncated( &Fcb->SectionObjects, &EndOfFile->EndOfFile ) )
+                    {
+                        Status = STATUS_USER_MAPPED_FILE;
+                        KdPrint( ( "[WinIOSol] EvtID=%09d %s %s Line=%d, Status=0x%08x,%s\n",
+                                   IrpContext->EvtID, __FUNCTION__, "MmCanFileBeTruncated FAILED", __LINE__
+                                   , Status, ntkernel_error_category::find_ntstatus( Status )->message ) );
+
+                        AssignCmnResult( IrpContext, Status );
+                        __leave;
+                    }
+                }
+
+                Fcb->AdvFcbHeader.FileSize.QuadPart = EndOfFile->EndOfFile.QuadPart;
+                Fcb->AdvFcbHeader.AllocationSize.QuadPart = ROUND_TO_SIZE( EndOfFile->EndOfFile.QuadPart, Fcb->InstanceContext->ClusterSize );
+                if( Fcb->AdvFcbHeader.FileSize.QuadPart < Fcb->AdvFcbHeader.ValidDataLength.QuadPart )
+                {
+                    Fcb->AdvFcbHeader.ValidDataLength.QuadPart = Fcb->AdvFcbHeader.FileSize.QuadPart;
+                }
+
+                HelperFileSize.QuadPart = EndOfFile->EndOfFile.QuadPart;
+
+                Status = FltSetInformationFile( IrpContext->FltObjects->Instance, 
+                                                Ccb->LowerFileObject != NULLPTR ? Ccb->LowerFileObject : Fcb->LowerFileObject,
+                                                &HelperFileSize,
+                                                sizeof( FILE_END_OF_FILE_INFORMATION ),
+                                                FileEndOfFileInformation );
+
+                if( !NT_SUCCESS( Status ) )
+                {
                     KdPrint( ( "[WinIOSol] EvtID=%09d %s %s Line=%d, Status=0x%08x,%s\n",
                                IrpContext->EvtID, __FUNCTION__, "MmCanFileBeTruncated FAILED", __LINE__
                                , Status, ntkernel_error_category::find_ntstatus( Status )->message ) );
@@ -260,87 +325,65 @@ NTSTATUS ProcessSetFileEndOfFileInformation( IRP_CONTEXT* IrpContext )
                     AssignCmnResult( IrpContext, Status );
                     __leave;
                 }
-            }
 
-            Fcb->AdvFcbHeader.FileSize.QuadPart = EndOfFile->EndOfFile.QuadPart;
-            Fcb->AdvFcbHeader.AllocationSize.QuadPart = ROUND_TO_SIZE( EndOfFile->EndOfFile.QuadPart, Fcb->InstanceContext->ClusterSize );
-            if( Fcb->AdvFcbHeader.FileSize.QuadPart < Fcb->AdvFcbHeader.ValidDataLength.QuadPart )
-            {
-                Fcb->AdvFcbHeader.ValidDataLength.QuadPart = Fcb->AdvFcbHeader.FileSize.QuadPart;
-            }
+                if( CcIsFileCached( FileObject ) )
+                {
+                    CcSetFileSizes( FileObject, ( PCC_FILE_SIZES )( &Fcb->AdvFcbHeader.AllocationSize ) );
+                }
 
-            HelperFileSize.QuadPart = EndOfFile->EndOfFile.QuadPart;
-
-            Status = FltSetInformationFile( IrpContext->FltObjects->Instance, Ccb->LowerFileObject,
-                                            &HelperFileSize,
-                                            sizeof( FILE_END_OF_FILE_INFORMATION ),
-                                            FileEndOfFileInformation );
-
-            if( !NT_SUCCESS( Status ) )
-            {
-                KdPrint( ( "[WinIOSol] EvtID=%09d %s %s Line=%d, Status=0x%08x,%s\n",
-                           IrpContext->EvtID, __FUNCTION__, "MmCanFileBeTruncated FAILED", __LINE__
-                           , Status, ntkernel_error_category::find_ntstatus( Status )->message ) );
-
+                Status = STATUS_SUCCESS;
                 AssignCmnResult( IrpContext, Status );
-                __leave;
+                AssignCmnResultInfo( IrpContext, sizeof( FILE_END_OF_FILE_INFORMATION ) );
+
+                FileObject->Flags |= FO_FILE_MODIFIED;
             }
-
-            if( CcIsFileCached( FileObject ) )
+            else if( EndOfFile->EndOfFile.QuadPart == Fcb->AdvFcbHeader.FileSize.QuadPart )
             {
-                CcSetFileSizes( FileObject, ( PCC_FILE_SIZES )( &Fcb->AdvFcbHeader.AllocationSize ) );
+                ;
             }
-
-            Status = STATUS_SUCCESS;
-            AssignCmnResult( IrpContext, Status );
-            AssignCmnResultInfo( IrpContext, sizeof( FILE_END_OF_FILE_INFORMATION ) );
-
-            FileObject->Flags |= FO_FILE_MODIFIED;
-        }
-        else if( EndOfFile->EndOfFile.QuadPart == Fcb->AdvFcbHeader.FileSize.QuadPart )
-        {
-            ;
-        }
-        else
-        {
-            Fcb->AdvFcbHeader.FileSize.QuadPart = EndOfFile->EndOfFile.QuadPart;
-            Fcb->AdvFcbHeader.ValidDataLength.QuadPart = EndOfFile->EndOfFile.QuadPart;
-            Fcb->AdvFcbHeader.AllocationSize.QuadPart = ROUND_TO_SIZE( EndOfFile->EndOfFile.QuadPart, Fcb->InstanceContext->ClusterSize );
-
-            HelperFileSize.QuadPart = EndOfFile->EndOfFile.QuadPart;
-
-            Status = FltSetInformationFile( IrpContext->FltObjects->Instance, Ccb->LowerFileObject,
-                                            &HelperFileSize,
-                                            sizeof( FILE_END_OF_FILE_INFORMATION ),
-                                            FileEndOfFileInformation );
-
-            if( !NT_SUCCESS( Status ) )
+            else
             {
-                KdPrint( ( "[WinIOSol] EvtID=%09d %s %s Line=%d, Status=0x%08x,%s\n",
-                           IrpContext->EvtID, __FUNCTION__, "MmCanFileBeTruncated FAILED", __LINE__
-                           , Status, ntkernel_error_category::find_ntstatus( Status )->message ) );
+                Fcb->AdvFcbHeader.FileSize.QuadPart = EndOfFile->EndOfFile.QuadPart;
+                Fcb->AdvFcbHeader.ValidDataLength.QuadPart = EndOfFile->EndOfFile.QuadPart;
+                Fcb->AdvFcbHeader.AllocationSize.QuadPart = ROUND_TO_SIZE( EndOfFile->EndOfFile.QuadPart, Fcb->InstanceContext->ClusterSize );
 
+                HelperFileSize.QuadPart = EndOfFile->EndOfFile.QuadPart;
+
+                Status = FltSetInformationFile( IrpContext->FltObjects->Instance, 
+                                                Ccb->LowerFileObject != NULLPTR ? Ccb->LowerFileObject : Fcb->LowerFileObject,
+                                                &HelperFileSize,
+                                                sizeof( FILE_END_OF_FILE_INFORMATION ),
+                                                FileEndOfFileInformation );
+
+                if( !NT_SUCCESS( Status ) )
+                {
+                    KdPrint( ( "[WinIOSol] EvtID=%09d %s %s Line=%d, Status=0x%08x,%s\n",
+                               IrpContext->EvtID, __FUNCTION__, "MmCanFileBeTruncated FAILED", __LINE__
+                               , Status, ntkernel_error_category::find_ntstatus( Status )->message ) );
+
+                    AssignCmnResult( IrpContext, Status );
+                    __leave;
+                }
+
+                if( CcIsFileCached( FileObject ) )
+                {
+                    CcSetFileSizes( FileObject, ( PCC_FILE_SIZES )( &Fcb->AdvFcbHeader.AllocationSize ) );
+                }
+
+                Status = STATUS_SUCCESS;
                 AssignCmnResult( IrpContext, Status );
-                __leave;
+                AssignCmnResultInfo( IrpContext, 0 );
+
+                FileObject->Flags |= FO_FILE_MODIFIED;
             }
 
-            if( CcIsFileCached( FileObject ) )
-            {
-                CcSetFileSizes( FileObject, ( PCC_FILE_SIZES )( &Fcb->AdvFcbHeader.AllocationSize ) );
-            }
-
-            Status = STATUS_SUCCESS;
-            AssignCmnResult( IrpContext, Status );
-            AssignCmnResultInfo( IrpContext, 0 );
-
-            FileObject->Flags |= FO_FILE_MODIFIED;
-        }
-
-        SetFlag( Fcb->Flags, FCB_STATE_FILE_MODIFIED );
+            SetFlag( Fcb->Flags, FCB_STATE_FILE_MODIFIED );
+        } // if bAdvanceOnly
     }
     __finally
     {
-
+        if( bCacheMapInitialized != FALSE )
+            CcUninitializeCacheMap( FileObject, NULL, NULL );
     }
 
     return Status;
@@ -352,12 +395,16 @@ NTSTATUS ProcessSetFileValidDataLengthInformation( IRP_CONTEXT* IrpContext )
 
     auto FileObject = IrpContext->FltObjects->FileObject;
     auto Fcb = ( FCB* )FileObject->FsContext;
+    auto Ccb = ( CCB* )FileObject->FsContext2;
 
     auto Length = IrpContext->Data->Iopb->Parameters.SetFileInformation.Length;
     auto FileInformationClass = ( nsW32API::FILE_INFORMATION_CLASS )IrpContext->Data->Iopb->Parameters.SetFileInformation.FileInformationClass;
     auto ParentOfTarget = IrpContext->Data->Iopb->Parameters.SetFileInformation.ParentOfTarget;
 
     auto InfoBuffer = IrpContext->Data->Iopb->Parameters.SetFileInformation.InfoBuffer;
+    BOOLEAN bAdvanceOnly = IrpContext->Data->Iopb->Parameters.SetFileInformation.AdvanceOnly;
+    BOOLEAN bCacheMapInitialized = FALSE;
+    auto VDLOfFile = ( PFILE_VALID_DATA_LENGTH_INFORMATION )InfoBuffer;
 
     __try
     {
@@ -371,10 +418,87 @@ NTSTATUS ProcessSetFileValidDataLengthInformation( IRP_CONTEXT* IrpContext )
             __leave;
         }
 
+        if( FileObject->SectionObjectPointer->DataSectionObject != NULLPTR &&
+            FileObject->SectionObjectPointer->SharedCacheMap == NULLPTR &&
+            !BooleanFlagOn( IrpContext->Data->Iopb->IrpFlags, IRP_PAGING_IO ) )
+        {
+            if( FlagOn( FileObject->Flags, FO_CLEANUP_COMPLETE ) )
+            {
+                Status = STATUS_FILE_CLOSED;
+                AssignCmnResult( IrpContext, Status );
+                __leave;
+            }
+
+            CcInitializeCacheMap( FileObject, ( PCC_FILE_SIZES )&Fcb->AdvFcbHeader.AllocationSize,
+                                  FALSE,
+                                  &GlobalContext.CacheMgrCallbacks,
+                                  Fcb );
+
+            bCacheMapInitialized = TRUE;
+        }
+
+        if( bAdvanceOnly != FALSE )
+        {
+            if( VDLOfFile->ValidDataLength.QuadPart <= Fcb->AdvFcbHeader.ValidDataLength.QuadPart )
+            {
+                Status = STATUS_SUCCESS;
+                AssignCmnResult( IrpContext, Status );
+                __leave;
+            }
+
+            // 지연된 쓰기 호출에서는 파일 크기를 변경할 수 없다
+            VDLOfFile->ValidDataLength.QuadPart = Fcb->AdvFcbHeader.ValidDataLength.QuadPart;
+
+            Status = FltSetInformationFile( IrpContext->FltObjects->Instance,
+                                            Ccb->LowerFileObject != NULLPTR ? Ccb->LowerFileObject : Fcb->LowerFileObject,
+                                            VDLOfFile, sizeof( FILE_VALID_DATA_LENGTH_INFORMATION ),
+                                            FileValidDataLengthInformation );
+
+            AssignCmnResult( IrpContext, Status );
+        }
+        else
+        {
+            if( VDLOfFile->ValidDataLength.QuadPart < Fcb->AdvFcbHeader.ValidDataLength.QuadPart )
+            {
+                if( !MmCanFileBeTruncated( FileObject->SectionObjectPointer, &VDLOfFile->ValidDataLength ) )
+                {
+                    Status = STATUS_USER_MAPPED_FILE;
+                    AssignCmnResult( IrpContext, Status );
+                    __leave;
+                }
+
+                AcquireCmnResource( IrpContext, FCB_PGIO_EXCLUSIVE );
+            }
+
+            auto Current = Fcb->AdvFcbHeader.ValidDataLength;
+            Fcb->AdvFcbHeader.ValidDataLength.QuadPart = VDLOfFile->ValidDataLength.QuadPart;
+
+            Status = FltSetInformationFile( IrpContext->FltObjects->Instance,
+                                            Ccb->LowerFileObject != NULLPTR ? Ccb->LowerFileObject : Fcb->LowerFileObject,
+                                            VDLOfFile, sizeof( FILE_VALID_DATA_LENGTH_INFORMATION ),
+                                            FileValidDataLengthInformation );
+
+            if( !NT_SUCCESS( Status ))
+            {
+                Fcb->AdvFcbHeader.ValidDataLength = Current;
+                AssignCmnResult( IrpContext, Status );
+                __leave;
+            }
+
+            if( CcIsFileCached( FileObject ) )
+                CcSetFileSizes( FileObject, ( PCC_FILE_SIZES )&Fcb->AdvFcbHeader.AllocationSize );
+
+            FileObject->Flags |= FO_FILE_MODIFIED;
+
+            Status = STATUS_SUCCESS;
+            AssignCmnResult( IrpContext, Status );
+
+        } // if bAdvanceOnly
     }
     __finally
     {
-
+        if( bCacheMapInitialized != FALSE )
+            CcUninitializeCacheMap( FileObject, NULL, NULL );
     }
 
     return Status;
