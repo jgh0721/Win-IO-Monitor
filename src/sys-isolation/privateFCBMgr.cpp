@@ -100,7 +100,7 @@ NTSTATUS InitializeFcbAndCcb( IRP_CONTEXT* IrpContext )
         Fcb->AdvFcbHeader.NodeByteSize = Fcb->NodeSize;
 
         // TODO: 향후 Fast IO 를 지원할 때 변경한다
-        Fcb->AdvFcbHeader.IsFastIoPossible = FastIoIsNotPossible;
+        Fcb->AdvFcbHeader.IsFastIoPossible = FastIoIsQuestionable;
 
         Fcb->AdvFcbHeader.Resource = &Fcb->MainResource;
         Fcb->AdvFcbHeader.PagingIoResource = &Fcb->PagingIoResource;

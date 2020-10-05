@@ -6,6 +6,7 @@
 #include "fltCmnLibs.hpp"
 #include "utilities/osInfoMgr.hpp"
 #include "utilities/bufferMgr.hpp"
+#include "utilities/fltUtilities.hpp"
 
 #include "W32API.hpp"
 
@@ -363,6 +364,8 @@ NTSTATUS CreateFileExistFCB( IRP_CONTEXT* IrpContext )
         Args->FileObject->SectionObjectPointer = &IrpContext->Fcb->SectionObjects;
         Args->FileObject->PrivateCacheMap = NULLPTR;               // 파일에 접근할 때 캐시를 초기화한다
         Args->FileObject->Flags |= FO_CACHE_SUPPORTED;
+
+        IrpContext->Fcb->AdvFcbHeader.IsFastIoPossible = CheckIsFastIOPossible( IrpContext->Fcb );
 
         InterlockedIncrement( &IrpContext->Fcb->OpnCount );
         InterlockedIncrement( &IrpContext->Fcb->ClnCount );
