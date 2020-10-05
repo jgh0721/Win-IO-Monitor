@@ -21,7 +21,7 @@
 
 NTSTATUS FLTAPI DriverEntry( PDRIVER_OBJECT DriverObject, PUNICODE_STRING RegistryPath )
 {
-    KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_TRACE_LEVEL, "[WinIOMon] %s DriverObject=%p|RegistryPath=%wZ\n",
+    KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_TRACE_LEVEL, "[WinIOSol] %s DriverObject=%p|RegistryPath=%wZ\n",
                  __FUNCTION__, DriverObject, RegistryPath ) );
 
     NTSTATUS Status = STATUS_UNSUCCESSFUL;
@@ -35,7 +35,7 @@ NTSTATUS FLTAPI DriverEntry( PDRIVER_OBJECT DriverObject, PUNICODE_STRING Regist
         PFAST_IO_DISPATCH FastIODispatch = ( PFAST_IO_DISPATCH )ExAllocatePoolWithTag( NonPagedPool, sizeof( FAST_IO_DISPATCH ), 'abcd' );
         if( FastIODispatch == NULLPTR )
         {
-            KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_ERROR_LEVEL, "[WinIOMon] %s %s\n", __FUNCTION__, "ExAllocatePoolWithTag FAILED" ) );
+            KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_ERROR_LEVEL, "[WinIOSol] %s %s\n", __FUNCTION__, "ExAllocatePoolWithTag FAILED" ) );
             Status = STATUS_INSUFFICIENT_RESOURCES;
             break;
         }
@@ -64,7 +64,7 @@ NTSTATUS FLTAPI DriverEntry( PDRIVER_OBJECT DriverObject, PUNICODE_STRING Regist
 
 void DriverUnload( PDRIVER_OBJECT DriverObject )
 {
-    KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_TRACE_LEVEL, "[WinIOMon] %s DriverObject=%p\n",
+    KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_TRACE_LEVEL, "[WinIOSol] %s DriverObject=%p\n",
                  __FUNCTION__, DriverObject ) );
 
     /*!
@@ -174,7 +174,7 @@ NTSTATUS InitializeGlobalContext( PDRIVER_OBJECT DriverObject )
 
     } while( false );
 
-    KdPrint( ( "[WinIOMon] %s Line=%d Status=0x%08x\n", __FUNCTION__, __LINE__, Status ) );
+    KdPrint( ( "[WinIOSol] %s Line=%d Status=0x%08x\n", __FUNCTION__, __LINE__, Status ) );
     return Status;
 }
 
@@ -188,6 +188,6 @@ NTSTATUS InitializeFeatures( CTX_GLOBAL_DATA* GlobalContext )
 
     } while( false );
 
-    KdPrint( ( "[WinIOMon] %s Line=%d Status=0x%08x\n", __FUNCTION__, __LINE__, Status ) );
+    KdPrint( ( "[WinIOSol] %s Line=%d Status=0x%08x\n", __FUNCTION__, __LINE__, Status ) );
     return Status;
 }

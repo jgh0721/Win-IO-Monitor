@@ -47,7 +47,7 @@ NTSTATUS FLTAPI FilterTransactionNotificationCallback( PCFLT_RELATED_OBJECTS Flt
     ASSERT( ( !FlagOnAll( NotificationMask, ( DF_NOTIFICATION_MASK ) ) ) &&
             FlagOn( NotificationMask, ( DF_NOTIFICATION_MASK ) ) );
 
-    KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_TRACE_LEVEL, "[WinIOMon] %s %s %s\n",
+    KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_TRACE_LEVEL, "[WinIOSol] %s %s %s\n",
                  __FUNCTION__, "TransactionNotification : ", commit != FALSE ? "COMMIT" : "ROLLBACK" ) );
 
     ASSERT( NULL != TransactionContext->Resource );
@@ -89,14 +89,14 @@ void DfNotifyDeleteOnTransactionEnd( PDF_DELETE_NOTIFY DeleteNotify, BOOLEAN Com
     {
         if( Commit != FALSE )
         {
-            KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_INFO_LEVEL, "[WinIOMon] %s %s : %ws(%p)\n" 
+            KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_INFO_LEVEL, "[WinIOSol] %s %s : %ws(%p)\n" 
                          __FUNCTION__, "File Deleted In Transaction Commit"
                          , DeleteNotify->StreamContext->FileFullPath.Buffer, DeleteNotify->StreamContext 
                          ) );
         }
         else
         {
-            KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_INFO_LEVEL, "[WinIOMon] %s %s : %ws(%p)\n"
+            KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_INFO_LEVEL, "[WinIOSol] %s %s : %ws(%p)\n"
                          __FUNCTION__, "File Delete Canceled By Transaction Rollback"
                          , DeleteNotify->StreamContext->FileFullPath.Buffer, DeleteNotify->StreamContext
                          ) );
@@ -107,14 +107,14 @@ void DfNotifyDeleteOnTransactionEnd( PDF_DELETE_NOTIFY DeleteNotify, BOOLEAN Com
         // alternate data stream
         if( Commit != FALSE )
         {
-            KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_INFO_LEVEL, "[WinIOMon] %s %s : %ws(%p)\n"
+            KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_INFO_LEVEL, "[WinIOSol] %s %s : %ws(%p)\n"
                          __FUNCTION__, "ADS Deleted In Transaction Commit"
                          , DeleteNotify->StreamContext->FileFullPath.Buffer, DeleteNotify->StreamContext
                          ) );
         }
         else
         {
-            KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_INFO_LEVEL, "[WinIOMon] %s %s : %ws(%p)\n"
+            KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_INFO_LEVEL, "[WinIOSol] %s %s : %ws(%p)\n"
                          __FUNCTION__, "ADS Delete Canceled By Transaction Rollback"
                          , DeleteNotify->StreamContext->FileFullPath.Buffer, DeleteNotify->StreamContext
                          ) );

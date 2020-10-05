@@ -214,7 +214,7 @@ NTSTATUS InitializeMiniFilter( CTX_GLOBAL_DATA* GlobalContext )
 
         if( !NT_SUCCESS( Status ) )
         {
-            KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_ERROR_LEVEL, "[WinIOMon] %s %s Status=0x%08x\n",
+            KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_ERROR_LEVEL, "[WinIOSol] %s %s Status=0x%08x\n",
                          __FUNCTION__, "FltRegisterFilter FAILED", Status ) );
             break;
         }
@@ -225,7 +225,7 @@ NTSTATUS InitializeMiniFilter( CTX_GLOBAL_DATA* GlobalContext )
 
         if( !NT_SUCCESS( Status ) )
         {
-            KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_ERROR_LEVEL, "[WinIOMon] %s %s Status=0x%08x\n",
+            KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_ERROR_LEVEL, "[WinIOSol] %s %s Status=0x%08x\n",
                          __FUNCTION__, "FltStartFiltering FAILED", Status ) );
             break;
         }
@@ -246,13 +246,13 @@ NTSTATUS InitializeMiniFilter( CTX_GLOBAL_DATA* GlobalContext )
         }
     }
 
-    KdPrint( ( "[WinIOMon] %s Line=%d Status=0x%08x\n", __FUNCTION__, __LINE__, Status ) );
+    KdPrint( ( "[WinIOSol] %s Line=%d Status=0x%08x\n", __FUNCTION__, __LINE__, Status ) );
     return Status;
 }
 
 NTSTATUS InitializeMiniFilterPort( CTX_GLOBAL_DATA* GlobalContext )
 {
-    KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_TRACE_LEVEL, "[WinIOMon] %s GlobalContext=%p", __FUNCTION__, GlobalContext ) );
+    KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_TRACE_LEVEL, "[WinIOSol] %s GlobalContext=%p\n", __FUNCTION__, GlobalContext ) );
     NTSTATUS Status = STATUS_UNSUCCESSFUL;
     PSECURITY_DESCRIPTOR SD = NULLPTR;
 
@@ -262,7 +262,7 @@ NTSTATUS InitializeMiniFilterPort( CTX_GLOBAL_DATA* GlobalContext )
 
         if( !NT_SUCCESS( Status ) )
         {
-            KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_ERROR_LEVEL, "[WinIOMon] %s %s Status=0x%08x\n",
+            KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_ERROR_LEVEL, "[WinIOSol] %s %s Status=0x%08x\n",
                          __FUNCTION__, "FltBuildDefaultSecurityDescriptor FAILED", Status ) );
             break;
         }
@@ -282,7 +282,7 @@ NTSTATUS InitializeMiniFilterPort( CTX_GLOBAL_DATA* GlobalContext )
 
         if( !NT_SUCCESS( Status ) )
         {
-            KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_ERROR_LEVEL, "[WinIOMon] %s %s Status=0x%08x PortName=%wZ\n",
+            KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_ERROR_LEVEL, "[WinIOSol] %s %s Status=0x%08x PortName=%wZ\n",
                          __FUNCTION__, "FltCreateCommunicationPort FAILED", Status, &PortName ) );
             break;
         }
@@ -297,7 +297,7 @@ NTSTATUS InitializeMiniFilterPort( CTX_GLOBAL_DATA* GlobalContext )
 
 NTSTATUS FLTAPI MiniFilterUnload( FLT_FILTER_UNLOAD_FLAGS Flags )
 {
-    KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_TRACE_LEVEL, "[WinIOMon] %s Flags=%d", __FUNCTION__, Flags ) );
+    KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_TRACE_LEVEL, "[WinIOSol] %s Flags=%d\n", __FUNCTION__, Flags ) );
 
     if( GlobalContext.ServerPort != NULLPTR )
         FltCloseCommunicationPort( GlobalContext.ServerPort );
@@ -319,7 +319,7 @@ NTSTATUS FLTAPI ClientConnectNotify( PFLT_PORT ClientPort, PVOID ServerPortCooki
 
 void FLTAPI ClientDisconnectNotify( PVOID ConnectionCookie )
 {
-    KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_TRACE_LEVEL, "[WinIOMon] %s ConnectionCookie=%d", __FUNCTION__, ConnectionCookie ) );
+    KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_TRACE_LEVEL, "[WinIOSol] %s ConnectionCookie=%d\n", __FUNCTION__, ConnectionCookie ) );
 
     FltCloseClientPort( GlobalContext.Filter, &GlobalContext.ClientPort );
     GlobalContext.ClientPort = NULLPTR;

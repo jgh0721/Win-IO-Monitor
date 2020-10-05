@@ -64,7 +64,7 @@ NTSTATUS CreateInstanceContext( PCFLT_RELATED_OBJECTS FltObjects, FLT_INSTANCE_S
         Status = CtxAllocateContext( FltObjects->Filter, FLT_INSTANCE_CONTEXT, ( PFLT_CONTEXT* )&InstanceContext );
         if( !NT_SUCCESS( Status ) )
         {
-            KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_ERROR_LEVEL, "[WinIOMon] %s %s Status=0x%08x,%s\n",
+            KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_ERROR_LEVEL, "[WinIOSol] %s %s Status=0x%08x,%s\n",
                          __FUNCTION__, "CtxAllocateContext FAILED", Status, ntkernel_error_category::find_ntstatus( Status )->message ) );
             break;
         }
@@ -72,7 +72,7 @@ NTSTATUS CreateInstanceContext( PCFLT_RELATED_OBJECTS FltObjects, FLT_INSTANCE_S
         Status = CtxSetContext( FltObjects, NULLPTR, FLT_INSTANCE_CONTEXT, InstanceContext, NULLPTR );
         if( !NT_SUCCESS( Status ) )
         {
-            KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_ERROR_LEVEL, "[WinIOMon] %s %s Status=0x%08x InstanceContext=%p\n",
+            KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_ERROR_LEVEL, "[WinIOSol] %s %s Status=0x%08x InstanceContext=%p\n",
                          __FUNCTION__, "FltSetInstanceContext FAILED", Status, InstanceContext ) );
             break;
         }
@@ -87,7 +87,7 @@ NTSTATUS CreateInstanceContext( PCFLT_RELATED_OBJECTS FltObjects, FLT_INSTANCE_S
         Status = FltGetVolumeName( FltObjects->Volume, &InstanceContext->DeviceName, NULL );
         if( !NT_SUCCESS( Status ) )
         {
-            KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_ERROR_LEVEL, "[WinIOMon] %s %s Status=0x%08x\n",
+            KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_ERROR_LEVEL, "[WinIOSol] %s %s Status=0x%08x\n",
                          __FUNCTION__, "FltGetVolumeName FAILED", Status ) );
             break;
         }
@@ -110,8 +110,8 @@ NTSTATUS CreateInstanceContext( PCFLT_RELATED_OBJECTS FltObjects, FLT_INSTANCE_S
         ExInitializeResourceLite( &InstanceContext->VcbLock );
         InitializeListHead( &InstanceContext->FcbListHead );
 
-        KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_INFO_LEVEL, "[WinIOMon] %s DeviceName=%wZ DriveLetter=%wc\n",
-                     __FUNCTION__, &InstanceContext->DeviceName, InstanceContext->DriveLetter ) );
+        KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_INFO_LEVEL, "[WinIOSol] %s DeviceName=%wZ DriveLetter=%lc\n",
+                     __FUNCTION__, &InstanceContext->DeviceName, InstanceContext->DriveLetter == L'\0' ? L' ' : InstanceContext->DriveLetter ) );
 
     } while( false );
 

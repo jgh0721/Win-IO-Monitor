@@ -441,7 +441,7 @@ NTSTATUS InsertProcessInfo( __in ULONG uParentProcessId, ULONG uProcessId )
         if( procInfo == NULL )
         {
             Status = STATUS_INSUFFICIENT_RESOURCES;
-            KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_ERROR_LEVEL, "[WinIOMon] %s %s\n",
+            KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_ERROR_LEVEL, "[WinIOSol] %s %s\n",
                          __FUNCTION__, "ExAllocatePoolWithTag FAILED" ) );
             break;
         }
@@ -453,7 +453,7 @@ NTSTATUS InsertProcessInfo( __in ULONG uParentProcessId, ULONG uProcessId )
 
         if( !NT_SUCCESS( Status ) )
         {
-            KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_ERROR_LEVEL, "[WinIOMon] %s %s Status=0x%08x\n",
+            KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_ERROR_LEVEL, "[WinIOSol] %s %s Status=0x%08x\n",
                          __FUNCTION__, "PsLookupProcessByProcessId FAILED", Status ) );
             break;
         }
@@ -564,7 +564,7 @@ HANDLE GetProcessHandleFromEPROCESS( PEPROCESS Process )
 
         if( !NT_SUCCESS( Status ) )
         {
-            KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_ERROR_LEVEL, "[WinIOMon] %s %s Status=0x%08x\n",
+            KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_ERROR_LEVEL, "[WinIOSol] %s %s Status=0x%08x\n",
                          __FUNCTION__, "ObOpenObjectByPointer FAILED", Status ) );
 
             return NULL;
