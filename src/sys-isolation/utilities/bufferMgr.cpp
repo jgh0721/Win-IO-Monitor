@@ -46,7 +46,8 @@ NTSTATUS AllocateGenericBuffer( TyGenericBuffer<VOID>* GenericBuffer, ULONG Requ
 void DeallocateGenericBuffer( TyGenericBuffer<void>* GenericBuffer, PVOID LookasideList, _POOL_TYPE ePoolType /* = NonPagedPool */ )
 {
     ASSERT( GenericBuffer != NULLPTR );
-    ASSERT( LookasideList != NULLPTR );
+    if( GenericBuffer->IsAllocatedFromLookasideList != FALSE )
+        ASSERT( LookasideList != NULLPTR );
 
     if( GenericBuffer->IsAllocatedFromLookasideList != FALSE )
     {
