@@ -239,8 +239,6 @@ NTSTATUS ProcessSetFileEndOfFileInformation( IRP_CONTEXT* IrpContext )
         }
 
         AcquireCmnResource( IrpContext, INST_EXCLUSIVE );
-        AcquireCmnResource( IrpContext, FCB_MAIN_EXCLUSIVE );
-        AcquireCmnResource( IrpContext, FCB_PGIO_EXCLUSIVE );
 
         if( FileObject->SectionObjectPointer->DataSectionObject != NULLPTR && 
             FileObject->SectionObjectPointer->SharedCacheMap == NULLPTR && 
@@ -299,6 +297,8 @@ NTSTATUS ProcessSetFileEndOfFileInformation( IRP_CONTEXT* IrpContext )
                         AssignCmnResult( IrpContext, Status );
                         __leave;
                     }
+
+                    AcquireCmnResource( IrpContext, FCB_PGIO_EXCLUSIVE );
                 }
 
                 Fcb->AdvFcbHeader.FileSize.QuadPart = EndOfFile->EndOfFile.QuadPart;
