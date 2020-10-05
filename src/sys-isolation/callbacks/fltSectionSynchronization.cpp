@@ -15,6 +15,8 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreAcquireSectionSynchronization( PFLT_CA
     FLT_PREOP_CALLBACK_STATUS                   FltStatus = FLT_PREOP_SUCCESS_NO_CALLBACK;
     const auto&                                 FileObject = FltObjects->FileObject;
 
+    UNREFERENCED_PARAMETER( CompletionContext );
+
     __try
     {
         if( IsOwnFileObject( FileObject ) == false )
@@ -22,14 +24,25 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreAcquireSectionSynchronization( PFLT_CA
 
         auto Fcb = ( FCB* )FileObject->FsContext;
 
-        KdPrint( ( "[WinIOSol] EvtID=%09d IRP=%s Name=%ws \n"
-                   , CreateEvtID(), FltGetIrpName( Data->Iopb->MajorFunction )
-                   , Fcb->FileFullPath.Buffer ) );
+        auto EvtID = CreateEvtID();
+        KdPrint( ( "[WinIOSol] >> EvtID=%09d %s Thread=%p Open=%d Clean=%d Ref=%d Src=%ws\n"
+                   , EvtID, __FUNCTION__
+                   , PsGetCurrentThread()
+                   , Fcb->OpnCount, Fcb->ClnCount, Fcb->RefCount
+                   , Fcb->FileFullPath.Buffer
+                   ) );
 
         FltAcquireResourceExclusive( &Fcb->MainResource );
         Data->IoStatus.Status = STATUS_SUCCESS;
         Data->IoStatus.Information = 0;
         FltStatus = FLT_PREOP_COMPLETE;
+
+        KdPrint( ( "[WinIOSol] << EvtID=%09d %s Thread=%p Open=%d Clean=%d Ref=%d Src=%ws\n"
+                   , EvtID, __FUNCTION__
+                   , PsGetCurrentThread()
+                   , Fcb->OpnCount, Fcb->ClnCount, Fcb->RefCount
+                   , Fcb->FileFullPath.Buffer
+                   ) );
     }
     __finally
     {
@@ -60,6 +73,8 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreReleaseSectionSynchronization( PFLT_CA
     FLT_PREOP_CALLBACK_STATUS                   FltStatus = FLT_PREOP_SUCCESS_NO_CALLBACK;
     const auto&                                 FileObject = FltObjects->FileObject;
 
+    UNREFERENCED_PARAMETER( CompletionContext );
+
     __try
     {
         if( IsOwnFileObject( FileObject ) == false )
@@ -67,14 +82,25 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreReleaseSectionSynchronization( PFLT_CA
 
         auto Fcb = ( FCB* )FileObject->FsContext;
 
-        KdPrint( ( "[WinIOSol] EvtID=%09d IRP=%s Name=%ws \n"
-                   , CreateEvtID(), FltGetIrpName( Data->Iopb->MajorFunction )
-                   , Fcb->FileFullPath.Buffer ) );
+        auto EvtID = CreateEvtID();
+        KdPrint( ( "[WinIOSol] >> EvtID=%09d %s Thread=%p Open=%d Clean=%d Ref=%d Src=%ws\n"
+                   , EvtID, __FUNCTION__
+                   , PsGetCurrentThread()
+                   , Fcb->OpnCount, Fcb->ClnCount, Fcb->RefCount
+                   , Fcb->FileFullPath.Buffer
+                   ) );
 
         FltReleaseResource( &Fcb->MainResource );
         Data->IoStatus.Status = STATUS_SUCCESS;
         Data->IoStatus.Information = 0;
         FltStatus = FLT_PREOP_COMPLETE;
+
+        KdPrint( ( "[WinIOSol] << EvtID=%09d %s Thread=%p Open=%d Clean=%d Ref=%d Src=%ws\n"
+                   , EvtID, __FUNCTION__
+                   , PsGetCurrentThread()
+                   , Fcb->OpnCount, Fcb->ClnCount, Fcb->RefCount
+                   , Fcb->FileFullPath.Buffer
+                   ) );
     }
     __finally
     {
