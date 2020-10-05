@@ -532,6 +532,17 @@ namespace nsW32API
                               __in_opt PFLTOPLOCK_PREPOST_CALLBACKDATA_ROUTINE, PrePostCallbackDataRoutine
         );
 
+        /*!
+            The FltOplockFsctrlEx routine performs various opportunistic lock (oplock) operations on behalf of a minifilter driver.
+
+            Windows 8 ~ 
+        */
+        DYNLOAD_FUNC_WITH_04( FLT_PREOP_COMPLETE, FLT_PREOP_CALLBACK_STATUS, FLTAPI, FltOplockFsctrlEx,
+                              __in POPLOCK, Oplock,
+                              __in PFLT_CALLBACK_DATA, CallbackData,
+                              __in ULONG, OpenCount,
+                              __in ULONG, Flags
+        );
 
     DYNLOAD_END_CLASS();
 

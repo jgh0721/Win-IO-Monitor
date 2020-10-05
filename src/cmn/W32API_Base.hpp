@@ -626,6 +626,93 @@ namespace nsW32API
         }                                                                               \
     }
 
+    //
+    //  Structures for FSCTL_REQUEST_OPLOCK
+    //
+
+    #define OPLOCK_LEVEL_CACHE_READ         (0x00000001)
+    #define OPLOCK_LEVEL_CACHE_HANDLE       (0x00000002)
+    #define OPLOCK_LEVEL_CACHE_WRITE        (0x00000004)
+
+    #define REQUEST_OPLOCK_INPUT_FLAG_REQUEST               (0x00000001)
+    #define REQUEST_OPLOCK_INPUT_FLAG_ACK                   (0x00000002)
+    #define REQUEST_OPLOCK_INPUT_FLAG_COMPLETE_ACK_ON_CLOSE (0x00000004)
+
+    #define REQUEST_OPLOCK_CURRENT_VERSION          1
+
+    typedef struct _REQUEST_OPLOCK_INPUT_BUFFER
+    {
+
+        //
+        //  This should be set to REQUEST_OPLOCK_CURRENT_VERSION.
+        //
+
+        USHORT StructureVersion;
+
+        USHORT StructureLength;
+
+        //
+        //  One or more OPLOCK_LEVEL_CACHE_* values to indicate the desired level of the oplock.
+        //
+
+        ULONG RequestedOplockLevel;
+
+        //
+        //  REQUEST_OPLOCK_INPUT_FLAG_* flags.
+        //
+
+        ULONG Flags;
+
+    } REQUEST_OPLOCK_INPUT_BUFFER, * PREQUEST_OPLOCK_INPUT_BUFFER;
+
+    #define REQUEST_OPLOCK_OUTPUT_FLAG_ACK_REQUIRED     (0x00000001)
+    #define REQUEST_OPLOCK_OUTPUT_FLAG_MODES_PROVIDED   (0x00000002)
+
+    typedef struct _REQUEST_OPLOCK_OUTPUT_BUFFER
+    {
+
+        //
+        //  This should be set to REQUEST_OPLOCK_CURRENT_VERSION.
+        //
+
+        USHORT StructureVersion;
+
+        USHORT StructureLength;
+
+        //
+        //  One or more OPLOCK_LEVEL_CACHE_* values indicating the level of the oplock that
+        //  was just broken.
+        //
+
+        ULONG OriginalOplockLevel;
+
+        //
+        //  One or more OPLOCK_LEVEL_CACHE_* values indicating the level to which an oplock
+        //  is being broken, or an oplock level that may be available for granting, depending
+        //  on the operation returning this buffer.
+        //
+
+        ULONG NewOplockLevel;
+
+        //
+        //  REQUEST_OPLOCK_OUTPUT_FLAG_* flags.
+        //
+
+        ULONG Flags;
+
+        //
+        //  When REQUEST_OPLOCK_OUTPUT_FLAG_MODES_PROVIDED is set, and when the
+        //  OPLOCK_LEVEL_CACHE_HANDLE level is being lost in an oplock break, these fields
+        //  contain the access mode and share mode of the request that is causing the break.
+        //
+
+        ACCESS_MASK AccessMode;
+
+        USHORT ShareMode;
+
+    } REQUEST_OPLOCK_OUTPUT_BUFFER, * PREQUEST_OPLOCK_OUTPUT_BUFFER;
+
+
 } // nsW32API
 
 #endif // HDR_W32API_BASE
