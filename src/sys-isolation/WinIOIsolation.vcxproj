@@ -41,6 +41,7 @@
     <ClInclude Include="callbacks\fltFlushBuffers.hpp" />
     <ClInclude Include="callbacks\fltInstance.hpp" />
     <ClInclude Include="callbacks\fltLockControl.hpp" />
+    <ClInclude Include="callbacks\fltModWrite.hpp" />
     <ClInclude Include="callbacks\fltNetworkQueryOpen.hpp" />
     <ClInclude Include="callbacks\fltQueryInformation.hpp" />
     <ClInclude Include="callbacks\fltQueryVolumeInformation.hpp" />
@@ -86,6 +87,7 @@
     <ClCompile Include="callbacks\fltFlushBuffers.cpp" />
     <ClCompile Include="callbacks\fltInstance.cpp" />
     <ClCompile Include="callbacks\fltLockControl.cpp" />
+    <ClCompile Include="callbacks\fltModWrite.cpp" />
     <ClCompile Include="callbacks\fltNetworkQueryOpen.cpp" />
     <ClCompile Include="callbacks\fltQueryInformation.cpp" />
     <ClCompile Include="callbacks\fltQueryVolumeInformation.cpp" />

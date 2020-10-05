@@ -168,6 +168,9 @@
     <ClInclude Include="..\cmn\W32API_DBGHelper.hpp">
       <Filter>common files</Filter>
     </ClInclude>
+    <ClInclude Include="callbacks\fltModWrite.hpp">
+      <Filter>callbacks</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="WinIOIsolation.cpp">
@@ -277,6 +280,9 @@
     </ClCompile>
     <ClCompile Include="..\cmn\W32API_DBGHelper.cpp">
       <Filter>common files</Filter>
+    </ClCompile>
+    <ClCompile Include="callbacks\fltModWrite.cpp">
+      <Filter>callbacks</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
