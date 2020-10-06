@@ -734,6 +734,24 @@ namespace nsW32API
         return "";
     }
 
+    const char* ConvertSecurityInformationTo( SECURITY_INFORMATION SecurityInformation )
+    {
+        switch( SecurityInformation )
+        {
+            case OWNER_SECURITY_INFORMATION: { return "OWNER_SECURITY_INFORMATION"; } break;
+            case GROUP_SECURITY_INFORMATION: { return "GROUP_SECURITY_INFORMATION"; } break;
+            case DACL_SECURITY_INFORMATION: { return "DACL_SECURITY_INFORMATION"; } break;
+            case SACL_SECURITY_INFORMATION: { return "SACL_SECURITY_INFORMATION"; } break;
+            case LABEL_SECURITY_INFORMATION: { return "LABEL_SECURITY_INFORMATION"; } break;
+
+            case PROTECTED_DACL_SECURITY_INFORMATION: { return "PROTECTED_DACL_SECURITY_INFORMATION"; } break;
+            case PROTECTED_SACL_SECURITY_INFORMATION: { return "PROTECTED_SACL_SECURITY_INFORMATION"; } break;
+            case UNPROTECTED_DACL_SECURITY_INFORMATION: { return "UNPROTECTED_DACL_SECURITY_INFORMATION"; } break;
+            case UNPROTECTED_SACL_SECURITY_INFORMATION: { return "UNPROTECTED_SACL_SECURITY_INFORMATION"; } break;
+        }
+        return "";
+    }
+
     void FormatFileBasicInformation( char* PrintBuffer, ULONG BufferSize, FILE_BASIC_INFORMATION* Info )
     {
         if( Info == NULLPTR )

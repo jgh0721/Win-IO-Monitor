@@ -18,6 +18,8 @@
 #include "fltLockControl.hpp"
 #include "fltQueryInformation.hpp"
 #include "fltSetInformation.hpp"
+#include "fltQuerySecurityInformation.hpp"
+#include "fltSetSecurityInformation.hpp"
 #include "fltNetworkQueryOpen.hpp"
 #include "fltSectionSynchronization.hpp"
 #include "fltModWrite.hpp"

@@ -171,6 +171,12 @@
     <ClInclude Include="callbacks\fltModWrite.hpp">
       <Filter>callbacks</Filter>
     </ClInclude>
+    <ClInclude Include="callbacks\fltQuerySecurityInformation.hpp">
+      <Filter>callbacks</Filter>
+    </ClInclude>
+    <ClInclude Include="callbacks\fltSetSecurityInformation.hpp">
+      <Filter>callbacks</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="WinIOIsolation.cpp">
@@ -282,6 +288,12 @@
       <Filter>common files</Filter>
     </ClCompile>
     <ClCompile Include="callbacks\fltModWrite.cpp">
+      <Filter>callbacks</Filter>
+    </ClCompile>
+    <ClCompile Include="callbacks\fltQuerySecurityInformation.cpp">
+      <Filter>callbacks</Filter>
+    </ClCompile>
+    <ClCompile Include="callbacks\fltSetSecurityInformation.cpp">
       <Filter>callbacks</Filter>
     </ClCompile>
   </ItemGroup>

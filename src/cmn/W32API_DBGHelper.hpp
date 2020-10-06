@@ -43,6 +43,8 @@ namespace nsW32API
     void FormatCreateOptions( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in ULONG CreateOptions );
     const char* ConvertCreateResultInformationTo( __in NTSTATUS Status, __in ULONG_PTR Information );
 
+    const char* ConvertSecurityInformationTo( __in SECURITY_INFORMATION SecurityInformation );
+
     void FormatFileBasicInformation( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in FILE_BASIC_INFORMATION* Info );
     void FormatFileStandardInformation( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in FILE_STANDARD_INFORMATION* Info );
     void FormatFileAccessInformation( __out_bcount_z( BufferSize ) char* PrintBuffer, __in ULONG BufferSize, __in FILE_ACCESS_INFORMATION* Info );

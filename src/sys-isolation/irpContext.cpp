@@ -284,6 +284,8 @@ VOID PrintIrpContext( __in PIRP_CONTEXT IrpContext, __in bool isForceResult /* =
         case IRP_MJ_WRITE:                      { PrintIrpContextWRITE( IrpContext, IsResultMode ); } break;
         case IRP_MJ_QUERY_INFORMATION:          { PrintIrpContextQUERY_INFORMATION( IrpContext, IsResultMode ); } break;
         case IRP_MJ_SET_INFORMATION:            { PrintIrpContextSET_INFORMATION( IrpContext, IsResultMode ); } break;
+        case IRP_MJ_QUERY_SECURITY:             { PrintIrpContextQUERY_SECURITY( IrpContext, IsResultMode ); } break;
+        case IRP_MJ_SET_SECURITY:               { PrintIrpContextSET_SECURITY( IrpContext, IsResultMode ); } break;
         case IRP_MJ_CLEANUP:                    { PrintIrpContextCLEANUP( IrpContext, IsResultMode ); } break;
         case IRP_MJ_CLOSE:                      { PrintIrpContextCLOSE( IrpContext, IsResultMode ); } break;
 
@@ -705,6 +707,94 @@ void PrintIrpContextSET_INFORMATION( PIRP_CONTEXT IrpContext, bool IsResultMode 
                    , IrpContext->EvtID
                    , Parameters.InfoBuffer
                    , IrpContext->DebugText
+                   ) );
+    }
+}
+
+void PrintIrpContextQUERY_SECURITY( PIRP_CONTEXT IrpContext, bool IsResultMode )
+{
+    const auto& Data = IrpContext->Data;
+    const auto& MajorFunction = Data->Iopb->MajorFunction;
+    const auto& MinorFunction = Data->Iopb->MinorFunction;
+    auto IoStatus = Data->IoStatus;
+    if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_IOSTATUS_STATUS ) )
+        IoStatus.Status = IrpContext->Status;
+    if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_IOSTATUS_INFORMATION ) )
+        IoStatus.Information = IrpContext->Information;
+
+    const auto& Parameters = Data->Iopb->Parameters.QuerySecurity;
+
+    if( IsResultMode == false )
+    {
+        KdPrint( ( "[WinIOSol] %s EvtID=%09d IRP=%s,%s Thread=%p Proc=%06d,%ws Src=%ws\n"
+                   , IsResultMode == false ? ">>" : "<<"
+                   , IrpContext->EvtID
+                   , nsW32API::ConvertIrpMajorFuncTo( MajorFunction ), nsW32API::ConvertIrpMinorFuncTo( MajorFunction, MinorFunction )
+                   , PsGetCurrentThread()
+                   , IrpContext->ProcessId, IrpContext->ProcessFileName == NULLPTR ? L"(null)" : IrpContext->ProcessFileName
+                   , IrpContext->SrcFileFullPath.Buffer
+                   ) );
+
+        KdPrint( ( "[WinIOSol] %s EvtID=%09d        SecurityInformation=%s Length=%d Buffer=%p MDL=%p\n"
+                   , IsResultMode == false ? ">>" : "<<"
+                   , nsW32API::ConvertSecurityInformationTo( Parameters.SecurityInformation )
+                   , Parameters.Length
+                   , Parameters.SecurityBuffer
+                   , Parameters.MdlAddress
+                   ) );
+    }
+    else
+    {
+        KdPrint( ( "[WinIOSol] %s EvtID=%09d IRP=%s,%s Thread=%p Proc=%06d,%ws Status=0x%08x,%s\n"
+                   , IsResultMode == false ? ">>" : "<<"
+                   , IrpContext->EvtID
+                   , nsW32API::ConvertIrpMajorFuncTo( MajorFunction ), nsW32API::ConvertIrpMinorFuncTo( MajorFunction, MinorFunction )
+                   , PsGetCurrentThread()
+                   , IrpContext->ProcessId, IrpContext->ProcessFileName == NULLPTR ? L"(null)" : IrpContext->ProcessFileName
+                   , IoStatus.Status, ntkernel_error_category::find_ntstatus( IoStatus.Status )->message
+                   ) );
+    }
+}
+
+void PrintIrpContextSET_SECURITY( PIRP_CONTEXT IrpContext, bool IsResultMode )
+{
+    const auto& Data = IrpContext->Data;
+    const auto& MajorFunction = Data->Iopb->MajorFunction;
+    const auto& MinorFunction = Data->Iopb->MinorFunction;
+    auto IoStatus = Data->IoStatus;
+    if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_IOSTATUS_STATUS ) )
+        IoStatus.Status = IrpContext->Status;
+    if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_IOSTATUS_INFORMATION ) )
+        IoStatus.Information = IrpContext->Information;
+
+    const auto& Parameters = Data->Iopb->Parameters.SetSecurity;
+
+    if( IsResultMode == false )
+    {
+        KdPrint( ( "[WinIOSol] %s EvtID=%09d IRP=%s,%s Thread=%p Proc=%06d,%ws Src=%ws\n"
+                   , IsResultMode == false ? ">>" : "<<"
+                   , IrpContext->EvtID
+                   , nsW32API::ConvertIrpMajorFuncTo( MajorFunction ), nsW32API::ConvertIrpMinorFuncTo( MajorFunction, MinorFunction )
+                   , PsGetCurrentThread()
+                   , IrpContext->ProcessId, IrpContext->ProcessFileName == NULLPTR ? L"(null)" : IrpContext->ProcessFileName
+                   , IrpContext->SrcFileFullPath.Buffer
+                   ) );
+
+        KdPrint( ( "[WinIOSol] %s EvtID=%09d        SecurityInformation=%s SecurityDescriptor=%p\n"
+                   , IsResultMode == false ? ">>" : "<<"
+                   , nsW32API::ConvertSecurityInformationTo( Parameters.SecurityInformation )
+                   , Parameters.SecurityDescriptor
+                   ) );
+    }
+    else
+    {
+        KdPrint( ( "[WinIOSol] %s EvtID=%09d IRP=%s,%s Thread=%p Proc=%06d,%ws Status=0x%08x,%s\n"
+                   , IsResultMode == false ? ">>" : "<<"
+                   , IrpContext->EvtID
+                   , nsW32API::ConvertIrpMajorFuncTo( MajorFunction ), nsW32API::ConvertIrpMinorFuncTo( MajorFunction, MinorFunction )
+                   , PsGetCurrentThread()
+                   , IrpContext->ProcessId, IrpContext->ProcessFileName == NULLPTR ? L"(null)" : IrpContext->ProcessFileName
+                   , IoStatus.Status, ntkernel_error_category::find_ntstatus( IoStatus.Status )->message
                    ) );
     }
 }

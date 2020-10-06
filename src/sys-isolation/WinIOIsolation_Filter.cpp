@@ -57,9 +57,9 @@ CONST FLT_OPERATION_REGISTRATION FilterCallbacks[] = {
 
     { IRP_MJ_CREATE_MAILSLOT,               0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
 
-    { IRP_MJ_QUERY_SECURITY,                0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
+    { IRP_MJ_QUERY_SECURITY,                0,      FilterPreQuerySecurityInformation,  FilterPostQuerySecurityInformation    },
 
-    { IRP_MJ_SET_SECURITY,                  0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
+    { IRP_MJ_SET_SECURITY,                  0,      FilterPreSetSecurityInformation,    FilterPostSetSecurityInformation    },
 
     { IRP_MJ_QUERY_QUOTA,                   0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
 
