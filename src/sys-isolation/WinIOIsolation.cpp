@@ -11,6 +11,8 @@
 #include "utilities/osInfoMgr.hpp"
 #include "utilities/contextMgr.hpp"
 
+#include "policies/GlobalFilter.hpp"
+
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
 #endif
@@ -74,9 +76,10 @@ void DriverUnload( PDRIVER_OBJECT DriverObject )
     if( GlobalContext.Filter != NULLPTR )
         MiniFilterUnload( 0 );
 
-    StopProcessNotify();
-
     RemoveControlDevice( GlobalContext );
+
+    StopProcessNotify();
+    UninitializeGlobalFilter();
 
     ExDeleteNPagedLookasideList( &GlobalContext.DebugLookasideList );
 
@@ -185,6 +188,10 @@ NTSTATUS InitializeFeatures( CTX_GLOBAL_DATA* GlobalContext )
     do
     {
         IF_FAILED_BREAK( Status, StartProcessNotify() );
+        IF_FAILED_BREAK( Status, InitializeGlobalFilter() );
+
+        // for Testing Purpose only
+        GlobalFilter_Add( L"*isolationtest*", true );
 
     } while( false );
 

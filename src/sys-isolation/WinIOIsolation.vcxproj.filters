@@ -22,6 +22,12 @@
     <Filter Include="callbacks">
       <UniqueIdentifier>{fd32f6f7-f2bc-4379-b0af-333e6d804b75}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Policies">
+      <UniqueIdentifier>{b0bbc354-4681-4db4-a255-8ee400bd366e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Policies\GlobalFilter">
+      <UniqueIdentifier>{9fcc56d0-f933-47c5-b645-1e7a93c7d4f4}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="fltBase.hpp">
@@ -177,6 +183,12 @@
     <ClInclude Include="callbacks\fltSetSecurityInformation.hpp">
       <Filter>callbacks</Filter>
     </ClInclude>
+    <ClInclude Include="..\cmn\WinIOIsolation_IOCTL.hpp">
+      <Filter>common files</Filter>
+    </ClInclude>
+    <ClInclude Include="policies\GlobalFilter.hpp">
+      <Filter>Policies\GlobalFilter</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="WinIOIsolation.cpp">
@@ -295,6 +307,9 @@
     </ClCompile>
     <ClCompile Include="callbacks\fltSetSecurityInformation.cpp">
       <Filter>callbacks</Filter>
+    </ClCompile>
+    <ClCompile Include="policies\GlobalFilter.cpp">
+      <Filter>Policies\GlobalFilter</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

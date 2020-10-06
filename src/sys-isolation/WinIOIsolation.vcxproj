@@ -30,6 +30,7 @@
     <ClInclude Include="..\cmn\W32API_LibMgr.hpp" />
     <ClInclude Include="..\cmn\W32API_NtOsKrnl.hpp" />
     <ClInclude Include="..\cmn\W32API_NTSTATUS.hpp" />
+    <ClInclude Include="..\cmn\WinIOIsolation_IOCTL.hpp" />
     <ClInclude Include="callbacks\cacheManagerCallbacks.hpp" />
     <ClInclude Include="callbacks\callbacks.hpp" />
     <ClInclude Include="callbacks\fltCcFlush.hpp" />
@@ -57,6 +58,7 @@
     <ClInclude Include="fltBase.hpp" />
     <ClInclude Include="irpContext.hpp" />
     <ClInclude Include="irpContext_Defs.hpp" />
+    <ClInclude Include="policies\GlobalFilter.hpp" />
     <ClInclude Include="pool.hpp" />
     <ClInclude Include="privateFCBMgr.hpp" />
     <ClInclude Include="privateFCBMgr_Defs.hpp" />
@@ -103,6 +105,7 @@
     <ClCompile Include="deviceCntl.cpp" />
     <ClCompile Include="deviceMgmt.cpp" />
     <ClCompile Include="irpContext.cpp" />
+    <ClCompile Include="policies\GlobalFilter.cpp" />
     <ClCompile Include="privateFCBMgr.cpp" />
     <ClCompile Include="utilities\bufferMgr.cpp" />
     <ClCompile Include="utilities\contextMgr.cpp" />

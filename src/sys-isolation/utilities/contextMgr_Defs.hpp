@@ -44,6 +44,7 @@ typedef struct _CTX_GLOBAL_DATA
     PAGED_LOOKASIDE_LIST            SwapWriteLookasideList_16384;
     PAGED_LOOKASIDE_LIST            SwapWriteLookasideList_65536;
 
+    PVOID                           GlobalFilter;
     PVOID                           ProcessFilter;
 
     LARGE_INTEGER                   TimeOutMs;
