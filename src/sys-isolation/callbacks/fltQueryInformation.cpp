@@ -391,6 +391,8 @@ NTSTATUS ProcessFilePositionInformation( IRP_CONTEXT* IrpContext )
         FilePositionInfo->CurrentByteOffset = IrpContext->FltObjects->FileObject->CurrentByteOffset;
 
         Status = STATUS_SUCCESS;
+        // from http://fsfilters.blogspot.com/2012/04/setting-iostatusinformation.html
+        Information = sizeof( FilePositionInfo->CurrentByteOffset );
     }
     __finally
     {
