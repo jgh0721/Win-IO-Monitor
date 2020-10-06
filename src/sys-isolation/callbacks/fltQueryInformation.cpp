@@ -409,20 +409,23 @@ NTSTATUS ProcessFileAllInformation( IRP_CONTEXT* IrpContext )
     ULONG_PTR Information = 0;
     ULONG LengthReturned = 0;
 
-    PVOID InputBuffer = IrpContext->Data->Iopb->Parameters.QueryFileInformation.InfoBuffer;
+    auto InputBuffer = (PFILE_ALL_INFORMATION)IrpContext->Data->Iopb->Parameters.QueryFileInformation.InfoBuffer;
     ULONG Length = IrpContext->Data->Iopb->Parameters.QueryFileInformation.Length;
     PFILE_ALL_INFORMATION FileAllInformationBuffer = NULLPTR;
 
     __try
     {
-        if( Length < sizeof( FILE_ALL_INFORMATION ) )
+        auto Fcb = IrpContext->Fcb;
+        auto Ccb = ( CCB* )IrpContext->FltObjects->FileObject->FsContext2;
+        SIZE_T poolSize = sizeof( FILE_ALL_INFORMATION ) + ( nsUtils::strlength( Fcb->FileFullPath.Buffer ) * sizeof( WCHAR ) );
+
+        if( Length == 0 )
         {
-            Status = STATUS_BUFFER_TOO_SMALL;
+            Status = STATUS_INFO_LENGTH_MISMATCH;
+            Information = poolSize;
             __leave;
         }
 
-        auto Fcb = IrpContext->Fcb;
-        SIZE_T poolSize = sizeof( FILE_ALL_INFORMATION ) + ( nsUtils::strlength( Fcb->FileFullPath.Buffer ) * sizeof( WCHAR ) );
         FileAllInformationBuffer = ( PFILE_ALL_INFORMATION )ExAllocatePoolWithTag( PagedPool, poolSize, POOL_MAIN_TAG );
 
         if( FileAllInformationBuffer == NULL )
@@ -432,7 +435,7 @@ NTSTATUS ProcessFileAllInformation( IRP_CONTEXT* IrpContext )
         }
 
         RtlZeroMemory( FileAllInformationBuffer, poolSize );
-        Status = FltQueryInformationFile( IrpContext->FltObjects->Instance, Fcb->LowerFileObject,
+        Status = FltQueryInformationFile( IrpContext->FltObjects->Instance, Ccb->LowerFileObject,
                                           FileAllInformationBuffer, poolSize,
                                           FileAllInformation, &LengthReturned );
 
@@ -447,19 +450,57 @@ NTSTATUS ProcessFileAllInformation( IRP_CONTEXT* IrpContext )
                         ) );
             __leave;
         }
-        
+
+        // pre-post processing
+        // based on http://fsfilters.blogspot.com/2011/11/filters-and-irpmjqueryinformation.html
+        // based on FastFAT
+        ULONG AtLeastSize = 0;
         ULONG RequiredLength = sizeof( FILE_ALL_INFORMATION ) + FileAllInformationBuffer->NameInformation.FileNameLength - sizeof( WCHAR );
 
-        if( Length < RequiredLength )
+        AtLeastSize += sizeof( FILE_BASIC_INFORMATION );
+        if( Length >= AtLeastSize )
+            RtlCopyMemory( &InputBuffer->BasicInformation, &FileAllInformationBuffer->BasicInformation, sizeof( FILE_BASIC_INFORMATION ) );
+
+        AtLeastSize += sizeof( FILE_STANDARD_INFORMATION );
+        if( Length >= AtLeastSize )
+            RtlCopyMemory( &InputBuffer->StandardInformation, &FileAllInformationBuffer->StandardInformation, sizeof( FILE_STANDARD_INFORMATION ) );
+
+        AtLeastSize += sizeof( FILE_INTERNAL_INFORMATION );
+        if( Length >= AtLeastSize )
+            RtlCopyMemory( &InputBuffer->InternalInformation, &FileAllInformationBuffer->InternalInformation, sizeof( FILE_INTERNAL_INFORMATION ) );
+
+        AtLeastSize += sizeof( FILE_EA_INFORMATION );
+        if( Length >= AtLeastSize )
+            RtlCopyMemory( &InputBuffer->EaInformation, &FileAllInformationBuffer->EaInformation, sizeof( FILE_EA_INFORMATION ) );
+
+        // this information was processed by IO Manager before call my callback
+        AtLeastSize += sizeof( FILE_ACCESS_INFORMATION );
+
+        AtLeastSize += sizeof( FILE_POSITION_INFORMATION );
+        if( Length >= AtLeastSize )
+            InputBuffer->PositionInformation.CurrentByteOffset = IrpContext->FltObjects->FileObject->CurrentByteOffset;
+
+        // this information was processed by IO Manager before call my callback
+        AtLeastSize += sizeof( FILE_MODE_INFORMATION );
+
+        // this information was processed by IO Manager before call my callback
+        AtLeastSize += sizeof( FILE_ALIGNMENT_INFORMATION );
+
+        if( Length >= ( AtLeastSize + sizeof( FILE_NAME_INFORMATION ) ) )
         {
-            RtlCopyMemory( InputBuffer, FileAllInformationBuffer, Length );
-            Status = STATUS_BUFFER_OVERFLOW;
-            Information = Length;
-            __leave;
+            auto RemainSize = Length - AtLeastSize;
+            RtlCopyMemory( &InputBuffer->NameInformation, &FileAllInformationBuffer->NameInformation, RemainSize );
+
+            if( RemainSize < InputBuffer->NameInformation.FileNameLength + sizeof( ULONG ) )
+                InputBuffer->NameInformation.FileNameLength = RemainSize - sizeof( ULONG );
         }
 
-        Status = STATUS_SUCCESS;
-        Information = RequiredLength;
+        if( Length >= RequiredLength )
+            Status = STATUS_SUCCESS;
+        else
+            Status = STATUS_BUFFER_OVERFLOW;
+
+        Information = Length;
     }
     __finally
     {
