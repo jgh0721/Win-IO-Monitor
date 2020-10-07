@@ -28,6 +28,9 @@
     <Filter Include="Policies\GlobalFilter">
       <UniqueIdentifier>{9fcc56d0-f933-47c5-b645-1e7a93c7d4f4}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Policies\ProcessFilter">
+      <UniqueIdentifier>{f13a4ee0-a16b-47c9-ae6d-1e4179b55444}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="fltBase.hpp">
@@ -189,6 +192,9 @@
     <ClInclude Include="policies\GlobalFilter.hpp">
       <Filter>Policies\GlobalFilter</Filter>
     </ClInclude>
+    <ClInclude Include="policies\ProcessFilter.hpp">
+      <Filter>Policies\ProcessFilter</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="WinIOIsolation.cpp">
@@ -310,6 +316,9 @@
     </ClCompile>
     <ClCompile Include="policies\GlobalFilter.cpp">
       <Filter>Policies\GlobalFilter</Filter>
+    </ClCompile>
+    <ClCompile Include="policies\ProcessFilter.cpp">
+      <Filter>Policies\ProcessFilter</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

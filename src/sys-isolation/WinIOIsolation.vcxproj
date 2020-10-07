@@ -59,6 +59,7 @@
     <ClInclude Include="irpContext.hpp" />
     <ClInclude Include="irpContext_Defs.hpp" />
     <ClInclude Include="policies\GlobalFilter.hpp" />
+    <ClInclude Include="policies\ProcessFilter.hpp" />
     <ClInclude Include="pool.hpp" />
     <ClInclude Include="privateFCBMgr.hpp" />
     <ClInclude Include="privateFCBMgr_Defs.hpp" />
@@ -106,6 +107,7 @@
     <ClCompile Include="deviceMgmt.cpp" />
     <ClCompile Include="irpContext.cpp" />
     <ClCompile Include="policies\GlobalFilter.cpp" />
+    <ClCompile Include="policies\ProcessFilter.cpp" />
     <ClCompile Include="privateFCBMgr.cpp" />
     <ClCompile Include="utilities\bufferMgr.cpp" />
     <ClCompile Include="utilities\contextMgr.cpp" />
