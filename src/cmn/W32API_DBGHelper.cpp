@@ -329,7 +329,7 @@ namespace nsW32API
             case FileLinkInformationBypassAccessCheck: { return "FileLinkInformationBypassAccessCheck"; } break;
             case FileVolumeNameInformation: { return "FileVolumeNameInformation"; } break;
             case FileIdInformation: { return "FileIdInformation"; } break;
-            case FileidExtdDirectoryInformation: { return "FileidExtdDirectoryInformation"; } break;
+            case FileIdExtdDirectoryInformation: { return "FileIdExtdDirectoryInformation"; } break;
             case FileReplaceCompletionInformation: { return "FileReplaceCompletionInformation"; } break;
             case FileHardLinkFullIdInformation: { return "FileHardLinkFullIdInformation"; } break;
             case FileIdExtdBothDirectoryInformation: { return "FileIdExtdBothDirectoryInformation"; } break;

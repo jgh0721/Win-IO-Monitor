@@ -191,7 +191,7 @@ namespace nsW32API
         FileLinkInformationBypassAccessCheck,
         FileVolumeNameInformation,
         FileIdInformation,
-        FileidExtdDirectoryInformation,
+        FileIdExtdDirectoryInformation,
         FileReplaceCompletionInformation,
         FileHardLinkFullIdInformation,
         FileIdExtdBothDirectoryInformation,
