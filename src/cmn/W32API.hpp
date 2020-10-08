@@ -68,6 +68,21 @@ namespace nsW32API
                                __in_opt PIO_DRIVER_CREATE_CONTEXT DriverContext
     );
 
+    /*!
+
+        Support WinXP
+    */
+    NTSTATUS FltQueryDirectoryFile( __in       PFLT_INSTANCE Instance,
+                                    __in       PFILE_OBJECT FileObject,
+                                    __out      PVOID FileInformation,
+                                    __in       ULONG Length,
+                                    __in       FILE_INFORMATION_CLASS FileInformationClass,
+                                    __in       BOOLEAN ReturnSingleEntry,
+                                    __in_opt   PUNICODE_STRING FileName,
+                                    __in       BOOLEAN RestartScan,
+                                    __out_opt  PULONG LengthReturned
+    );
+
 } // nsW32API
 
 #endif // HDR_W32API

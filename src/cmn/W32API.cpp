@@ -236,3 +236,54 @@ NTSTATUS nsW32API::FltCreateFileEx2( PFLT_FILTER Filter, PFLT_INSTANCE Instance,
 
     return Status;
 }
+
+NTSTATUS nsW32API::FltQueryDirectoryFile( PFLT_INSTANCE Instance, PFILE_OBJECT FileObject, PVOID FileInformation, ULONG Length, FILE_INFORMATION_CLASS FileInformationClass, BOOLEAN ReturnSingleEntry, PUNICODE_STRING FileName, BOOLEAN RestartScan, PULONG LengthReturned )
+{
+    if( GlobalFltMgr.Is_FltQueryDirectoryFile() == true )
+        return GlobalFltMgr.FltQueryDirectoryFile( Instance, FileObject, FileInformation, Length, FileInformationClass, ReturnSingleEntry, FileName, RestartScan, LengthReturned );
+
+    NTSTATUS            Status = STATUS_SUCCESS;
+    PFLT_CALLBACK_DATA  CallbackData = NULLPTR;
+    PFLT_PARAMETERS     Params = NULLPTR;
+
+    do
+    {
+        ASSERT( NULL != Instance );
+        ASSERT( NULL != FileInformation );
+        ASSERT( Length > 0 );
+
+        Status = FltAllocateCallbackData( Instance, FileObject, &CallbackData );
+
+        if( !NT_SUCCESS( Status ) )
+            break;
+
+        CallbackData->Iopb->MajorFunction = IRP_MJ_DIRECTORY_CONTROL;
+        CallbackData->Iopb->MinorFunction = IRP_MN_QUERY_DIRECTORY;
+
+        if( RestartScan )
+            SetFlag( CallbackData->Iopb->OperationFlags, SL_RESTART_SCAN );
+
+        if( ReturnSingleEntry )
+            SetFlag( CallbackData->Iopb->OperationFlags, SL_RETURN_SINGLE_ENTRY );
+
+        Params = &CallbackData->Iopb->Parameters;
+        Params->DirectoryControl.QueryDirectory.Length = Length;
+        Params->DirectoryControl.QueryDirectory.FileName = FileName;
+        Params->DirectoryControl.QueryDirectory.FileInformationClass = (::FILE_INFORMATION_CLASS)FileInformationClass;
+        Params->DirectoryControl.QueryDirectory.DirectoryBuffer = FileInformation;
+        Params->DirectoryControl.QueryDirectory.MdlAddress = NULL;
+
+        FltPerformSynchronousIo( CallbackData );
+
+        Status = CallbackData->IoStatus.Status;
+
+        if( ARGUMENT_PRESENT( LengthReturned ) )
+            *LengthReturned = CallbackData->IoStatus.Information;
+
+    } while( false );
+
+    if( CallbackData != NULLPTR )
+        FltFreeCallbackData( CallbackData );
+
+    return Status;
+}
