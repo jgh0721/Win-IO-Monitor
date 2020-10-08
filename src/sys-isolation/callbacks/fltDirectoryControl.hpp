@@ -22,4 +22,10 @@ FilterPostDirectoryControl( __inout PFLT_CALLBACK_DATA    Data,
 
 EXTERN_C_END
 
+FLT_POSTOP_CALLBACK_STATUS FLTAPI
+FilterPostDirectoryControlWhenSafe( __inout PFLT_CALLBACK_DATA    Data,
+                                    __in PCFLT_RELATED_OBJECTS    FltObjects,
+                                    __in_opt PVOID                CompletionContext,
+                                    __in FLT_POST_OPERATION_FLAGS Flags );
+
 #endif // HDR_ISOLATION_DIRECTORY_CONTROL

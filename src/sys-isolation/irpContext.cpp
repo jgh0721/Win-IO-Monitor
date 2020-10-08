@@ -1,11 +1,13 @@
 ﻿#include "irpContext.hpp"
 
+#include "privateFCBMgr.hpp"
+
 #include "utilities/procNameMgr.hpp"
 #include "utilities/contextMgr.hpp"
 #include "utilities/contextMgr_Defs.hpp"
+#include "utilities/fltUtilities.hpp"
 
 #include "fltCmnLibs.hpp"
-#include "privateFCBMgr.hpp"
 
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
@@ -160,6 +162,8 @@ PIRP_CONTEXT CreateIrpContext( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_
                 IrpContext->SrcFileFullPathWOVolume = IrpContext->SrcFileFullPath.Buffer;
         }
 
+        IrpContext->UserBuffer = FltMapUserBuffer( Data );
+
         switch( MajorFunction )
         {
             case IRP_MJ_SET_INFORMATION: {
@@ -286,6 +290,7 @@ VOID PrintIrpContext( __in PIRP_CONTEXT IrpContext, __in bool isForceResult /* =
         case IRP_MJ_SET_INFORMATION:            { PrintIrpContextSET_INFORMATION( IrpContext, IsResultMode ); } break;
         case IRP_MJ_QUERY_SECURITY:             { PrintIrpContextQUERY_SECURITY( IrpContext, IsResultMode ); } break;
         case IRP_MJ_SET_SECURITY:               { PrintIrpContextSET_SECURITY( IrpContext, IsResultMode ); } break;
+        case IRP_MJ_DIRECTORY_CONTROL:          { PrintIrpContextDIRECTORY_CONTROL( IrpContext, IsResultMode ); } break;
         case IRP_MJ_CLEANUP:                    { PrintIrpContextCLEANUP( IrpContext, IsResultMode ); } break;
         case IRP_MJ_CLOSE:                      { PrintIrpContextCLOSE( IrpContext, IsResultMode ); } break;
 
@@ -796,6 +801,61 @@ void PrintIrpContextSET_SECURITY( PIRP_CONTEXT IrpContext, bool IsResultMode )
                    , IrpContext->ProcessId, IrpContext->ProcessFileName == NULLPTR ? L"(null)" : IrpContext->ProcessFileName
                    , IoStatus.Status, ntkernel_error_category::find_ntstatus( IoStatus.Status )->message
                    ) );
+    }
+}
+
+void PrintIrpContextDIRECTORY_CONTROL( PIRP_CONTEXT IrpContext, bool IsResultMode )
+{
+    const auto& Data = IrpContext->Data;
+    const auto& MajorFunction = IrpContext->Data->Iopb->MajorFunction;
+    const auto& MinorFunction = IrpContext->Data->Iopb->MinorFunction;
+    auto IoStatus = IrpContext->Data->IoStatus;
+    if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_IOSTATUS_STATUS ) )
+        IoStatus.Status = IrpContext->Status;
+    if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_IOSTATUS_INFORMATION ) )
+        IoStatus.Information = IrpContext->Information;
+
+    switch( MinorFunction )
+    {
+        case IRP_MN_NOTIFY_CHANGE_DIRECTORY: {} break;
+        case IRP_MN_QUERY_DIRECTORY: {
+            const auto& Parameters = Data->Iopb->Parameters.DirectoryControl.QueryDirectory;
+            auto FileInformationClass = Parameters.FileInformationClass;
+
+            if( IsResultMode == false )
+            {
+                KdPrint( ( "[WinIOSol] %s EvtID=%09d IRP=%s,%s Info=%s Thread=%p Proc=%06d,%ws Src=%ws\n"
+                           , IsResultMode == false ? ">>" : "<<"
+                           , IrpContext->EvtID
+                           , nsW32API::ConvertIrpMajorFuncTo( MajorFunction ), nsW32API::ConvertIrpMinorFuncTo( MajorFunction, MinorFunction )
+                           , nsW32API::ConvertFileInformationClassTo( ( nsW32API::FILE_INFORMATION_CLASS )FileInformationClass )
+                           , PsGetCurrentThread()
+                           , IrpContext->ProcessId, IrpContext->ProcessFileName == NULLPTR ? L"(null)" : IrpContext->ProcessFileName
+                           , IrpContext->SrcFileFullPath.Buffer
+                           ) );
+            }
+            else
+            {
+                KdPrint( ( "[WinIOSol] %s EvtID=%09d IRP=%s,%s Info=%s Thread=%p Proc=%06d,%ws Src=%ws\n"
+                           , IsResultMode == false ? ">>" : "<<"
+                           , IrpContext->EvtID
+                           , nsW32API::ConvertIrpMajorFuncTo( MajorFunction ), nsW32API::ConvertIrpMinorFuncTo( MajorFunction, MinorFunction )
+                           , nsW32API::ConvertFileInformationClassTo( ( nsW32API::FILE_INFORMATION_CLASS )FileInformationClass )
+                           , PsGetCurrentThread()
+                           , IrpContext->ProcessId, IrpContext->ProcessFileName == NULLPTR ? L"(null)" : IrpContext->ProcessFileName
+                           , IrpContext->SrcFileFullPath.Buffer
+                           ) );
+
+                switch( FileInformationClass )
+                {
+                    case FileDirectoryInformation: {} break;
+                    case FileFullDirectoryInformation: {} break;
+                    case FileBothDirectoryInformation: {} break;
+                    case FileIdBothDirectoryInformation: {} break;
+                    case FileIdFullDirectoryInformation: {} break;
+                }
+            }
+        } break;
     }
 }
 

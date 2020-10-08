@@ -22,6 +22,7 @@ void            PrintIrpContextQUERY_INFORMATION( __in PIRP_CONTEXT IrpContext, 
 void            PrintIrpContextSET_INFORMATION( __in PIRP_CONTEXT IrpContext, __in bool IsResultMode = false );
 void            PrintIrpContextQUERY_SECURITY( __in PIRP_CONTEXT IrpContext, __in bool IsResultMode = false );
 void            PrintIrpContextSET_SECURITY( __in PIRP_CONTEXT IrpContext, __in bool IsResultMode = false );
+void            PrintIrpContextDIRECTORY_CONTROL( __in PIRP_CONTEXT IrpContext, __in bool IsResultMode = false );
 void            PrintIrpContextCLEANUP( __in PIRP_CONTEXT IrpContext, __in bool IsResultMode = false );
 void            PrintIrpContextCLOSE( __in PIRP_CONTEXT IrpContext, __in bool IsResultMode = false );
 

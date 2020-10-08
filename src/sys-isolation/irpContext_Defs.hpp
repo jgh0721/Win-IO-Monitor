@@ -35,6 +35,7 @@ typedef struct _IRP_CONTEXT
     PCFLT_RELATED_OBJECTS               FltObjects;
     FCB*                                Fcb;
     CCB*                                Ccb;
+    PVOID                               UserBuffer;
     CHAR*                               DebugText;
 
     LONG                                EvtID;
