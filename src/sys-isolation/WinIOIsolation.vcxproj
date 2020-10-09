@@ -71,6 +71,8 @@
     <ClInclude Include="utilities\fltUtilities.hpp" />
     <ClInclude Include="utilities\osInfoMgr.hpp" />
     <ClInclude Include="utilities\procNameMgr.hpp" />
+    <ClInclude Include="utilities\volumeNameMgr.hpp" />
+    <ClInclude Include="utilities\volumeNameMgr_Defs.hpp" />
     <ClInclude Include="WinIOIsolation.hpp" />
     <ClInclude Include="WinIOIsolation_Filter.hpp" />
   </ItemGroup>
@@ -114,6 +116,7 @@
     <ClCompile Include="utilities\fltUtilities.cpp" />
     <ClCompile Include="utilities\osInfoMgr.cpp" />
     <ClCompile Include="utilities\procNameMgr.cpp" />
+    <ClCompile Include="utilities\volumeNameMgr.cpp" />
     <ClCompile Include="WinIOIsolation.cpp" />
     <ClCompile Include="WinIOIsolation_Filter.cpp" />
   </ItemGroup>

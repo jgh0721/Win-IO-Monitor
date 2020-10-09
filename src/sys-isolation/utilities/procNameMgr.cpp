@@ -3,6 +3,7 @@
 #include "W32API.hpp"
 #include "fltCmnLibs.hpp"
 #include "utilities/osInfoMgr.hpp"
+#include "utilities/volumeNameMgr.hpp"
 
 #if defined(_MSC_VER)
 #	pragma warning( disable: 4311 )
@@ -495,12 +496,16 @@ NTSTATUS InsertProcessInfo( __in ULONG uParentProcessId, ULONG uProcessId )
 
             if( procInfo->ProcessFileFullPathUni != NULLPTR )
             {
+                VolumeMgr_Replace( procInfo->ProcessFileFullPathUni->Buffer, procInfo->ProcessFileFullPathUni->Length );
+
                 KdPrint( ( "[WinIOSol] [ProcNameMgr] %s Lv1. Proc=%06d,%wZ\n"
                            , __FUNCTION__, uProcessId, procInfo->ProcessFileFullPathUni
                            ) );
             }
             else if( procInfo->ProcessFileFullPath.Buffer != NULLPTR )
             {
+                VolumeMgr_Replace( procInfo->ProcessFileFullPath.Buffer, procInfo->ProcessFileFullPath.BufferSize );
+
                 KdPrint( ( "[WinIOSol] [ProcNameMgr] %s Lv2. Proc=%06d,%ws\n"
                            , __FUNCTION__, uProcessId, procInfo->ProcessFileFullPath.Buffer
                            ) );

@@ -31,6 +31,9 @@
     <Filter Include="Policies\ProcessFilter">
       <UniqueIdentifier>{f13a4ee0-a16b-47c9-ae6d-1e4179b55444}</UniqueIdentifier>
     </Filter>
+    <Filter Include="cache">
+      <UniqueIdentifier>{7cf29c1b-bf04-42f6-8f95-2d4e958644e7}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="fltBase.hpp">
@@ -195,6 +198,12 @@
     <ClInclude Include="policies\ProcessFilter.hpp">
       <Filter>Policies\ProcessFilter</Filter>
     </ClInclude>
+    <ClInclude Include="utilities\volumeNameMgr.hpp">
+      <Filter>cache</Filter>
+    </ClInclude>
+    <ClInclude Include="utilities\volumeNameMgr_Defs.hpp">
+      <Filter>cache</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="WinIOIsolation.cpp">
@@ -319,6 +328,9 @@
     </ClCompile>
     <ClCompile Include="policies\ProcessFilter.cpp">
       <Filter>Policies\ProcessFilter</Filter>
+    </ClCompile>
+    <ClCompile Include="utilities\volumeNameMgr.cpp">
+      <Filter>cache</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

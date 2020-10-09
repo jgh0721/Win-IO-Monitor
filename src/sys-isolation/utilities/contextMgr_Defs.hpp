@@ -46,6 +46,7 @@ typedef struct _CTX_GLOBAL_DATA
 
     PVOID                           GlobalFilter;
     PVOID                           ProcessFilter;
+    PVOID                           VolumeNameMgr;
 
     LARGE_INTEGER                   TimeOutMs;
 

@@ -6,6 +6,8 @@
 #include "utilities/contextMgr_Defs.hpp"
 #include "utilities/osInfoMgr.hpp"
 
+#include "utilities/volumeNameMgr.hpp"
+
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
 #endif
@@ -112,6 +114,9 @@ NTSTATUS CreateInstanceContext( PCFLT_RELATED_OBJECTS FltObjects, FLT_INSTANCE_S
 
         KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_INFO_LEVEL, "[WinIOSol] %s DeviceName=%wZ DriveLetter=%lc\n",
                      __FUNCTION__, &InstanceContext->DeviceName, InstanceContext->DriveLetter == L'\0' ? L' ' : InstanceContext->DriveLetter ) );
+
+        if( InstanceContext->DriveLetter != L'\0' )
+            VolumeMgr_Add( InstanceContext->DeviceNameBuffer, InstanceContext->DriveLetter );
 
     } while( false );
 

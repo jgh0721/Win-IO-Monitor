@@ -5,11 +5,12 @@
 #include "WinIOIsolation_Filter.hpp"
 #include "irpContext_Defs.hpp"
 #include "privateFCBMgr_Defs.hpp"
-#include "utilities/procNameMgr.hpp"
-#include "utilities/bufferMgr.hpp"
 
 #include "utilities/osInfoMgr.hpp"
 #include "utilities/contextMgr.hpp"
+#include "utilities/procNameMgr.hpp"
+#include "utilities/bufferMgr.hpp"
+#include "utilities/volumeNameMgr.hpp"
 
 #include "policies/GlobalFilter.hpp"
 #include "policies/ProcessFilter.hpp"
@@ -77,11 +78,11 @@ void DriverUnload( PDRIVER_OBJECT DriverObject )
     if( GlobalContext.Filter != NULLPTR )
         MiniFilterUnload( 0 );
 
-    RemoveControlDevice( GlobalContext );
-
     UninitializeProcessFilter();
     UninitializeGlobalFilter();
     StopProcessNotify();
+
+    RemoveControlDevice( GlobalContext );
 
     ExDeleteNPagedLookasideList( &GlobalContext.DebugLookasideList );
 
@@ -189,6 +190,8 @@ NTSTATUS InitializeFeatures( CTX_GLOBAL_DATA* GlobalContext )
 
     do
     {
+        IF_FAILED_BREAK( Status, InitializeVolumeNameMgr() );
+
         IF_FAILED_BREAK( Status, StartProcessNotify() );
         IF_FAILED_BREAK( Status, InitializeGlobalFilter() );
         IF_FAILED_BREAK( Status, InitializeProcessFilter() );

@@ -6,6 +6,7 @@
 #include "utilities/contextMgr.hpp"
 #include "utilities/contextMgr_Defs.hpp"
 #include "utilities/fltUtilities.hpp"
+#include "utilities/volumeNameMgr.hpp"
 
 #include "fltCmnLibs.hpp"
 
@@ -206,6 +207,7 @@ PIRP_CONTEXT CreateIrpContext( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_
                         }
 
                         RtlStringCbCopyW( IrpContext->DstFileFullPath.Buffer, IrpContext->DstFileFullPath.BufferSize, DestinationFileName->Name.Buffer );
+                        VolumeMgr_Replace( IrpContext->DstFileFullPath.Buffer, IrpContext->DstFileFullPath.BufferSize );
 
                     } break;
                 } // switch FileInformationClass
