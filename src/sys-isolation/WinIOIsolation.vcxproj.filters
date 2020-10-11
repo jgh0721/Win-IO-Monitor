@@ -34,6 +34,9 @@
     <Filter Include="cache">
       <UniqueIdentifier>{7cf29c1b-bf04-42f6-8f95-2d4e958644e7}</UniqueIdentifier>
     </Filter>
+    <Filter Include="MetaData">
+      <UniqueIdentifier>{8077c9af-b023-4924-a7d9-3c5bbd18760c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="fltBase.hpp">
@@ -204,6 +207,12 @@
     <ClInclude Include="utilities\volumeNameMgr_Defs.hpp">
       <Filter>cache</Filter>
     </ClInclude>
+    <ClInclude Include="metadata\Metadata.hpp">
+      <Filter>MetaData</Filter>
+    </ClInclude>
+    <ClInclude Include="metadata\Metadata_Defs.hpp">
+      <Filter>MetaData</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="WinIOIsolation.cpp">
@@ -331,6 +340,9 @@
     </ClCompile>
     <ClCompile Include="utilities\volumeNameMgr.cpp">
       <Filter>cache</Filter>
+    </ClCompile>
+    <ClCompile Include="metadata\Metadata.cpp">
+      <Filter>MetaData</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

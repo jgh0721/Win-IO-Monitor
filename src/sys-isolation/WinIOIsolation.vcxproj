@@ -58,6 +58,8 @@
     <ClInclude Include="fltBase.hpp" />
     <ClInclude Include="irpContext.hpp" />
     <ClInclude Include="irpContext_Defs.hpp" />
+    <ClInclude Include="metadata\Metadata.hpp" />
+    <ClInclude Include="metadata\Metadata_Defs.hpp" />
     <ClInclude Include="policies\GlobalFilter.hpp" />
     <ClInclude Include="policies\ProcessFilter.hpp" />
     <ClInclude Include="pool.hpp" />
@@ -108,6 +110,7 @@
     <ClCompile Include="deviceCntl.cpp" />
     <ClCompile Include="deviceMgmt.cpp" />
     <ClCompile Include="irpContext.cpp" />
+    <ClCompile Include="metadata\Metadata.cpp" />
     <ClCompile Include="policies\GlobalFilter.cpp" />
     <ClCompile Include="policies\ProcessFilter.cpp" />
     <ClCompile Include="privateFCBMgr.cpp" />

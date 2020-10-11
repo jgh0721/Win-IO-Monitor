@@ -2,9 +2,12 @@
 #define HDR_PRIVATE_FCB_MGR_DEFS
 
 #include "fltBase.hpp"
+#include "W32API.hpp"
 
 #include "utilities/bufferMgr_Defs.hpp"
 #include "utilities/contextMgr_Defs.hpp"
+
+#include "metadata/Metadata_Defs.hpp"
 
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
@@ -19,10 +22,39 @@
 #define FCB_STATE_MAIN_SHARED       0x40000
 #define FCB_STATE_MAIN_EXCLUSIVE    0x80000
 
+
 typedef struct _FCB_CUSTOM
 {
 
 } FCB_CUSTOM, *PFCB_CUSTOM;
+
+typedef struct _FCB_BASE
+{
+    
+} FCB_BASE, *PFCB_BASE;
+
+typedef struct _FCB_XP : public FCB_BASE
+{
+    nsW32API::FSRTL_ADVANCED_FCB_HEADER_XP      AdvFcbHeader;
+
+} FCB_XP, *PFCB_XP;
+
+typedef struct _FCB_VISTA : public FCB_BASE
+{
+    nsW32API::FSRTL_ADVANCED_FCB_HEADER_VISTA   AdvFcbHeader;
+
+} FCB_VISTA, * PFCB_VISTA;
+
+typedef struct _FCB_WIN8 : public FCB_BASE
+{
+    nsW32API::FSRTL_ADVANCED_FCB_HEADER_WIN8    AdvFcbHeader;
+    
+} FCB_WIN8, * PFCB_WIN8;
+
+typedef struct _FCB_WIN10 : public FCB_BASE
+{
+    nsW32API::FSRTL_ADVANCED_FCB_HEADER_WIN10   AdvFcbHeader;
+} FCB_WIN10, * PFCB_WIN10;
 
 typedef struct _FCB
 {
@@ -82,6 +114,10 @@ typedef struct _FCB
     WCHAR*                                      FileName;
 
     CTX_INSTANCE_CONTEXT*                       InstanceContext;
+
+    ///////////////////////////////////////////////////////////////////////////
+
+    METADATA_DRIVER*                            MetaDataInfo;
 
     ///////////////////////////////////////////////////////////////////////////
 

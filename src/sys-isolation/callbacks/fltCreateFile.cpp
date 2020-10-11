@@ -81,7 +81,8 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
         if( IrpContext->SrcFileFullPath.Buffer == NULLPTR )
             __leave;
 
-        if( nsUtils::WildcardMatch_straight( IrpContext->SrcFileFullPathWOVolume, L"*isolationtest.txt*" ) == false )
+        if( nsUtils::WildcardMatch_straight( IrpContext->SrcFileFullPathWOVolume, L"*isolationtest.txt*" ) == false || 
+            nsUtils::WildcardMatch_straight( IrpContext->SrcFileFullPathWOVolume, L"*metadatatest.txt*" ) == false )
             __leave;
 
         IrpContext->IsAudit = true;
