@@ -1,5 +1,6 @@
 ﻿#include "privateFCBMgr.hpp"
 
+#include "metadata/Metadata.hpp"
 #include "utilities/bufferMgr.hpp"
 #include "fltCmnLibs.hpp"
 #include "callbacks/fltCreateFile.hpp"
@@ -105,9 +106,22 @@ NTSTATUS InitializeFcbAndCcb( IRP_CONTEXT* IrpContext )
         Fcb->AdvFcbHeader.Resource = &Fcb->MainResource;
         Fcb->AdvFcbHeader.PagingIoResource = &Fcb->PagingIoResource;
 
-        Fcb->AdvFcbHeader.AllocationSize = ( ( CREATE_ARGS* )IrpContext->Params )->FileAllocationSize;
-        Fcb->AdvFcbHeader.FileSize = ( ( CREATE_ARGS* )IrpContext->Params )->FileSize;
-        Fcb->AdvFcbHeader.ValidDataLength = ( ( CREATE_ARGS* )IrpContext->Params )->FileSize;
+        const auto Args = ( CREATE_ARGS* )IrpContext->Params;
+
+        if( Args->MetaDataInfo.MetaData.Type == METADATA_UNK_TYPE)
+        {
+            Fcb->AdvFcbHeader.FileSize = Args->FileSize;
+            Fcb->AdvFcbHeader.ValidDataLength = Args->FileSize;
+            Fcb->AdvFcbHeader.AllocationSize = Args->FileAllocationSize;
+        }
+        else
+        {
+            // 파일에 메타데이터가 설정되어있다면 메타데이터에 기록된 파일크기로 FCB 를 초기화한다
+
+            Fcb->AdvFcbHeader.FileSize.QuadPart = Args->MetaDataInfo.MetaData.ContentSize;
+            Fcb->AdvFcbHeader.ValidDataLength = Fcb->AdvFcbHeader.FileSize;
+            Fcb->AdvFcbHeader.AllocationSize.QuadPart = ROUND_TO_SIZE( Args->FileSize.QuadPart, IrpContext->InstanceContext->ClusterSize );
+        }
 
         ///////////////////////////////////////////////////////////////////////
 
@@ -167,6 +181,19 @@ NTSTATUS UninitializeFCB( IRP_CONTEXT* IrpContext )
         ASSERT( Fcb != NULLPTR );
         if( Fcb == NULLPTR )
             break;
+
+        if( Fcb->MetaDataInfo != NULLPTR )
+        {
+            // TODO: CCB 의 Flags 를 추가로 점검하도록 한다
+            if( BooleanFlagOn( Fcb->Flags, FCB_STATE_METADATA_ASSOC ) )
+            {
+                WriteMetaData( IrpContext, IrpContext->Fcb->LowerFileObject, IrpContext->Fcb->MetaDataInfo );
+
+                SetFlag( Fcb->Flags, FCB_STATE_FILE_MODIFIED );
+            }
+
+            UninitializeMetaDataInfo( Fcb->MetaDataInfo );
+        }
 
         if( BooleanFlagOn( Fcb->Flags, FCB_STATE_DELETE_ON_CLOSE ) )
         {

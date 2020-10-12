@@ -2,6 +2,7 @@
 
 #include "irpContext.hpp"
 #include "privateFCBMgr.hpp"
+#include "metadata/Metadata.hpp"
 #include "pool.hpp"
 
 #include "fltCmnLibs.hpp"
@@ -159,23 +160,17 @@ NTSTATUS ProcessFileBasicInformation( IRP_CONTEXT* IrpContext )
 
     __try
     {
-        if( Length < sizeof( FILE_BASIC_INFORMATION ) )
-        {
-            AssignCmnResult( IrpContext, STATUS_BUFFER_TOO_SMALL );
-            __leave;
-        }
-
         FILE_BASIC_INFORMATION fbi;
 
         RtlZeroMemory( &fbi, sizeof( fbi ) );
         Status = FltQueryInformationFile( IrpContext->FltObjects->Instance,
                                           IrpContext->Fcb->LowerFileObject,
                                           &fbi,
-                                          sizeof( FILE_BASIC_INFORMATION ),
+                                          Length,
                                           FileBasicInformation,
                                           &LengthReturned );
 
-        if( !NT_SUCCESS( Status ) )
+        if( !NT_SUCCESS( Status ) && Status != STATUS_BUFFER_OVERFLOW  )
         {
             KdPrint( ( "[WinIOSol] EvtID=%09d %s %s Line=%d Status=0x%08x,%s Src=%ws\n",
                        IrpContext->EvtID, __FUNCTION__, "FltQueryInformationFile FAILED", __LINE__ 
@@ -229,6 +224,12 @@ NTSTATUS ProcessFileStandardInformation( IRP_CONTEXT* IrpContext )
                        , IrpContext->SrcFileFullPath.Buffer ) );
 
             __leave;
+        }
+
+        if( BooleanFlagOn( IrpContext->Fcb->Flags, FCB_STATE_METADATA_ASSOC ) )
+        {
+            FileStdInfo.EndOfFile = IrpContext->Fcb->AdvFcbHeader.FileSize;
+            FileStdInfo.AllocationSize = IrpContext->Fcb->AdvFcbHeader.AllocationSize;
         }
 
         RtlCopyMemory( InputBuffer, &FileStdInfo, sizeof( FILE_STANDARD_INFORMATION ) );
@@ -463,7 +464,15 @@ NTSTATUS ProcessFileAllInformation( IRP_CONTEXT* IrpContext )
 
         AtLeastSize += sizeof( FILE_STANDARD_INFORMATION );
         if( Length >= AtLeastSize )
+        {
             RtlCopyMemory( &InputBuffer->StandardInformation, &FileAllInformationBuffer->StandardInformation, sizeof( FILE_STANDARD_INFORMATION ) );
+
+            if( BooleanFlagOn( IrpContext->Fcb->Flags, FCB_STATE_METADATA_ASSOC ) )
+            {
+                InputBuffer->StandardInformation.EndOfFile = IrpContext->Fcb->AdvFcbHeader.FileSize;
+                InputBuffer->StandardInformation.AllocationSize = IrpContext->Fcb->AdvFcbHeader.AllocationSize;
+            }
+        }
 
         AtLeastSize += sizeof( FILE_INTERNAL_INFORMATION );
         if( Length >= AtLeastSize )
@@ -628,6 +637,12 @@ NTSTATUS ProcessFileNetworkOpenInformation( IRP_CONTEXT* IrpContext )
                        , IrpContext->SrcFileFullPath.Buffer ) );
 
             __leave;
+        }
+
+        if( BooleanFlagOn( IrpContext->Fcb->Flags, FCB_STATE_METADATA_ASSOC ) )
+        {
+            networkOpenInfo.EndOfFile = IrpContext->Fcb->AdvFcbHeader.FileSize;
+            networkOpenInfo.AllocationSize = IrpContext->Fcb->AdvFcbHeader.AllocationSize;
         }
 
         RtlCopyMemory( InputBuffer, &networkOpenInfo, Length );

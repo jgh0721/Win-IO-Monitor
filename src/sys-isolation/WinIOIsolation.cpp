@@ -15,6 +15,8 @@
 #include "policies/GlobalFilter.hpp"
 #include "policies/ProcessFilter.hpp"
 
+#include "metadata/Metadata.hpp"
+
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
 #endif
@@ -83,6 +85,9 @@ void DriverUnload( PDRIVER_OBJECT DriverObject )
     StopProcessNotify();
 
     RemoveControlDevice( GlobalContext );
+
+    UninitializeVolumeNameMgr();
+    UninitializeMetaDataMgr();
 
     ExDeleteNPagedLookasideList( &GlobalContext.DebugLookasideList );
 
@@ -190,6 +195,7 @@ NTSTATUS InitializeFeatures( CTX_GLOBAL_DATA* GlobalContext )
 
     do
     {
+        IF_FAILED_BREAK( Status, InitializeMetaDataMgr() );
         IF_FAILED_BREAK( Status, InitializeVolumeNameMgr() );
 
         IF_FAILED_BREAK( Status, StartProcessNotify() );

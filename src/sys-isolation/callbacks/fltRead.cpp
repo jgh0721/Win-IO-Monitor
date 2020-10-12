@@ -2,6 +2,7 @@
 
 #include "privateFCBMgr.hpp"
 #include "irpContext.hpp"
+#include "metadata/Metadata.hpp"
 #include "utilities/bufferMgr.hpp"
 
 #include "fltCmnLibs.hpp"
@@ -686,6 +687,11 @@ NTSTATUS ReadPagingIO( IRP_CONTEXT* IrpContext, PVOID ReadBuffer, ULONG BytesToC
             __leave;
         }
 
+        if( BooleanFlagOn( Fcb->Flags, FCB_STATE_METADATA_ASSOC ) )
+        {
+            ByteOffset.QuadPart += GetHDRSizeFromMetaData( Fcb->MetaDataInfo );
+        }
+
         Status = FltReadFile( IrpContext->FltObjects->Instance, Fcb->LowerFileObject,
                               &ByteOffset, BytesToRead,
                               TySwapBuffer.Buffer,
@@ -818,6 +824,11 @@ NTSTATUS ReadNonCachedIO( IRP_CONTEXT* IrpContext, PVOID ReadBuffer, ULONG Bytes
             KdPrint( ( "[WinIOSol] EvtID=%09d %s %s Line=%d\n",
                        IrpContext->EvtID, __FUNCTION__, "Allocate Swap Buffer FAILED", __LINE__ ) );
             __leave;
+        }
+
+        if( BooleanFlagOn( Fcb->Flags, FCB_STATE_METADATA_ASSOC ) )
+        {
+            ByteOffset.QuadPart += GetHDRSizeFromMetaData( Fcb->MetaDataInfo );
         }
 
         Status = FltReadFile( IrpContext->FltObjects->Instance, Fcb->LowerFileObject,

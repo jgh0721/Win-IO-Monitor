@@ -3,6 +3,7 @@
 #include "irpContext.hpp"
 #include "privateFCBMgr.hpp"
 #include "utilities/bufferMgr.hpp"
+#include "metadata/Metadata.hpp"
 
 #include "fltCmnLibs.hpp"
 
@@ -83,77 +84,6 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreWrite( PFLT_CALLBACK_DATA Data, PCFLT_
 
         CloseIrpContext( IrpContext );
     }
-
-    //NTSTATUS                   Status = STATUS_SUCCESS;
-    //ULONG_PTR                  Information = 0;
-    //PCTX_INSTANCE_CONTEXT      pInstanceContext = NULL;
-    //PFILE_OBJECT               FileObject = NULL;
-    //FLT_PREOP_CALLBACK_STATUS  fltStatus = FLT_PREOP_SUCCESS_NO_CALLBACK;
-    //FLT_PREOP_CALLBACK_STATUS  fltStatusTmp = FLT_PREOP_SUCCESS_NO_CALLBACK;
-    //PIO_STATUS_BLOCK           IoStatus = &Data->IoStatus;
-    //PFCB                       Fcb = NULL;
-    //ULONG                      IrpFlags;
-    //BOOLEAN                    PagingIo = TRUE;
-    //BOOLEAN                    Nocache = TRUE;
-    //BOOLEAN                    SynchronousIo = TRUE;
-    //BOOLEAN                    bLazyWriter = FALSE;
-    //LARGE_INTEGER              ByteOffset;
-    //ULONG                      Length = 0;
-    //PVOID                      WriteBuffer;
-    //PMDL                       WriteMdlAddress;
-    //BOOLEAN                    bFreeMainResource = FALSE;
-    //BOOLEAN                    bFreePagingResource = FALSE;
-    //int                        i, nRound, remainder;
-    //LARGE_INTEGER              HelperFileSize;
-    //LARGE_INTEGER              ValidFileSize;
-    //LARGE_INTEGER              ValidAllocationSize;
-    //PVOID                      SwapBuffer = NULL;
-    //ULONG                      BytesToWrite = 0;
-    //LARGE_INTEGER              ByteOffset1;
-    //ULONG                      SwapBufferLength = 0;
-    //ULONG                      BytesToCopy = 0;
-    //LARGE_INTEGER              WriteOffset;
-    //ULONG                      nBytesWrite = 0;
-    //IO_STATUS_BLOCK            IoStatusInternal;
-    //LARGE_INTEGER              ZeroStartingOffset;
-    //LARGE_INTEGER              ZeroEndingOffset;
-    //LARGE_INTEGER              ValidDataLength;
-    //ULONG                      nCipherID = 0xFFFF;
-
-    //CompletionContext;
-    //bDeffered;
-
-    //IrpFlags = Data->Iopb->IrpFlags;
-    //FileObject = FltObjects->FileObject;
-    //ByteOffset.QuadPart = 0;
-
-    //__try
-    //{
-    //	PagingIo = BooleanFlagOn( IrpFlags, IRP_PAGING_IO );
-    //	Nocache = BooleanFlagOn( IrpFlags, IRP_NOCACHE );
-    //	SynchronousIo = BooleanFlagOn( IrpFlags, FO_SYNCHRONOUS_IO );
-    //	if( PagingIo )
-    //	{
-    //		bLazyWriter = ( PsGetCurrentThread() == Fcb->LazyWriterThread );
-    //	}
-
-    //	Length = Data->Iopb->Parameters.Write.Length;
-    //	ByteOffset = Data->Iopb->Parameters.Write.ByteOffset;
-    //	WriteBuffer = Data->Iopb->Parameters.Write.WriteBuffer;
-    //	WriteMdlAddress = Data->Iopb->Parameters.Write.MdlAddress;
-
-    //	if( IsEndOfFile( ByteOffset ) )
-    //	{
-    //		ByteOffset.QuadPart = Fcb->AdvanceFcbHeader.FileSize.QuadPart;
-    //	}
-
-    //	if( Nocache && ( ByteOffset.LowPart & ( Fcb->InstanceContext->BytesPerSector - 1 ) ) )
-    //	{
-    //		Status = STATUS_INVALID_PARAMETER;
-    //		__leave;
-    //	}
-
-    //}
 
     return FltStatus;
 }
@@ -290,8 +220,7 @@ NTSTATUS WritePagingIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
                     {
                         AssignCmnResultInfo( IrpContext, BytesToCopy );
 
-                        Fcb->AdvFcbHeader.ValidDataLength.QuadPart =
-                            Fcb->AdvFcbHeader.FileSize.QuadPart;
+                        Fcb->AdvFcbHeader.ValidDataLength.QuadPart = Fcb->AdvFcbHeader.FileSize.QuadPart;
 
                         if( CcIsFileCached( FileObject ) )
                         {
@@ -449,6 +378,12 @@ NTSTATUS WriteCachedIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
 
         AcquireCmnResource( IrpContext, FCB_MAIN_EXCLUSIVE );
 
+        if( FltCheckLockForWriteAccess( &Fcb->FileLock, IrpContext->Data ) == FALSE )
+        {
+            Status = STATUS_FILE_LOCK_CONFLICT;
+            __leave;
+        }
+
         SetFlag( Fcb->Flags, FCB_STATE_FILE_MODIFIED );
 
         if( Fcb->AdvFcbHeader.ValidDataLength.QuadPart == Fcb->AdvFcbHeader.FileSize.QuadPart )
@@ -505,6 +440,7 @@ NTSTATUS WriteCachedIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
                     if( NT_SUCCESS( Status ) )
                     {
                         AssignCmnResultInfo( IrpContext, Length );
+                        UpdateFileSizeOnMetaData( IrpContext, FileObject, Fcb->AdvFcbHeader.FileSize );
 
                         if( CcIsFileCached( FileObject ) )
                         {
@@ -556,6 +492,8 @@ NTSTATUS WriteCachedIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
                     SetFlag( FileObject->Flags, FCB_STATE_FILE_SIZE_CHANGED );
                     FileObject->CurrentByteOffset.QuadPart = ByteOffset.QuadPart + Length;
 
+                    UpdateFileSizeOnMetaData( IrpContext, FileObject, Fcb->AdvFcbHeader.FileSize );
+
                     Fcb->AdvFcbHeader.ValidDataLength.QuadPart = ByteOffset.QuadPart + Length;
                     if( CcIsFileCached( FileObject ) )
                     {
@@ -598,6 +536,7 @@ NTSTATUS WriteCachedIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
                 if( NT_SUCCESS( Status ) )
                 {
                     AssignCmnResultInfo( IrpContext, Length );
+                    UpdateFileSizeOnMetaData( IrpContext, FileObject, Fcb->AdvFcbHeader.FileSize );
 
                     if( ByteOffset.QuadPart + Length > Fcb->AdvFcbHeader.ValidDataLength.QuadPart )
                     {
@@ -710,6 +649,7 @@ NTSTATUS WriteCachedIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
                     if( NT_SUCCESS( Status ) )
                     {
                         AssignCmnResultInfo( IrpContext, Length );
+                        UpdateFileSizeOnMetaData( IrpContext, FileObject, Fcb->AdvFcbHeader.FileSize );
 
                         if( ByteOffset.QuadPart + Length > Fcb->AdvFcbHeader.ValidDataLength.QuadPart )
                         {
@@ -747,6 +687,7 @@ NTSTATUS WriteCachedIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
                     if( NT_SUCCESS( Status ) )
                     {
                         AssignCmnResultInfo( IrpContext, Length );
+                        UpdateFileSizeOnMetaData( IrpContext, FileObject, Fcb->AdvFcbHeader.FileSize );
 
                         if( ByteOffset.QuadPart + Length > Fcb->AdvFcbHeader.ValidDataLength.QuadPart )
                         {
@@ -790,6 +731,7 @@ NTSTATUS WriteCachedIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
                     if( NT_SUCCESS( Status ) )
                     {
                         AssignCmnResultInfo( IrpContext, Length );
+                        UpdateFileSizeOnMetaData( IrpContext, FileObject, Fcb->AdvFcbHeader.FileSize );
 
                         if( ByteOffset.QuadPart + Length > Fcb->AdvFcbHeader.ValidDataLength.QuadPart )
                         {
@@ -836,6 +778,7 @@ NTSTATUS WriteCachedIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
                     if( NT_SUCCESS( Status ) )
                     {
                         AssignCmnResultInfo( IrpContext, Length );
+                        UpdateFileSizeOnMetaData( IrpContext, FileObject, Fcb->AdvFcbHeader.FileSize );
 
                         if( ByteOffset.QuadPart + Length > Fcb->AdvFcbHeader.ValidDataLength.QuadPart )
                         {
@@ -883,6 +826,7 @@ NTSTATUS WriteCachedIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
                     if( NT_SUCCESS( Status ) )
                     {
                         AssignCmnResultInfo( IrpContext, Length );
+                        UpdateFileSizeOnMetaData( IrpContext, FileObject, Fcb->AdvFcbHeader.FileSize );
 
                         if( ByteOffset.QuadPart + Length > Fcb->AdvFcbHeader.ValidDataLength.QuadPart )
                         {
@@ -946,6 +890,7 @@ NTSTATUS WriteCachedIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
                 if( NT_SUCCESS( Status ) )
                 {
                     AssignCmnResultInfo( IrpContext, Length );
+                    UpdateFileSizeOnMetaData( IrpContext, FileObject, Fcb->AdvFcbHeader.FileSize );
 
                     Fcb->AdvFcbHeader.ValidDataLength.QuadPart = ByteOffset.QuadPart + Length;
                     CcSetFileSizes( FileObject, ( PCC_FILE_SIZES )( &Fcb->AdvFcbHeader.AllocationSize ) );
@@ -991,6 +936,7 @@ NTSTATUS WriteCachedIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
                 if( NT_SUCCESS( Status ) )
                 {
                     AssignCmnResultInfo( IrpContext, Length );
+                    UpdateFileSizeOnMetaData( IrpContext, FileObject, Fcb->AdvFcbHeader.FileSize );
 
                     Fcb->AdvFcbHeader.ValidDataLength.QuadPart = ByteOffset.QuadPart + Length;
                     CcSetFileSizes( FileObject, ( PCC_FILE_SIZES )( &Fcb->AdvFcbHeader.AllocationSize ) );
@@ -1039,6 +985,12 @@ NTSTATUS WriteNonCachedIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
     {
         AcquireCmnResource( IrpContext, FCB_MAIN_EXCLUSIVE );
 
+        if( FltCheckLockForWriteAccess( &Fcb->FileLock, IrpContext->Data ) == FALSE )
+        {
+            Status = STATUS_FILE_LOCK_CONFLICT;
+            __leave;
+        }
+
         if( Fcb->AdvFcbHeader.ValidDataLength.QuadPart == Fcb->AdvFcbHeader.FileSize.QuadPart )
         {
             if( ByteOffset.QuadPart < Fcb->AdvFcbHeader.ValidDataLength.QuadPart )
@@ -1079,6 +1031,7 @@ NTSTATUS WriteNonCachedIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
 
                         Fcb->AdvFcbHeader.ValidDataLength.QuadPart = Fcb->AdvFcbHeader.FileSize.QuadPart;
                         FileObject->CurrentByteOffset.QuadPart = ByteOffset.QuadPart + Length;
+                        UpdateFileSizeOnMetaData( IrpContext, FileObject, Fcb->AdvFcbHeader.FileSize );
 
                         if( CcIsFileCached( FileObject ) )
                         {
@@ -1123,6 +1076,7 @@ NTSTATUS WriteNonCachedIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
 
                     Fcb->AdvFcbHeader.ValidDataLength.QuadPart = Fcb->AdvFcbHeader.FileSize.QuadPart;
                     FileObject->CurrentByteOffset.QuadPart = ByteOffset.QuadPart + Length;
+                    UpdateFileSizeOnMetaData( IrpContext, FileObject, Fcb->AdvFcbHeader.FileSize );
 
                     if( CcIsFileCached( FileObject ) )
                     {
@@ -1203,6 +1157,7 @@ NTSTATUS WriteNonCachedIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
 
                         Fcb->AdvFcbHeader.ValidDataLength.QuadPart = Fcb->AdvFcbHeader.FileSize.QuadPart;
                         FileObject->CurrentByteOffset.QuadPart = ByteOffset.QuadPart + Length;
+                        UpdateFileSizeOnMetaData( IrpContext, FileObject, Fcb->AdvFcbHeader.FileSize );
 
                         if( CcIsFileCached( FileObject ) )
                         {
@@ -1281,6 +1236,7 @@ NTSTATUS WriteNonCachedIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
 
                         Fcb->AdvFcbHeader.ValidDataLength.QuadPart = Fcb->AdvFcbHeader.FileSize.QuadPart;
                         FileObject->CurrentByteOffset.QuadPart = ByteOffset.QuadPart + Length;
+                        UpdateFileSizeOnMetaData( IrpContext, FileObject, Fcb->AdvFcbHeader.FileSize );
 
                         if( CcIsFileCached( FileObject ) )
                         {
@@ -1324,6 +1280,7 @@ NTSTATUS WriteNonCachedIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer )
                     AssignCmnResultInfo( IrpContext, BytesToCopy );
 
                     Fcb->AdvFcbHeader.ValidDataLength.QuadPart = Fcb->AdvFcbHeader.FileSize.QuadPart;
+                    UpdateFileSizeOnMetaData( IrpContext, FileObject, Fcb->AdvFcbHeader.FileSize );
 
                     if( CcIsFileCached( FileObject ) )
                     {
@@ -1375,6 +1332,11 @@ NTSTATUS WritePagingIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer, ULONG BytesT
         }
 
         RtlCopyMemory( TySwapBuffer.Buffer, WriteBuffer, BytesToCopy );
+
+        if( BooleanFlagOn( Fcb->Flags, FCB_STATE_METADATA_ASSOC ) )
+        {
+            ByteOffset.QuadPart += GetHDRSizeFromMetaData( Fcb->MetaDataInfo );
+        }
 
         Status = FltWriteFile( IrpContext->FltObjects->Instance,
                                Fcb->LowerFileObject,
@@ -1474,6 +1436,11 @@ NTSTATUS WriteNonCachedIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer, ULONG Byt
     NTSTATUS Status = STATUS_SUCCESS;
     TyGenericBuffer<BYTE> TySwapBuffer;
 
+    if( IsEndOfFile( ByteOffset ) )
+    {
+        ByteOffset.QuadPart = Fcb->AdvFcbHeader.FileSize.QuadPart;
+    }
+
     __try
     {
         TySwapBuffer = AllocateSwapBuffer( BUFFER_SWAP_WRITE, BytesToWrite );
@@ -1488,6 +1455,9 @@ NTSTATUS WriteNonCachedIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer, ULONG Byt
         }
 
         RtlCopyMemory( TySwapBuffer.Buffer, WriteBuffer, BytesToCopy );
+
+        if( BooleanFlagOn( Fcb->Flags, FCB_STATE_METADATA_ASSOC ) )
+            ByteOffset.QuadPart += GetHDRSizeFromMetaData( Fcb->MetaDataInfo );
 
         Status = FltWriteFile( IrpContext->FltObjects->Instance,
                                Fcb->LowerFileObject,
@@ -1535,6 +1505,12 @@ NTSTATUS SetEndOfFile( IRP_CONTEXT* IrpContext, LONGLONG llEndOfFile )
         FILE_END_OF_FILE_INFORMATION FileEOF;
         FileEOF.EndOfFile.QuadPart = llEndOfFile;
 
+        if( IrpContext->Fcb != NULLPTR && 
+            BooleanFlagOn( IrpContext->Fcb->Flags, FCB_STATE_METADATA_ASSOC ) )
+        {
+            FileEOF.EndOfFile.QuadPart += GetHDRSizeFromMetaData( IrpContext->Fcb->MetaDataInfo );
+        }
+
         Status = FltSetInformationFile( IrpContext->FltObjects->Instance,
                                         FileObject, &FileEOF, sizeof( FILE_END_OF_FILE_INFORMATION ),
                                         FileEndOfFileInformation );
@@ -1547,6 +1523,9 @@ NTSTATUS SetEndOfFile( IRP_CONTEXT* IrpContext, LONGLONG llEndOfFile )
                        , IrpContext->SrcFileFullPath.Buffer ) );
         }
 
+        // UpdateFileSizeOnMetaData( IrpContext, FileObject, llEndOfFile );
+
+        Status = STATUS_SUCCESS;
     } while( false );
 
     return Status;

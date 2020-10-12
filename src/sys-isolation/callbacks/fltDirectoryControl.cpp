@@ -105,7 +105,9 @@ FLT_POSTOP_CALLBACK_STATUS FilterPostDirectoryControlWhenSafe( PFLT_CALLBACK_DAT
 
         switch( FileInformationClass )
         {
-            case FileDirectoryInformation: {} break;
+            case FileDirectoryInformation: {
+                TuneFileDirectoryInformation( IrpContext );
+            } break;
             case FileFullDirectoryInformation: {} break;
             case FileBothDirectoryInformation: {} break;
             case FileNamesInformation: {} break;
@@ -125,4 +127,27 @@ FLT_POSTOP_CALLBACK_STATUS FilterPostDirectoryControlWhenSafe( PFLT_CALLBACK_DAT
     }
 
     return FltStatus;
+}
+
+NTSTATUS TuneFileDirectoryInformation( IRP_CONTEXT* IrpContext )
+{
+    NTSTATUS Status = STATUS_SUCCESS;
+
+    __try
+    {
+        if( IrpContext->UserBuffer == NULLPTR )
+        {
+            Status = STATUS_INSUFFICIENT_RESOURCES;
+            __leave;
+        }
+
+
+    }
+    __finally
+    {
+        AssignCmnResult( IrpContext, Status );
+        AssignCmnFltResult( IrpContext, FLT_PREOP_COMPLETE );
+    }
+
+    return Status;
 }

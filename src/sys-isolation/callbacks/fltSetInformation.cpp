@@ -2,6 +2,7 @@
 
 #include "privateFCBMgr.hpp"
 #include "irpContext.hpp"
+#include "metadata/Metadata.hpp"
 
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
@@ -173,7 +174,12 @@ NTSTATUS ProcessSetFileAllocationInformation( IRP_CONTEXT* IrpContext )
             {
                 CcSetFileSizes( FileObject, ( PCC_FILE_SIZES )( &Fcb->AdvFcbHeader.AllocationSize ) );
             }
-            
+
+            if( BooleanFlagOn( Fcb->Flags, FCB_STATE_METADATA_ASSOC ) )
+            {
+                Fcb->MetaDataInfo->MetaData.ContentSize = Fcb->AdvFcbHeader.FileSize.QuadPart;
+            }
+
             Status = STATUS_SUCCESS;
             AssignCmnResult( IrpContext, Status );
             AssignCmnResultInfo( IrpContext, sizeof( FILE_ALLOCATION_INFORMATION ) );
@@ -272,11 +278,19 @@ NTSTATUS ProcessSetFileEndOfFileInformation( IRP_CONTEXT* IrpContext )
             // 지연된 쓰기 호출에서는 파일 크기를 변경할 수 없다
             EndOfFile->EndOfFile.QuadPart = Fcb->AdvFcbHeader.FileSize.QuadPart;
 
+            if( BooleanFlagOn( Fcb->Flags, FCB_STATE_METADATA_ASSOC ) )
+                EndOfFile->EndOfFile.QuadPart += GetHDRSizeFromMetaData( Fcb->MetaDataInfo );
+
             Status = FltSetInformationFile( IrpContext->FltObjects->Instance, 
                                             Ccb->LowerFileObject != NULLPTR ? Ccb->LowerFileObject : Fcb->LowerFileObject,
                                             EndOfFile, sizeof( FILE_END_OF_FILE_INFORMATION ),
                                             FileEndOfFileInformation );
-            
+            if( NT_SUCCESS( Status ) )
+            {
+                if( BooleanFlagOn( Fcb->Flags, FCB_STATE_METADATA_ASSOC ) )
+                    Fcb->MetaDataInfo->MetaData.ContentSize = EndOfFile->EndOfFile.QuadPart - GetHDRSizeFromMetaData( Fcb->MetaDataInfo );
+            }
+
             AssignCmnResult( IrpContext, Status );
         }
         else
@@ -310,6 +324,9 @@ NTSTATUS ProcessSetFileEndOfFileInformation( IRP_CONTEXT* IrpContext )
 
                 HelperFileSize.QuadPart = EndOfFile->EndOfFile.QuadPart;
 
+                if( BooleanFlagOn( Fcb->Flags, FCB_STATE_METADATA_ASSOC ) )
+                    HelperFileSize.QuadPart += GetHDRSizeFromMetaData( Fcb->MetaDataInfo );
+
                 Status = FltSetInformationFile( IrpContext->FltObjects->Instance, 
                                                 Ccb->LowerFileObject != NULLPTR ? Ccb->LowerFileObject : Fcb->LowerFileObject,
                                                 &HelperFileSize,
@@ -325,6 +342,9 @@ NTSTATUS ProcessSetFileEndOfFileInformation( IRP_CONTEXT* IrpContext )
                     AssignCmnResult( IrpContext, Status );
                     __leave;
                 }
+
+                if( BooleanFlagOn( Fcb->Flags, FCB_STATE_METADATA_ASSOC ) )
+                    Fcb->MetaDataInfo->MetaData.ContentSize = EndOfFile->EndOfFile.QuadPart;
 
                 if( CcIsFileCached( FileObject ) )
                 {
@@ -369,6 +389,9 @@ NTSTATUS ProcessSetFileEndOfFileInformation( IRP_CONTEXT* IrpContext )
                 {
                     CcSetFileSizes( FileObject, ( PCC_FILE_SIZES )( &Fcb->AdvFcbHeader.AllocationSize ) );
                 }
+
+                if( BooleanFlagOn( Fcb->Flags, FCB_STATE_METADATA_ASSOC ) )
+                    Fcb->MetaDataInfo->MetaData.ContentSize = EndOfFile->EndOfFile.QuadPart;
 
                 Status = STATUS_SUCCESS;
                 AssignCmnResult( IrpContext, Status );
@@ -449,6 +472,9 @@ NTSTATUS ProcessSetFileValidDataLengthInformation( IRP_CONTEXT* IrpContext )
             // 지연된 쓰기 호출에서는 파일 크기를 변경할 수 없다
             VDLOfFile->ValidDataLength.QuadPart = Fcb->AdvFcbHeader.ValidDataLength.QuadPart;
 
+            if( BooleanFlagOn( Fcb->Flags, FCB_STATE_METADATA_ASSOC ) )
+                VDLOfFile->ValidDataLength.QuadPart += GetHDRSizeFromMetaData( Fcb->MetaDataInfo );
+
             Status = FltSetInformationFile( IrpContext->FltObjects->Instance,
                                             Ccb->LowerFileObject != NULLPTR ? Ccb->LowerFileObject : Fcb->LowerFileObject,
                                             VDLOfFile, sizeof( FILE_VALID_DATA_LENGTH_INFORMATION ),
@@ -472,6 +498,9 @@ NTSTATUS ProcessSetFileValidDataLengthInformation( IRP_CONTEXT* IrpContext )
 
             auto Current = Fcb->AdvFcbHeader.ValidDataLength;
             Fcb->AdvFcbHeader.ValidDataLength.QuadPart = VDLOfFile->ValidDataLength.QuadPart;
+
+            if( BooleanFlagOn( Fcb->Flags, FCB_STATE_METADATA_ASSOC ) )
+                VDLOfFile->ValidDataLength.QuadPart += GetHDRSizeFromMetaData( Fcb->MetaDataInfo );
 
             Status = FltSetInformationFile( IrpContext->FltObjects->Instance,
                                             Ccb->LowerFileObject != NULLPTR ? Ccb->LowerFileObject : Fcb->LowerFileObject,

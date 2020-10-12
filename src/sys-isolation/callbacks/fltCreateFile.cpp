@@ -2,6 +2,7 @@
 
 #include "irpContext.hpp"
 #include "privateFCBMgr.hpp"
+#include "metadata/Metadata.hpp"
 
 #include "fltCmnLibs.hpp"
 #include "utilities/osInfoMgr.hpp"
@@ -70,6 +71,7 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
         Args.CreateDesiredAccess = SecurityContext->DesiredAccess;
         Args.DeleteOnClose = FlagOn( Args.CreateOptions, FILE_DELETE_ON_CLOSE ) > 0;
         Args.RequiringOplock = FlagOn( Args.CreateOptions, FILE_OPEN_REQUIRING_OPLOCK ) > 0;
+        RtlZeroMemory( &Args.MetaDataInfo, METADATA_DRIVER_SIZE );
 
         if( BooleanFlagOn( Args.CreateOptions, FILE_DIRECTORY_FILE ) )
             __leave;
@@ -81,7 +83,7 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
         if( IrpContext->SrcFileFullPath.Buffer == NULLPTR )
             __leave;
 
-        if( nsUtils::WildcardMatch_straight( IrpContext->SrcFileFullPathWOVolume, L"*isolationtest.txt*" ) == false || 
+        if( nsUtils::WildcardMatch_straight( IrpContext->SrcFileFullPathWOVolume, L"*isolationtest.txt*" ) == false && 
             nsUtils::WildcardMatch_straight( IrpContext->SrcFileFullPathWOVolume, L"*metadatatest.txt*" ) == false )
             __leave;
 
@@ -346,6 +348,16 @@ NTSTATUS CreateFileExistFCB( IRP_CONTEXT* IrpContext )
             __leave;
         }
 
+        GetFileMetaDataInfo( IrpContext, Args->LowerFileObject, &Args->MetaDataInfo );
+
+        if( Args->MetaDataInfo.MetaData.Type != METADATA_UNK_TYPE )
+        {
+            IrpContext->Fcb->MetaDataInfo = AllocateMetaDataInfo();
+            RtlCopyMemory( IrpContext->Fcb->MetaDataInfo, &Args->MetaDataInfo, METADATA_DRIVER_SIZE );
+
+            SetFlag( IrpContext->Fcb->Flags, FCB_STATE_METADATA_ASSOC );
+        }
+
         IrpContext->Ccb = AllocateCcb();
         if( IrpContext->Ccb != NULLPTR )
         {
@@ -479,34 +491,15 @@ NTSTATUS CreateFileNonExistFCB( IRP_CONTEXT* IrpContext )
                        , Status, ntkernel_error_category::find_ntstatus( Status )->message ) );
         }
 
-        //switch( CreateArgs.CreateDisposition )
-        //{
-        //    case FILE_SUPERSEDE:
-        //    {
-        //        ProcessPreCreate_SUPERSEDE( IrpContext );
-        //    } break;
-        //    case FILE_OPEN:
-        //    {
-        //        ProcessPreCreate_OPEN( IrpContext );
-        //    } break;
-        //    case FILE_CREATE:
-        //    {
-        //        ProcessPreCreate_CREATE( IrpContext );
-        //    } break;
-        //    case FILE_OPEN_IF:
-        //    {
-        //        ProcessPreCreate_OPEN_IF( IrpContext );
-        //    } break;
-        //    case FILE_OVERWRITE:
-        //    {
-        //        ProcessPreCreate_OVERWRITE( IrpContext );
-        //    } break;
-        //    case FILE_OVERWRITE_IF:
-        //    {
-        //        ProcessPreCreate_OVERWRITE_IF( IrpContext );
-        //    } break;
-        //} // switch CreateDisposition
-        //
+        GetFileMetaDataInfo( IrpContext, Args->LowerFileObject, &Args->MetaDataInfo );
+
+        if( IoStatus.Information == FILE_CREATED || 
+            IoStatus.Information == FILE_SUPERSEDED || 
+            IoStatus.Information == FILE_OVERWRITTEN )
+        {
+            if( nsUtils::WildcardMatch_straight( IrpContext->SrcFileFullPathWOVolume, L"*metadatatest.txt*" ) == true )
+                Args->IsMetaDataOnCreate = TRUE;
+        }
 
         AcquireCmnResource( IrpContext, INST_EXCLUSIVE );
 
@@ -549,6 +542,39 @@ NTSTATUS CreateFileNonExistFCB( IRP_CONTEXT* IrpContext )
 
                 __leave;
             }
+        }
+
+        if( Args->IsMetaDataOnCreate != FALSE || Args->MetaDataInfo.MetaData.Type != METADATA_UNK_TYPE )
+        {
+            IrpContext->Fcb->MetaDataInfo = AllocateMetaDataInfo();
+            RtlCopyMemory( IrpContext->Fcb->MetaDataInfo, &Args->MetaDataInfo, METADATA_DRIVER_SIZE );
+
+            SetFlag( IrpContext->Fcb->Flags, FCB_STATE_METADATA_ASSOC );
+        }
+
+        if( Args->IsMetaDataOnCreate != FALSE )
+        {
+            LARGE_INTEGER FILE_BEGIN_OFFSET = { 0,0 };
+            ULONG BytesWritten = 0;
+
+            InitializeMetaDataInfo( IrpContext->Fcb->MetaDataInfo );
+
+            Status = FltWriteFile( IrpContext->FltObjects->Instance,
+                                   IrpContext->Fcb->LowerFileObject, &FILE_BEGIN_OFFSET, METADATA_DRIVER_SIZE, 
+                                   ( PVOID )IrpContext->Fcb->MetaDataInfo,
+                                   FLTFL_IO_OPERATION_DO_NOT_UPDATE_BYTE_OFFSET | FLTFL_IO_OPERATION_NON_CACHED,
+                                   &BytesWritten, NULL, NULL );
+
+            if( !NT_SUCCESS( Status ) )
+            {
+                KdPrint( ( "[WinIOSol] EvtID=%09d %s %s Line=%d Status=0x%08x,%s Src=%wZ\n"
+                           , IrpContext->EvtID, __FUNCTION__, "FltWriteFile FAILED", __LINE__
+                           , Status, ntkernel_error_category::find_ntstatus( Status )->message
+                           , &Args->CreateFileNameUS
+                           ) );
+            }
+
+            IrpContext->Fcb->MetaDataInfo->MetaData.ContentSize = 0;
         }
 
         if( nsUtils::VerifyVersionInfoEx( 6, 1, ">=" ) == true )

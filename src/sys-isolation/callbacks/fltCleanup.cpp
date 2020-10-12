@@ -3,6 +3,7 @@
 #include "fltWrite.hpp"
 #include "privateFCBMgr.hpp"
 #include "irpContext.hpp"
+#include "metadata/Metadata.hpp"
 
 #include "utilities/osInfoMgr.hpp"
 #include "utilities/fltUtilities.hpp"

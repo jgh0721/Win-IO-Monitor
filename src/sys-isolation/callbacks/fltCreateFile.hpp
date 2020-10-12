@@ -4,6 +4,7 @@
 #include "fltBase.hpp"
 #include "irpContext_Defs.hpp"
 #include "privateFCBMgr_Defs.hpp"
+#include "metadata/Metadata_Defs.hpp"
 
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
@@ -76,6 +77,9 @@ typedef struct _CREATE_ARGS
     FCB*                    Fcb;
     FILE_OBJECT*            LowerFileObject;
     HANDLE                  LowerFileHandle;
+
+    METADATA_DRIVER         MetaDataInfo;
+    BOOLEAN                 IsMetaDataOnCreate; // 해당 파일이 새로 생성되었고, 메타 데이터 생성 필요함 여부 
     
 } CREATE_ARGS, * PCREATE_ARGS;
 
