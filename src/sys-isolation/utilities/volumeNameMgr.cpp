@@ -78,7 +78,7 @@ VOID VolumeNameMgr_Release( __in_opt VOLUME_INFO* VolumeNameMgr )
         return;
 
     VolumeNameMgr->RefCount = 0;
-    if( GlobalContext.GlobalFilter == VolumeNameMgr )
+    if( GlobalContext.VolumeNameMgr == VolumeNameMgr )
         return;
 
     auto Head = &VolumeNameMgr->ListHead;
