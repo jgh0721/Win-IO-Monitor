@@ -6,6 +6,7 @@
 #include "irpContext_Defs.hpp"
 
 #include "utilities/contextMgr_Defs.hpp"
+#include "metadata/Metadata_Defs.hpp"
 
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
@@ -27,5 +28,6 @@ VOID Vcb_InsertFCB( __in CTX_INSTANCE_CONTEXT* InstanceContext, __in FCB* Fcb );
 VOID Vcb_DeleteFCB( __in CTX_INSTANCE_CONTEXT* InstanceContext, __in FCB* Fcb );
 
 bool IsOwnFileObject( __in FILE_OBJECT* FileObject );
+bool IsOwnFile( __in IRP_CONTEXT* IrpContext, __in_z const WCHAR* FileFullPathWOVolume, __out_opt METADATA_DRIVER* MetaDataInfo );
 
 #endif // HDR_PRIVATE_FCB_MGR

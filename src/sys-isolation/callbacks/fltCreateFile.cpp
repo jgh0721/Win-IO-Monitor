@@ -348,16 +348,6 @@ NTSTATUS CreateFileExistFCB( IRP_CONTEXT* IrpContext )
             __leave;
         }
 
-        GetFileMetaDataInfo( IrpContext, Args->LowerFileObject, &Args->MetaDataInfo );
-
-        if( Args->MetaDataInfo.MetaData.Type != METADATA_UNK_TYPE )
-        {
-            IrpContext->Fcb->MetaDataInfo = AllocateMetaDataInfo();
-            RtlCopyMemory( IrpContext->Fcb->MetaDataInfo, &Args->MetaDataInfo, METADATA_DRIVER_SIZE );
-
-            SetFlag( IrpContext->Fcb->Flags, FCB_STATE_METADATA_ASSOC );
-        }
-
         IrpContext->Ccb = AllocateCcb();
         if( IrpContext->Ccb != NULLPTR )
         {
@@ -404,6 +394,9 @@ NTSTATUS CreateFileExistFCB( IRP_CONTEXT* IrpContext )
                 IrpContext->Fcb->AdvFcbHeader.AllocationSize.QuadPart = IrpContext->Data->Iopb->Parameters.Create.AllocationSize.QuadPart;
 
                 CcSetFileSizes( Args->FileObject, ( PCC_FILE_SIZES )&IrpContext->Fcb->AdvFcbHeader.AllocationSize );
+
+                if( FlagOn( IrpContext->Fcb->Flags, FCB_STATE_METADATA_ASSOC ) )
+                    UpdateFileSizeOnMetaData( IrpContext, Args->FileObject, 0 );
 
                 FltReleaseResource( &IrpContext->Fcb->PagingIoResource );
                 ClearFlag( IrpContext->CompleteStatus, COMPLETE_FREE_PGIO_RSRC );

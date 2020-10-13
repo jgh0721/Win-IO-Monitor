@@ -6,7 +6,7 @@
 #include "utilities/contextMgr.hpp"
 #include "utilities/contextMgr_Defs.hpp"
 #include "utilities/fltUtilities.hpp"
-#include "utilities/volumeNameMgr.hpp"
+#include "utilities/volumeMgr.hpp"
 
 #include "fltCmnLibs.hpp"
 
@@ -106,12 +106,7 @@ PIRP_CONTEXT CreateIrpContext( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_
 
         if( IrpContext->SrcFileFullPath.Buffer == NULLPTR )
         {
-            if( !FlagOn( IrpContext->Data->Iopb->Parameters.Create.Options, FILE_OPEN_BY_FILE_ID ) )
-            {
-                IrpContext->SrcFileFullPath = nsUtils::ExtractFileFullPath( FltObjects->FileObject, InstanceContext,
-                                                                            ( MajorFunction == IRP_MJ_CREATE ) && ( IsPreIO == true ) );
-            }
-            else
+            if( MajorFunction == IRP_MJ_CREATE && FlagOn( IrpContext->Data->Iopb->Parameters.Create.Options, FILE_OPEN_BY_FILE_ID ) )
             {
                 PFLT_FILE_NAME_INFORMATION fni = NULLPTR;
 
@@ -137,7 +132,7 @@ PIRP_CONTEXT CreateIrpContext( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_
 
                         auto DeviceNameLength = nsUtils::strlength( InstanceContext->DeviceNameBuffer ) * sizeof( WCHAR );
                         RtlStringCbCatW( &IrpContext->SrcFileFullPath.Buffer[ 2 ],
-                                         fni->Name.Length - ( DeviceNameLength * sizeof(WCHAR) ) + sizeof(WCHAR),
+                                         fni->Name.Length - ( DeviceNameLength * sizeof( WCHAR ) ) + sizeof( WCHAR ),
                                          &fni->Name.Buffer[ DeviceNameLength ] );
                     }
 
@@ -145,6 +140,11 @@ PIRP_CONTEXT CreateIrpContext( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_
 
                 if( fni != NULLPTR )
                     FltReleaseFileNameInformation( fni );
+            }
+            else
+            {
+                IrpContext->SrcFileFullPath = nsUtils::ExtractFileFullPath( FltObjects->FileObject, InstanceContext,
+                                                                            ( MajorFunction == IRP_MJ_CREATE ) && ( IsPreIO == true ) );
             }
         }
         
@@ -852,7 +852,40 @@ void PrintIrpContextDIRECTORY_CONTROL( PIRP_CONTEXT IrpContext, bool IsResultMod
                 {
                     case FileDirectoryInformation: {} break;
                     case FileFullDirectoryInformation: {} break;
-                    case FileBothDirectoryInformation: {} break;
+                    case FileBothDirectoryInformation: {
+
+                        ULONG Offset = 0;
+                        auto InfoBuffer = ( FILE_BOTH_DIR_INFORMATION* )IrpContext->UserBuffer;
+                        UNICODE_STRING FileNameUni;
+
+                        do
+                        {
+                            Offset = InfoBuffer->NextEntryOffset;
+
+                            if( nsUtils::stricmp( InfoBuffer->FileName, InfoBuffer->FileNameLength, L"." ) != 0 && 
+                                nsUtils::stricmp( InfoBuffer->FileName, InfoBuffer->FileNameLength, L".." ) != 0 )
+                            {
+                                FileNameUni.Buffer = InfoBuffer->FileName;
+                                FileNameUni.Length = InfoBuffer->FileNameLength;
+                                FileNameUni.MaximumLength = InfoBuffer->FileNameLength;
+
+                                KdPrint( ( "[WinIOSol] %s EvtID=%09d        FileName=%wZ CreationTime=%I64d LastAccessTime=%I64d LastWriteTime=%I64d ChangeTime=%I64d EndOfFile=%I64d AllocationSize=%I64d\n"
+                                           , JudgeInOut( IrpContext, IsResultMode ), IrpContext->EvtID
+                                           , &FileNameUni
+                                           , InfoBuffer->CreationTime.QuadPart
+                                           , InfoBuffer->LastAccessTime.QuadPart
+                                           , InfoBuffer->LastWriteTime.QuadPart
+                                           , InfoBuffer->ChangeTime.QuadPart
+                                           , InfoBuffer->EndOfFile.QuadPart
+                                           , InfoBuffer->AllocationSize.QuadPart
+                                           ) );
+                            }
+
+                            InfoBuffer = ( FILE_BOTH_DIR_INFORMATION* )Add2Ptr( InfoBuffer, Offset );
+
+                        } while( Offset != 0 );
+
+                    } break;
                     case FileIdBothDirectoryInformation: {} break;
                     case FileIdFullDirectoryInformation: {} break;
                 }
@@ -1037,6 +1070,23 @@ VOID AcquireCmnResource( PIRP_CONTEXT IrpContext, LONG RsrcFlags )
 
         FltAcquireResourceShared( &IrpContext->InstanceContext->VcbLock );
         SetFlag( IrpContext->CompleteStatus, COMPLETE_FREE_INST_RSRC );
+    }
+}
+
+void ReleaseCmnResource( PIRP_CONTEXT IrpContext, LONG RsrcFlags )
+{
+    ASSERT( IrpContext != NULLPTR );
+    if( IrpContext == NULLPTR )
+        return;
+
+    if( BooleanFlagOn( RsrcFlags, INST_SHARED ) || 
+        BooleanFlagOn( RsrcFlags, INST_EXCLUSIVE ) )
+    {
+        if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_FREE_INST_RSRC ) )
+        {
+            FltReleaseResource( &IrpContext->InstanceContext->VcbLock );
+            ClearFlag( IrpContext->CompleteStatus, COMPLETE_FREE_INST_RSRC );
+        }
     }
 }
 

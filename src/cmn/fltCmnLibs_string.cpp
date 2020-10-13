@@ -26,7 +26,28 @@ namespace nsUtils
 		return ullLength;
 	}
 
-	WCHAR* ReverseFindW( __in_z WCHAR* wszString, WCHAR ch )
+    int stricmp( const wchar_t* lhs, const wchar_t* rhs )
+    {
+		return stricmp( lhs, strlength( lhs ), rhs );
+    }
+
+    int stricmp( const wchar_t* lhs, ULONG cchCount, const wchar_t* rhs )
+    {
+		auto cchRhsCount = strlength( rhs );
+
+		// based on wineHQ, https://www.winehq.org/pipermail/wine-cvs/2016-May/113431.html
+		LONG ret = 0;
+		SIZE_T len = min( cchCount, cchRhsCount );
+		while( !ret && len-- )
+			ret = RtlUpcaseUnicodeChar( *lhs++ ) - RtlUpcaseUnicodeChar( *rhs++ );
+
+		if( !ret )
+			ret = cchCount - cchRhsCount;
+
+		return ret;
+    }
+
+    WCHAR* ReverseFindW( __in_z WCHAR* wszString, WCHAR ch )
 	{
 		size_t length = strlength( wszString );
 
@@ -90,7 +111,7 @@ namespace nsUtils
 		return &wszString[ base ];
     }
 
-    WCHAR* StartsWithW( WCHAR* wszString, const WCHAR* wszPattern )
+    WCHAR* StartsWithW( const WCHAR* wszString, const WCHAR* wszPattern )
     {
 		auto lhs = strlength( wszString );
 		auto rhs = strlength( wszPattern );
@@ -98,7 +119,7 @@ namespace nsUtils
 		if( lhs < rhs )
 			return NULLPTR;
 
-		for( auto idx = 0; idx < rhs; ++idx )
+		for( size_t idx = 0; idx < rhs; ++idx )
 		{
 			if( RtlUpcaseUnicodeChar( wszString[ idx ] ) != RtlUpcaseUnicodeChar( wszPattern[ idx ] ) )
 			{
@@ -106,7 +127,7 @@ namespace nsUtils
 			}
 		}
 
-		return &wszString[ 0 ];
+		return &((const_cast< WCHAR* >( wszString ))[ 0 ]);
 	}
 
     bool WildcardMatch_straight( const char* pszString, const char* pszMatch, bool isCaseSensitive /* = false */ )

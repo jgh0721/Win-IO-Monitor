@@ -1,9 +1,13 @@
 ﻿#include "privateFCBMgr.hpp"
 
+#include "callbacks/fltCreateFile.hpp"
+
+#include "irpContext.hpp"
 #include "metadata/Metadata.hpp"
 #include "utilities/bufferMgr.hpp"
+#include "utilities/fltUtilities.hpp"
+
 #include "fltCmnLibs.hpp"
-#include "callbacks/fltCreateFile.hpp"
 
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
@@ -184,14 +188,6 @@ NTSTATUS UninitializeFCB( IRP_CONTEXT* IrpContext )
 
         if( Fcb->MetaDataInfo != NULLPTR )
         {
-            // TODO: CCB 의 Flags 를 추가로 점검하도록 한다
-            if( BooleanFlagOn( Fcb->Flags, FCB_STATE_METADATA_ASSOC ) )
-            {
-                WriteMetaData( IrpContext, IrpContext->Fcb->LowerFileObject, IrpContext->Fcb->MetaDataInfo );
-
-                SetFlag( Fcb->Flags, FCB_STATE_FILE_MODIFIED );
-            }
-
             UninitializeMetaDataInfo( Fcb->MetaDataInfo );
         }
 
@@ -290,4 +286,72 @@ bool IsOwnFileObject( FILE_OBJECT* FileObject )
         return false;
 
     return true;
+}
+
+bool IsOwnFile( IRP_CONTEXT* IrpContext, const WCHAR* FileFullPathWOVolume, METADATA_DRIVER* MetaDataInfo )
+{
+    NTSTATUS Status = STATUS_SUCCESS;
+    bool IsOwnFileByFilter = false;
+    HANDLE FileHandle = NULL;
+    FILE_OBJECT* FileObject = NULLPTR;
+
+    AcquireCmnResource( IrpContext, INST_SHARED );
+
+    do
+    {
+        // TODO: 향후 캐시시스템을 구축하여 락을 최소화하여야한다
+
+        ASSERT( IrpContext != NULLPTR && FileFullPathWOVolume != NULLPTR );
+        if( IrpContext == NULLPTR || FileFullPathWOVolume == NULLPTR )
+            break;
+
+        if( ARGUMENT_PRESENT( MetaDataInfo ) )
+            RtlZeroMemory( MetaDataInfo, METADATA_DRIVER_SIZE );
+
+        auto Fcb = Vcb_SearchFCB( IrpContext->InstanceContext, FileFullPathWOVolume );
+
+        if( Fcb != NULLPTR )
+        {
+            if( ARGUMENT_PRESENT( MetaDataInfo ) && Fcb->MetaDataInfo != NULLPTR )
+                RtlCopyMemory( MetaDataInfo, Fcb->MetaDataInfo, METADATA_DRIVER_SIZE );
+
+            IsOwnFileByFilter = true;
+            break;
+        }
+
+        ReleaseCmnResource( IrpContext, INST_SHARED );
+
+        IO_STATUS_BLOCK IoStatus;
+
+        Status = FltCreateFileOwn( IrpContext, FileFullPathWOVolume, &FileHandle, &FileObject, &IoStatus );
+
+        if( !NT_SUCCESS( Status ) || IoStatus.Information != FILE_OPENED )
+        {
+            if( Status != STATUS_FILE_IS_A_DIRECTORY )
+            {
+                KdPrint( ( "[WinIOSol] %s EvtID=%09d %s Status=0x%08x,%s Src=%ws\n"
+                           , ">>", IrpContext->EvtID, __FUNCTION__
+                           , Status, ntkernel_error_category::find_ntstatus( Status )->message
+                           , FileFullPathWOVolume
+                           ) );
+            }
+            break;
+        }
+
+        if( GetFileMetaDataInfo( IrpContext, FileObject, MetaDataInfo ) != METADATA_UNK_TYPE )
+        {
+            IsOwnFileByFilter = true;
+            break;
+        }
+
+    } while( false );
+
+    if( FileHandle != NULL )
+        FltClose( FileHandle );
+
+    if( FileObject != NULLPTR )
+        ObDereferenceObject( FileObject );
+
+    ReleaseCmnResource( IrpContext, INST_SHARED );
+    return IsOwnFileByFilter;
 }

@@ -62,6 +62,7 @@ typedef struct _CTX_INSTANCE_CONTEXT
 
     UNICODE_STRING                  DeviceName;
     WCHAR                           DeviceNameBuffer[ 128 ];
+    ULONG                           DeviceNameCch;              // real volumename char count, not including null 
 
     UNICODE_STRING                  VolumeGUIDName;
     WCHAR                           VolumeGUIDNameBuffer[ 64 ];

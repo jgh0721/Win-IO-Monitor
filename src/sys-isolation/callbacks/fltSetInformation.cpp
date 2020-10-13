@@ -175,10 +175,7 @@ NTSTATUS ProcessSetFileAllocationInformation( IRP_CONTEXT* IrpContext )
                 CcSetFileSizes( FileObject, ( PCC_FILE_SIZES )( &Fcb->AdvFcbHeader.AllocationSize ) );
             }
 
-            if( BooleanFlagOn( Fcb->Flags, FCB_STATE_METADATA_ASSOC ) )
-            {
-                Fcb->MetaDataInfo->MetaData.ContentSize = Fcb->AdvFcbHeader.FileSize.QuadPart;
-            }
+            UpdateFileSizeOnMetaData( IrpContext, FileObject, Fcb->AdvFcbHeader.FileSize );
 
             Status = STATUS_SUCCESS;
             AssignCmnResult( IrpContext, Status );
@@ -281,14 +278,13 @@ NTSTATUS ProcessSetFileEndOfFileInformation( IRP_CONTEXT* IrpContext )
             if( BooleanFlagOn( Fcb->Flags, FCB_STATE_METADATA_ASSOC ) )
                 EndOfFile->EndOfFile.QuadPart += GetHDRSizeFromMetaData( Fcb->MetaDataInfo );
 
-            Status = FltSetInformationFile( IrpContext->FltObjects->Instance, 
+            Status = FltSetInformationFile( IrpContext->FltObjects->Instance,
                                             Ccb->LowerFileObject != NULLPTR ? Ccb->LowerFileObject : Fcb->LowerFileObject,
                                             EndOfFile, sizeof( FILE_END_OF_FILE_INFORMATION ),
                                             FileEndOfFileInformation );
             if( NT_SUCCESS( Status ) )
             {
-                if( BooleanFlagOn( Fcb->Flags, FCB_STATE_METADATA_ASSOC ) )
-                    Fcb->MetaDataInfo->MetaData.ContentSize = EndOfFile->EndOfFile.QuadPart - GetHDRSizeFromMetaData( Fcb->MetaDataInfo );
+                UpdateFileSizeOnMetaData( IrpContext, FileObject, EndOfFile->EndOfFile.QuadPart - GetHDRSizeFromMetaData( Fcb->MetaDataInfo ) );
             }
 
             AssignCmnResult( IrpContext, Status );
@@ -343,8 +339,7 @@ NTSTATUS ProcessSetFileEndOfFileInformation( IRP_CONTEXT* IrpContext )
                     __leave;
                 }
 
-                if( BooleanFlagOn( Fcb->Flags, FCB_STATE_METADATA_ASSOC ) )
-                    Fcb->MetaDataInfo->MetaData.ContentSize = EndOfFile->EndOfFile.QuadPart;
+                UpdateFileSizeOnMetaData( IrpContext, FileObject, EndOfFile->EndOfFile );
 
                 if( CcIsFileCached( FileObject ) )
                 {
@@ -390,8 +385,7 @@ NTSTATUS ProcessSetFileEndOfFileInformation( IRP_CONTEXT* IrpContext )
                     CcSetFileSizes( FileObject, ( PCC_FILE_SIZES )( &Fcb->AdvFcbHeader.AllocationSize ) );
                 }
 
-                if( BooleanFlagOn( Fcb->Flags, FCB_STATE_METADATA_ASSOC ) )
-                    Fcb->MetaDataInfo->MetaData.ContentSize = EndOfFile->EndOfFile.QuadPart;
+                UpdateFileSizeOnMetaData( IrpContext, FileObject, EndOfFile->EndOfFile );
 
                 Status = STATUS_SUCCESS;
                 AssignCmnResult( IrpContext, Status );

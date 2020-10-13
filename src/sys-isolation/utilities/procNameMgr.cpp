@@ -3,7 +3,7 @@
 #include "W32API.hpp"
 #include "fltCmnLibs.hpp"
 #include "utilities/osInfoMgr.hpp"
-#include "utilities/volumeNameMgr.hpp"
+#include "utilities/volumeMgr.hpp"
 
 #if defined(_MSC_VER)
 #	pragma warning( disable: 4311 )

@@ -201,17 +201,17 @@
     <ClInclude Include="policies\ProcessFilter.hpp">
       <Filter>Policies\ProcessFilter</Filter>
     </ClInclude>
-    <ClInclude Include="utilities\volumeNameMgr.hpp">
-      <Filter>cache</Filter>
-    </ClInclude>
-    <ClInclude Include="utilities\volumeNameMgr_Defs.hpp">
-      <Filter>cache</Filter>
-    </ClInclude>
     <ClInclude Include="metadata\Metadata.hpp">
       <Filter>MetaData</Filter>
     </ClInclude>
     <ClInclude Include="metadata\Metadata_Defs.hpp">
       <Filter>MetaData</Filter>
+    </ClInclude>
+    <ClInclude Include="utilities\volumeMgr.hpp">
+      <Filter>cache</Filter>
+    </ClInclude>
+    <ClInclude Include="utilities\volumeMgr_Defs.hpp">
+      <Filter>cache</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -338,11 +338,11 @@
     <ClCompile Include="policies\ProcessFilter.cpp">
       <Filter>Policies\ProcessFilter</Filter>
     </ClCompile>
-    <ClCompile Include="utilities\volumeNameMgr.cpp">
-      <Filter>cache</Filter>
-    </ClCompile>
     <ClCompile Include="metadata\Metadata.cpp">
       <Filter>MetaData</Filter>
+    </ClCompile>
+    <ClCompile Include="utilities\volumeMgr.cpp">
+      <Filter>cache</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

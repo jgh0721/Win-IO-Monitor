@@ -19,6 +19,9 @@ namespace nsUtils
     size_t strlength( __in_z const wchar_t* str );
     size_t strlength( __in_z const char* str );
 
+    int stricmp( __in_z const wchar_t* lhs, __in_z const wchar_t* rhs );
+    int stricmp( __in_z const wchar_t* lhs, __in ULONG cchCount, __in_z const wchar_t* rhs );
+    
     WCHAR* ReverseFindW( __in_z WCHAR* wszString, WCHAR ch );
     WCHAR* ForwardFindW( __in_z WCHAR* wszString, WCHAR ch );
     WCHAR* UpperWString( __inout_z WCHAR* wszString );
@@ -32,7 +35,7 @@ namespace nsUtils
      *  IRQL = PAASIVE_LEVEL
     */
     WCHAR* EndsWithW( __in_z WCHAR* wszString, __in_z const WCHAR* wszPattern );
-    WCHAR* StartsWithW( __in_z WCHAR* wszString, __in_z const WCHAR* wszPattern );
+    WCHAR* StartsWithW( __in_z const WCHAR* wszString, __in_z const WCHAR* wszPattern );
 
     /**
      * @brief 지정한 문자열에서 와일드카드(*,?) 를 이용하여 일치하는지 검사

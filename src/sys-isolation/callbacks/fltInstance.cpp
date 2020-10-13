@@ -6,7 +6,7 @@
 #include "utilities/contextMgr_Defs.hpp"
 #include "utilities/osInfoMgr.hpp"
 
-#include "utilities/volumeNameMgr.hpp"
+#include "utilities/volumeMgr.hpp"
 
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
@@ -35,6 +35,8 @@ NTSTATUS FLTAPI InstanceSetup( PCFLT_RELATED_OBJECTS FltObjects, FLT_INSTANCE_SE
 
 NTSTATUS FLTAPI InstanceQueryTeardown( PCFLT_RELATED_OBJECTS FltObjects, FLT_INSTANCE_QUERY_TEARDOWN_FLAGS Flags )
 {
+    KdPrint( ( "[WinIOSol] >> %s|IRQL=%d|Thread=%p|Instance=%p|Flags=%d\n", __FUNCTION__, KeGetCurrentIrql(), PsGetCurrentThread(), FltObjects->Instance, Flags ) );
+
     UNREFERENCED_PARAMETER( FltObjects );
     UNREFERENCED_PARAMETER( Flags );
 
@@ -43,12 +45,30 @@ NTSTATUS FLTAPI InstanceQueryTeardown( PCFLT_RELATED_OBJECTS FltObjects, FLT_INS
 
 void FLTAPI InstanceTeardownStart( PCFLT_RELATED_OBJECTS FltObjects, FLT_INSTANCE_TEARDOWN_FLAGS Flags )
 {
+    KdPrint( ( "[WinIOSol] >> %s|IRQL=%d|Thread=%p|Instance=%p|Flags=%d\n", __FUNCTION__, KeGetCurrentIrql(), PsGetCurrentThread(), FltObjects->Instance, Flags ) );
+
     UNREFERENCED_PARAMETER( FltObjects );
     UNREFERENCED_PARAMETER( Flags );
+
+    if( Flags == FLTFL_INSTANCE_TEARDOWN_INTERNAL_ERROR )
+        return;
+
+    // TODO: Close Instance's Own FileObject
+    // TODO: Call FltCancelIO any I/O
+    CTX_INSTANCE_CONTEXT* CtxInstanceContext = NULLPTR;
+    NTSTATUS Status = CtxGetContext( FltObjects, NULLPTR, FLT_INSTANCE_CONTEXT, ( PVOID* )&CtxInstanceContext );
+
+    if( NT_SUCCESS( Status ) )
+    {
+        VolumeMgr_Remove( CtxInstanceContext->DeviceNameBuffer );
+        CtxReleaseContext( CtxInstanceContext );
+    }
 }
 
 void FLTAPI InstanceTeardownComplete( PCFLT_RELATED_OBJECTS FltObjects, FLT_INSTANCE_TEARDOWN_FLAGS Flags )
 {
+    KdPrint( ( "[WinIOSol] >> %s|IRQL=%d|Thread=%p|Instance=%p|Flags=%d\n", __FUNCTION__, KeGetCurrentIrql(), PsGetCurrentThread(), FltObjects->Instance, Flags ) );
+
     UNREFERENCED_PARAMETER( FltObjects );
     UNREFERENCED_PARAMETER( Flags );
 }
@@ -95,6 +115,7 @@ NTSTATUS CreateInstanceContext( PCFLT_RELATED_OBJECTS FltObjects, FLT_INSTANCE_S
         }
 
         nsUtils::FindDriveLetterByDeviceName( &InstanceContext->DeviceName, &InstanceContext->DriveLetter );
+        InstanceContext->DeviceNameCch = nsUtils::strlength( InstanceContext->DeviceNameBuffer );
 
         InstanceContext->VolumeFileSystemType = VolumeFilesystemType;
         RtlInitEmptyUnicodeString( &InstanceContext->VolumeGUIDName, InstanceContext->VolumeGUIDNameBuffer, sizeof( WCHAR ) * _countof( InstanceContext->VolumeGUIDNameBuffer ) );
@@ -116,7 +137,7 @@ NTSTATUS CreateInstanceContext( PCFLT_RELATED_OBJECTS FltObjects, FLT_INSTANCE_S
                      __FUNCTION__, &InstanceContext->DeviceName, InstanceContext->DriveLetter == L'\0' ? L' ' : InstanceContext->DriveLetter ) );
 
         if( InstanceContext->DriveLetter != L'\0' )
-            VolumeMgr_Add( InstanceContext->DeviceNameBuffer, InstanceContext->DriveLetter );
+            VolumeMgr_Add( InstanceContext->DeviceNameBuffer, InstanceContext->DriveLetter, InstanceContext );
 
     } while( false );
 

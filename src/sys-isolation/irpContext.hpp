@@ -15,6 +15,17 @@ VOID            CloseIrpContext( __in PIRP_CONTEXT IrpContext );
 VOID            PrintIrpContext( __in PIRP_CONTEXT IrpContext, __in bool isForceResult = false );
 VOID            PrintIrpContextEx( __in PIRP_CONTEXT IrpContext, __in bool isForceResult = false );
 
+FORCEINLINE const char* JudgeInOut( __in PIRP_CONTEXT IrpContext, __in_opt bool isForceResult = false )
+{
+    if( isForceResult == true )
+        return "<<";
+
+    if( BooleanFlagOn( IrpContext->Data->Flags, FLTFL_CALLBACK_DATA_POST_OPERATION ) == FALSE )
+        return ">>";
+
+    return "<<";
+}
+
 void            PrintIrpContextCREATE( __in PIRP_CONTEXT IrpContext, __in bool IsResultMode = false );
 void            PrintIrpContextREAD( __in PIRP_CONTEXT IrpContext, __in bool IsResultMode = false );
 void            PrintIrpContextWRITE( __in PIRP_CONTEXT IrpContext, __in bool IsResultMode = false );
@@ -43,6 +54,8 @@ enum TyEnCmnRsrc
 };
 
 VOID AcquireCmnResource( __in PIRP_CONTEXT IrpContext, __in LONG RsrcFlags );
+VOID ReleaseCmnResource( __in PIRP_CONTEXT IrpContext );
+VOID ReleaseCmnResource( __in PIRP_CONTEXT IrpContext, __in LONG RsrcFlags );
 
 #define IF_DONT_CONTINUE_PROCESS_LEAVE( IrpContext ) \
     if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_DONT_CONT_PROCESS ) ) \

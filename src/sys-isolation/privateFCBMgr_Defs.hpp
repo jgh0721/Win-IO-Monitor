@@ -127,6 +127,7 @@ typedef struct _FCB
 
 } FCB, * PFCB;
 
+#define CCB_STATE_SIZE_CHAGNED                  0x400
 #define CCB_STATE_OPEN_BY_FILEID                0x1000
 
 // Free on IRP_MJ_CLEANUP

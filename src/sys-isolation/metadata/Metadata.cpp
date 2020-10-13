@@ -265,7 +265,15 @@ NTSTATUS UpdateFileSizeOnMetaData( __in IRP_CONTEXT* IrpContext, PFILE_OBJECT Fi
                    , FileSize
                    , Fcb->FileFullPath.Buffer
                    ) );
-        
+
+        if( Fcb->MetaDataInfo->MetaData.ContentSize != FileSize )
+        {
+            Fcb->MetaDataInfo->MetaData.ContentSize = FileSize;
+
+            auto Ccb = ( CCB* )FileObject->FsContext2;
+            SetFlag( Ccb->Flags, CCB_STATE_SIZE_CHAGNED );
+        }
+
         Status = STATUS_SUCCESS;
 
     } while( false );

@@ -3,17 +3,21 @@
 
 #include "fltBase.hpp"
 
+#include "contextMgr_Defs.hpp"
+
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
 #endif
 
 typedef struct _VOLUME_INFO_ENTRY
 {
-    WCHAR               VolumeNameBuffer[ 128 ];
-    ULONG               VolumeNameCch;              // real volumename char count, not including null 
-    WCHAR               Letter;
+    WCHAR                   VolumeNameBuffer[ 128 ];
+    ULONG                   VolumeNameCch;              // real volumename char count, not including null 
+    WCHAR                   Letter;
 
-    LIST_ENTRY          ListEntry;
+    CTX_INSTANCE_CONTEXT*   InstanceContext;
+
+    LIST_ENTRY              ListEntry;
 
 } VOLUME_INFO_ENTRY, *PVOLUME_INFO_ENTRY;
 

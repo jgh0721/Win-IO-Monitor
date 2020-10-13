@@ -133,6 +133,15 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCleanup( PFLT_CALLBACK_DATA Data, PCFL
         CcUninitializeCacheMap( FileObject, &TruncateSize, NULLPTR );
         IoRemoveShareAccess( FileObject, &Fcb->LowerShareAccess );
 
+        // TODO: CCB 의 Flags 를 추가로 점검하도록 한다
+        if( BooleanFlagOn( Fcb->Flags, FCB_STATE_METADATA_ASSOC ) &&
+            BooleanFlagOn( IrpContext->Ccb->Flags, CCB_STATE_SIZE_CHAGNED ) )
+        {
+            WriteMetaData( IrpContext, IrpContext->Fcb->LowerFileObject, IrpContext->Fcb->MetaDataInfo );
+
+            SetFlag( Fcb->Flags, FCB_STATE_FILE_MODIFIED );
+        }
+
         if( !BooleanFlagOn( FileObject->Flags, FO_CLEANUP_COMPLETE ) )
             MmForceSectionClosed( &Fcb->SectionObjects, TRUE );
 

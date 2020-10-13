@@ -1,4 +1,4 @@
-﻿#include "volumeNameMgr.hpp"
+﻿#include "volumeMgr.hpp"
 
 #include "pool.hpp"
 #include "contextMgr_Defs.hpp"
@@ -145,13 +145,14 @@ NTSTATUS UninitializeVolumeNameMgr()
     return Status;
 }
 
-NTSTATUS VolumeMgr_Add( const WCHAR* DeviceVolumeName, WCHAR DriveLetter )
+NTSTATUS VolumeMgr_Add( const WCHAR* DeviceVolumeName, WCHAR DriveLetter, CTX_INSTANCE_CONTEXT* InstanceContext )
 {
     NTSTATUS Status = STATUS_UNSUCCESSFUL;
     auto VolumeNameMgr = VolumeNameMgr_Clone();
 
     do
     {
+        // 기존에 같은 항목이 존재하고, 드라이브 문자가 다를 때
         auto Head = &VolumeNameMgr->ListHead;
         for( auto Current = Head->Flink; Current != Head; Current = Current->Flink )
         {
@@ -180,6 +181,7 @@ NTSTATUS VolumeMgr_Add( const WCHAR* DeviceVolumeName, WCHAR DriveLetter )
         RtlStringCchCopyW( Item->VolumeNameBuffer, _countof( Item->VolumeNameBuffer ), DeviceVolumeName );
         Item->Letter = DriveLetter;
         Item->VolumeNameCch = nsUtils::strlength( Item->VolumeNameBuffer );
+        Item->InstanceContext = InstanceContext;
 
         Status = STATUS_SUCCESS;
 
@@ -248,5 +250,35 @@ void VolumeMgr_Replace( WCHAR* Path, ULONG BufferSize )
     } while( false );
 
     VolumeNameMgr_Release( VolumeNameMgr );
+}
+
+CTX_INSTANCE_CONTEXT* VolumeMgr_SearchContext( WCHAR DriveLetter )
+{
+    CTX_INSTANCE_CONTEXT* InstanceContext = NULLPTR;
+    auto VolumeNameMgr = VolumeNameMgr_Ref();
+
+    do
+    {
+        if( DriveLetter == L'\0' || DriveLetter == L' ' )
+            break;
+
+        auto Head = &VolumeNameMgr->ListHead;
+
+        for( auto Current = Head->Blink; Current != Head; Current = Current->Blink )
+        {
+            auto Item = CONTAINING_RECORD( Current, VOLUME_INFO_ENTRY, ListEntry );
+
+            if( DriveLetter != Item->Letter )
+                continue;
+
+            InstanceContext = Item->InstanceContext;
+            FltReferenceContext( InstanceContext );
+            break;
+        }
+
+    } while( false );
+
+    VolumeNameMgr_Release( VolumeNameMgr );
+    return InstanceContext;
 }
 

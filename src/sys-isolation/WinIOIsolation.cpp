@@ -10,7 +10,7 @@
 #include "utilities/contextMgr.hpp"
 #include "utilities/procNameMgr.hpp"
 #include "utilities/bufferMgr.hpp"
-#include "utilities/volumeNameMgr.hpp"
+#include "utilities/volumeMgr.hpp"
 
 #include "policies/GlobalFilter.hpp"
 #include "policies/ProcessFilter.hpp"

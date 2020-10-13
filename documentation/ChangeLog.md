@@ -17,4 +17,3 @@
 # Partial OPLOCK Support
 # Partial Byte-Range Lock Support
 
-# On Windows XP, On every file saved such as notepad++, process notified that external process changes saved file. 
