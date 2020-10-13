@@ -160,37 +160,19 @@ NTSTATUS TuneFileDirectoryInformation( IRP_CONTEXT* IrpContext )
         auto InfoBuffer = ( FILE_DIRECTORY_INFORMATION* )IrpContext->UserBuffer;
 
         ULONG Offset = 0;
-        ULONG RequiredSize = 0;
         METADATA_DRIVER MetaDataInfo;
         ULONG ConcernedType = 0;
 
         do
         {
             Offset = InfoBuffer->NextEntryOffset;
-            RequiredSize = IrpContext->SrcFileFullPath.BufferSize + InfoBuffer->FileNameLength + sizeof( WCHAR );   // including null char
 
-            if( IrpContext->DstFileFullPath.Buffer == NULLPTR )
-                IrpContext->DstFileFullPath = AllocateBuffer<WCHAR>( BUFFER_FILENAME, RequiredSize );
-            else
+            Status = MakeDstFileFullPath( IrpContext, InfoBuffer->FileName, InfoBuffer->FileNameLength );
+            if( !NT_SUCCESS( Status ) )
             {
-                if( IrpContext->DstFileFullPath.BufferSize < RequiredSize )
-                {
-                    DeallocateBuffer( &IrpContext->DstFileFullPath );
-                    IrpContext->DstFileFullPath = AllocateBuffer<WCHAR>( BUFFER_FILENAME, RequiredSize );
-                }
-            }
-
-            if( IrpContext->DstFileFullPath.Buffer == NULLPTR )
-            {
-                Status = STATUS_INSUFFICIENT_RESOURCES;
                 Information = 0;
                 __leave;
             }
-
-            RtlZeroMemory( IrpContext->DstFileFullPath.Buffer, IrpContext->DstFileFullPath.BufferSize );
-            RtlStringCbPrintfW( IrpContext->DstFileFullPath.Buffer, IrpContext->DstFileFullPath.BufferSize,
-                                L"%s\\%.*s", 
-                                IrpContext->SrcFileFullPathWOVolume, InfoBuffer->FileNameLength / sizeof(WCHAR), InfoBuffer->FileName );
 
             ConcernedType = IsConcernedFile( IrpContext, &IrpContext->DstFileFullPath, &MetaDataInfo );
             if( ConcernedType != CONCERNED_NONE )
@@ -233,37 +215,19 @@ NTSTATUS TuneFileFullDirectoryInformation( IRP_CONTEXT* IrpContext )
         auto InfoBuffer = ( FILE_FULL_DIR_INFORMATION* )IrpContext->UserBuffer;
 
         ULONG Offset = 0;
-        ULONG RequiredSize = 0;
         METADATA_DRIVER MetaDataInfo;
         ULONG ConcernedType = 0;
 
         do
         {
             Offset = InfoBuffer->NextEntryOffset;
-            RequiredSize = IrpContext->SrcFileFullPath.BufferSize + InfoBuffer->FileNameLength + sizeof( WCHAR );   // including null char
 
-            if( IrpContext->DstFileFullPath.Buffer == NULLPTR )
-                IrpContext->DstFileFullPath = AllocateBuffer<WCHAR>( BUFFER_FILENAME, RequiredSize );
-            else
+            Status = MakeDstFileFullPath( IrpContext, InfoBuffer->FileName, InfoBuffer->FileNameLength );
+            if( !NT_SUCCESS( Status ) )
             {
-                if( IrpContext->DstFileFullPath.BufferSize < RequiredSize )
-                {
-                    DeallocateBuffer( &IrpContext->DstFileFullPath );
-                    IrpContext->DstFileFullPath = AllocateBuffer<WCHAR>( BUFFER_FILENAME, RequiredSize );
-                }
-            }
-
-            if( IrpContext->DstFileFullPath.Buffer == NULLPTR )
-            {
-                Status = STATUS_INSUFFICIENT_RESOURCES;
                 Information = 0;
                 __leave;
             }
-
-            RtlZeroMemory( IrpContext->DstFileFullPath.Buffer, IrpContext->DstFileFullPath.BufferSize );
-            RtlStringCbPrintfW( IrpContext->DstFileFullPath.Buffer, IrpContext->DstFileFullPath.BufferSize,
-                                L"%s\\%.*s",
-                                IrpContext->SrcFileFullPathWOVolume, InfoBuffer->FileNameLength / sizeof( WCHAR ), InfoBuffer->FileName );
 
             ConcernedType = IsConcernedFile( IrpContext, &IrpContext->DstFileFullPath, &MetaDataInfo );
             if( ConcernedType != CONCERNED_NONE )
@@ -307,37 +271,19 @@ NTSTATUS TuneFileBothDirectoryInformation( IRP_CONTEXT* IrpContext )
         auto InfoBuffer = ( FILE_BOTH_DIR_INFORMATION* )IrpContext->UserBuffer;
 
         ULONG Offset = 0;
-        ULONG RequiredSize = 0;
         METADATA_DRIVER MetaDataInfo;
         ULONG ConcernedType = 0;
 
         do
         {
             Offset = InfoBuffer->NextEntryOffset;
-            RequiredSize = IrpContext->SrcFileFullPath.BufferSize + InfoBuffer->FileNameLength + sizeof( WCHAR );   // including null char
 
-            if( IrpContext->DstFileFullPath.Buffer == NULLPTR )
-                IrpContext->DstFileFullPath = AllocateBuffer<WCHAR>( BUFFER_FILENAME, RequiredSize );
-            else
+            Status = MakeDstFileFullPath( IrpContext, InfoBuffer->FileName, InfoBuffer->FileNameLength );
+            if( !NT_SUCCESS( Status ) )
             {
-                if( IrpContext->DstFileFullPath.BufferSize < RequiredSize )
-                {
-                    DeallocateBuffer( &IrpContext->DstFileFullPath );
-                    IrpContext->DstFileFullPath = AllocateBuffer<WCHAR>( BUFFER_FILENAME, RequiredSize );
-                }
-            }
-
-            if( IrpContext->DstFileFullPath.Buffer == NULLPTR )
-            {
-                Status = STATUS_INSUFFICIENT_RESOURCES;
                 Information = 0;
                 __leave;
             }
-
-            RtlZeroMemory( IrpContext->DstFileFullPath.Buffer, IrpContext->DstFileFullPath.BufferSize );
-            RtlStringCbPrintfW( IrpContext->DstFileFullPath.Buffer, IrpContext->DstFileFullPath.BufferSize,
-                                L"%s\\%.*s",
-                                IrpContext->SrcFileFullPathWOVolume, InfoBuffer->FileNameLength / sizeof( WCHAR ), InfoBuffer->FileName );
 
             ConcernedType = IsConcernedFile( IrpContext, &IrpContext->DstFileFullPath, &MetaDataInfo );
             if( ConcernedType != CONCERNED_NONE )
@@ -381,37 +327,19 @@ NTSTATUS TuneFileIdBothDirectoryInformation( IRP_CONTEXT* IrpContext )
         auto InfoBuffer = ( FILE_ID_BOTH_DIR_INFORMATION* )IrpContext->UserBuffer;
 
         ULONG Offset = 0;
-        ULONG RequiredSize = 0;
         METADATA_DRIVER MetaDataInfo;
         ULONG ConcernedType = 0;
 
         do
         {
             Offset = InfoBuffer->NextEntryOffset;
-            RequiredSize = IrpContext->SrcFileFullPath.BufferSize + InfoBuffer->FileNameLength + sizeof( WCHAR );   // including null char
 
-            if( IrpContext->DstFileFullPath.Buffer == NULLPTR )
-                IrpContext->DstFileFullPath = AllocateBuffer<WCHAR>( BUFFER_FILENAME, RequiredSize );
-            else
+            Status = MakeDstFileFullPath( IrpContext, InfoBuffer->FileName, InfoBuffer->FileNameLength );
+            if( !NT_SUCCESS( Status ) )
             {
-                if( IrpContext->DstFileFullPath.BufferSize < RequiredSize )
-                {
-                    DeallocateBuffer( &IrpContext->DstFileFullPath );
-                    IrpContext->DstFileFullPath = AllocateBuffer<WCHAR>( BUFFER_FILENAME, RequiredSize );
-                }
-            }
-
-            if( IrpContext->DstFileFullPath.Buffer == NULLPTR )
-            {
-                Status = STATUS_INSUFFICIENT_RESOURCES;
                 Information = 0;
                 __leave;
             }
-
-            RtlZeroMemory( IrpContext->DstFileFullPath.Buffer, IrpContext->DstFileFullPath.BufferSize );
-            RtlStringCbPrintfW( IrpContext->DstFileFullPath.Buffer, IrpContext->DstFileFullPath.BufferSize,
-                                L"%s\\%.*s",
-                                IrpContext->SrcFileFullPathWOVolume, InfoBuffer->FileNameLength / sizeof( WCHAR ), InfoBuffer->FileName );
 
             ConcernedType = IsConcernedFile( IrpContext, &IrpContext->DstFileFullPath, &MetaDataInfo );
             if( ConcernedType != CONCERNED_NONE )
@@ -455,37 +383,19 @@ NTSTATUS TuneFileIdFullDirectoryInformation( IRP_CONTEXT* IrpContext )
         auto InfoBuffer = ( FILE_ID_FULL_DIR_INFORMATION* )IrpContext->UserBuffer;
 
         ULONG Offset = 0;
-        ULONG RequiredSize = 0;
         METADATA_DRIVER MetaDataInfo;
         ULONG ConcernedType = 0;
 
         do
         {
             Offset = InfoBuffer->NextEntryOffset;
-            RequiredSize = IrpContext->SrcFileFullPath.BufferSize + InfoBuffer->FileNameLength + sizeof( WCHAR );   // including null char
 
-            if( IrpContext->DstFileFullPath.Buffer == NULLPTR )
-                IrpContext->DstFileFullPath = AllocateBuffer<WCHAR>( BUFFER_FILENAME, RequiredSize );
-            else
+            Status = MakeDstFileFullPath( IrpContext, InfoBuffer->FileName, InfoBuffer->FileNameLength );
+            if( !NT_SUCCESS( Status ) )
             {
-                if( IrpContext->DstFileFullPath.BufferSize < RequiredSize )
-                {
-                    DeallocateBuffer( &IrpContext->DstFileFullPath );
-                    IrpContext->DstFileFullPath = AllocateBuffer<WCHAR>( BUFFER_FILENAME, RequiredSize );
-                }
-            }
-
-            if( IrpContext->DstFileFullPath.Buffer == NULLPTR )
-            {
-                Status = STATUS_INSUFFICIENT_RESOURCES;
                 Information = 0;
                 __leave;
             }
-
-            RtlZeroMemory( IrpContext->DstFileFullPath.Buffer, IrpContext->DstFileFullPath.BufferSize );
-            RtlStringCbPrintfW( IrpContext->DstFileFullPath.Buffer, IrpContext->DstFileFullPath.BufferSize,
-                                L"%s\\%.*s",
-                                IrpContext->SrcFileFullPathWOVolume, InfoBuffer->FileNameLength / sizeof( WCHAR ), InfoBuffer->FileName );
 
             ConcernedType = IsConcernedFile( IrpContext, &IrpContext->DstFileFullPath, &MetaDataInfo );
             if( ConcernedType != CONCERNED_NONE )
@@ -512,6 +422,56 @@ NTSTATUS TuneFileIdFullDirectoryInformation( IRP_CONTEXT* IrpContext )
     return Status;
 }
 
+NTSTATUS MakeDstFileFullPath( IRP_CONTEXT* IrpContext, WCHAR* FileName, ULONG FileNameLength )
+{
+    NTSTATUS Status = STATUS_SUCCESS;
+    ULONG RequiredSize = 0;
+
+    do
+    {
+        RequiredSize = IrpContext->SrcFileFullPath.BufferSize + FileNameLength + sizeof( WCHAR );   // including null char
+
+        if( IrpContext->DstFileFullPath.Buffer == NULLPTR )
+            IrpContext->DstFileFullPath = AllocateBuffer<WCHAR>( BUFFER_FILENAME, RequiredSize );
+        else
+        {
+            if( IrpContext->DstFileFullPath.BufferSize < RequiredSize )
+            {
+                DeallocateBuffer( &IrpContext->DstFileFullPath );
+                IrpContext->DstFileFullPath = AllocateBuffer<WCHAR>( BUFFER_FILENAME, RequiredSize );
+            }
+        }
+
+        if( IrpContext->DstFileFullPath.Buffer == NULLPTR )
+        {
+            Status = STATUS_INSUFFICIENT_RESOURCES;
+            break;
+        }
+
+        RtlZeroMemory( IrpContext->DstFileFullPath.Buffer, IrpContext->DstFileFullPath.BufferSize );
+
+        if( IrpContext->SrcFileFullPath.Buffer[1] == L':' && IrpContext->SrcFileFullPath.Buffer[2] == L'\\' )
+        {
+            RtlStringCbCatW( IrpContext->DstFileFullPath.Buffer, IrpContext->DstFileFullPath.BufferSize, &IrpContext->SrcFileFullPath.Buffer[ 2 ] );
+
+            if( nsUtils::EndsWithW( IrpContext->DstFileFullPath.Buffer, L"\\" ) == NULLPTR )
+                RtlStringCbCatW( IrpContext->DstFileFullPath.Buffer, IrpContext->DstFileFullPath.BufferSize, L"\\" );
+
+            RtlStringCbCatNW( IrpContext->DstFileFullPath.Buffer, IrpContext->DstFileFullPath.BufferSize,
+                              FileName, FileNameLength );
+        }
+        else
+        {
+            RtlStringCbPrintfW( IrpContext->DstFileFullPath.Buffer, IrpContext->DstFileFullPath.BufferSize,
+                                L"%s\\%.*s",
+                                IrpContext->SrcFileFullPathWOVolume, FileNameLength / sizeof( WCHAR ), FileName );
+        }
+
+    } while( false );
+
+    return Status;
+}
+
 ULONG IsConcernedFile( IRP_CONTEXT* IrpContext, TyGenericBuffer<WCHAR>* FileFullPath, METADATA_DRIVER* MetaDataInfo )
 {
     ULONG ConcernedType = CONCERNED_NONE;
@@ -526,11 +486,8 @@ ULONG IsConcernedFile( IRP_CONTEXT* IrpContext, TyGenericBuffer<WCHAR>* FileFull
             nsUtils::EndsWithW( FileFullPath->Buffer, L"\\.." ) != NULLPTR )
             break;
 
-        //if( nsUtils::stricmp( IrpContext->ProcessFileName, L"Syn.exe" ) == 0 && 
-        //    nsUtils::WildcardMatch_straight( FileFullPath->Buffer, L"*metadatatest.txt*" ) == true )
-        //{
-        //    KdBreakPoint();
-        //}
+        if( nsUtils::stricmp( FileFullPath->Buffer, L"\\pagefile.sys" ) == 0 )
+            break;
 
         if( IsOwnFile( IrpContext, FileFullPath->Buffer, MetaDataInfo ) == false )
             break;

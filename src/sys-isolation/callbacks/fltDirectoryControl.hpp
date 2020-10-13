@@ -42,6 +42,8 @@ NTSTATUS TuneFileIdGlobalTxDirectoryInformation( __in IRP_CONTEXT* IrpContext );
 NTSTATUS TuneFileIdExtdDirectoryInformation( __in IRP_CONTEXT* IrpContext );
 NTSTATUS TuneFileIdExtdBothDirectoryInformation( __in IRP_CONTEXT* IrpContext );
 
+NTSTATUS MakeDstFileFullPath( __in IRP_CONTEXT* IrpContext, __in_z WCHAR* FileName, __in ULONG FileNameLength );
+
 enum TyEnConcernedType
 {
     CONCERNED_NONE  = 0x0,
