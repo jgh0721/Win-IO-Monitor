@@ -602,7 +602,29 @@ void PrintIrpContextQUERY_INFORMATION( PIRP_CONTEXT IrpContext, bool IsResultMod
                 nsW32API::FormatFilePositionInformation( IrpContext->DebugText, 1024, ( PFILE_POSITION_INFORMATION )Parameters.InfoBuffer );
                 RtlStringCbCatA( DebugText, 1024, " " );
             } break;
-            case FileStreamInformation: {} break;
+            case FileStreamInformation: {
+                ULONG Offset = 0;
+                auto InfoBuffer = (PFILE_STREAM_INFORMATION) Parameters.InfoBuffer;
+                RtlStringCbCatA( DebugText, 1024, "StreamInfo[ " );
+
+                do
+                {
+                    Offset = InfoBuffer->NextEntryOffset;
+
+                    auto Length = nsUtils::strlength( DebugText );
+
+                    RtlStringCbPrintfA( &DebugText[ Length ], 1024 - ( Length * sizeof( WCHAR ) ),
+                                        "StreamName=%.*S|StreamSize=%I64d|StreamAllocationSize=%I64d",
+                                        InfoBuffer->StreamNameLength == 0 ? 7 : InfoBuffer->StreamNameLength / sizeof( WCHAR ), InfoBuffer->StreamNameLength,
+                                        InfoBuffer->StreamSize.QuadPart, InfoBuffer->StreamAllocationSize.QuadPart
+                    );
+
+                    InfoBuffer = ( PFILE_STREAM_INFORMATION )Add2Ptr( InfoBuffer, Offset );
+                    
+                } while( Offset != 0 );
+
+                RtlStringCbCatA( DebugText, 1024, " ] " );
+            } break;
         }
 
         KdPrint( ( "[WinIOSol] %s EvtID=%09d        Buffer=%p %s\n"

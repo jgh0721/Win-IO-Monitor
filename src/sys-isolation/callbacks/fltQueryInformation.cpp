@@ -543,7 +543,8 @@ NTSTATUS ProcessFileStreamInformation( IRP_CONTEXT* IrpContext )
         Status = FltQueryInformationFile( IrpContext->FltObjects->Instance,
                                           IrpContext->Fcb->LowerFileObject,
                                           InputBuffer, Length,
-                                          FileStreamInformation, &LengthReturned );
+                                          FileStreamInformation, 
+                                          &LengthReturned );
 
         if( !NT_SUCCESS( Status ) )
         {
@@ -554,6 +555,49 @@ NTSTATUS ProcessFileStreamInformation( IRP_CONTEXT* IrpContext )
 
             __leave;
         }
+
+        ULONG Offset = 0;
+        auto InfoBuffer = ( PFILE_STREAM_INFORMATION )InputBuffer;
+        static WCHAR NTFS_DEFAULT_STREAM[] = L"::$DATA";
+        static WCHAR NTFS_ALTERNATE_STREAM[] = L":$DATA";
+
+        /*!
+            From MSDN
+
+            If a file system supports stream enumeration, but the file has no streams other than the default data stream, which is unnamed, the file system should return a single FILE_STREAM_INFORMATION structure containing either "::$DATA" or a zero-length Unicode string as the StreamName.
+
+            NTFS returns "::$DATA" as the StreamName for the default data stream.
+
+            For a named data stream, NTFS appends ":$DATA" to the stream name. For example, for a user data stream with the name "Authors," NTFS returns ":Authors:$DATA" as the StreamName.
+        */
+        do
+        {
+            Offset = InfoBuffer->NextEntryOffset;
+
+            if( (InfoBuffer->StreamNameLength == 0) || 
+                ( (InfoBuffer->StreamNameLength == (_countof( NTFS_DEFAULT_STREAM) * sizeof(WCHAR))) && 
+                  (RtlCompareMemory( InfoBuffer->StreamName, NTFS_DEFAULT_STREAM, InfoBuffer->StreamNameLength ) == InfoBuffer->StreamNameLength ) ) )
+            {
+                InfoBuffer->StreamSize.QuadPart = IrpContext->Fcb->AdvFcbHeader.FileSize.QuadPart;
+                InfoBuffer->StreamAllocationSize.QuadPart = IrpContext->Fcb->AdvFcbHeader.AllocationSize.QuadPart;
+            }
+            else
+            {
+                // 추가 스트림 목록
+                if( InfoBuffer->StreamNameLength >= (_countof( NTFS_ALTERNATE_STREAM ) * sizeof(WCHAR)) )
+                {
+                    if( nsUtils::EndsWithW( InfoBuffer->StreamName, NTFS_ALTERNATE_STREAM ) != NULLPTR )
+                    {
+                        // TODO: 파일 스트림 이름을 이용하여 실제 파일을 열고, 헤더 정보 및 크기를 획득한다
+                        // TODO: 만약 현재 열려진 파일이라면 FCB 를 검색한다
+                        // TODO: 그 후 위와 같이 StreamSize 및 StreamAllocationSize 를 수정한다
+                    }
+                }
+            }
+
+            InfoBuffer = ( PFILE_STREAM_INFORMATION )Add2Ptr( InfoBuffer, Offset );
+
+        } while( Offset != 0 );
     }
     __finally
     {
