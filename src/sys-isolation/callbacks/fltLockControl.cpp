@@ -4,6 +4,8 @@
 #include "privateFCBMgr.hpp"
 #include "metadata/Metadata.hpp"
 
+#include "utilities/fltUtilities.hpp"
+
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
 #endif
@@ -39,6 +41,8 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreLockControl( PFLT_CALLBACK_DATA Data, 
             AssignCmnFltResult( IrpContext, FLT_PREOP_COMPLETE );
             __leave;
         }
+
+        IrpContext->Fcb->AdvFcbHeader.IsFastIoPossible = CheckIsFastIOPossible( IrpContext->Fcb );
 
         if( FlagOn( IrpContext->Fcb->Flags, FCB_STATE_METADATA_ASSOC ) )
         {
