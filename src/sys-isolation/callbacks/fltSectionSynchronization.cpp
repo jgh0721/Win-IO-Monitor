@@ -3,6 +3,8 @@
 #include "privateFCBMgr.hpp"
 #include "irpContext.hpp"
 
+#include "utilities/osInfoMgr.hpp"
+
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
 #endif
@@ -33,7 +35,26 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreAcquireSectionSynchronization( PFLT_CA
                    ) );
 
         FltAcquireResourceExclusive( &Fcb->MainResource );
-        Data->IoStatus.Status = STATUS_SUCCESS;
+
+        if( nsUtils::VerifyVersionInfoEx( 6, 0, ">=" ) == true )
+        {
+            if( Data->Iopb->Parameters.AcquireForSectionSynchronization.SyncType == SyncTypeCreateSection )
+            {
+                Data->IoStatus.Status = STATUS_FSFILTER_OP_COMPLETED_SUCCESSFULLY;
+            }
+            else
+            {
+                if( Fcb->LowerShareAccess.Writers == 0 )
+                    Data->IoStatus.Status = STATUS_FILE_LOCKED_WITH_ONLY_READERS;
+                else
+                    Data->IoStatus.Status = STATUS_FILE_LOCKED_WITH_WRITERS;
+            }
+        }
+        else
+        {
+            Data->IoStatus.Status = STATUS_SUCCESS;
+        }
+
         Data->IoStatus.Information = 0;
         FltStatus = FLT_PREOP_COMPLETE;
 
