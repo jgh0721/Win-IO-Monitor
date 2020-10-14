@@ -83,6 +83,10 @@ namespace nsW32API
                                     __out_opt  PULONG LengthReturned
     );
 
+    FLT_PREOP_CALLBACK_STATUS FltProcessFileLock( __in PFILE_LOCK FileLock,
+                                                  __in PFLT_CALLBACK_DATA CallbackData,
+                                                  __in_opt PVOID Context );
+
 } // nsW32API
 
 #endif // HDR_W32API

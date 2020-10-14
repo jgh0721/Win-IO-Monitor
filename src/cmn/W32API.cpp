@@ -287,3 +287,95 @@ NTSTATUS nsW32API::FltQueryDirectoryFile( PFLT_INSTANCE Instance, PFILE_OBJECT F
 
     return Status;
 }
+
+FLT_PREOP_CALLBACK_STATUS nsW32API::FltProcessFileLock( PFILE_LOCK FileLock, PFLT_CALLBACK_DATA CallbackData, PVOID Context )
+{
+    FLT_PREOP_CALLBACK_STATUS FltStatus;
+    PFLT_IO_PARAMETER_BLOCK Iopb = CallbackData->Iopb;
+
+    IO_STATUS_BLOCK Iosb;
+    NTSTATUS        Status;
+
+    BOOLEAN	ExclusiveLock;
+    BOOLEAN FailImmediately;
+
+    Iosb.Information = 0;
+
+    ASSERT( Iopb->MajorFunction == IRP_MJ_LOCK_CONTROL );
+
+    ExclusiveLock = Iopb->Parameters.LockControl.ExclusiveLock;
+    FailImmediately = Iopb->Parameters.LockControl.FailImmediately;
+
+    switch( Iopb->MinorFunction )
+    {
+        case IRP_MN_LOCK:
+
+            ( VOID )FsRtlFastLock( FileLock,
+                                   Iopb->TargetFileObject,
+                                   &Iopb->Parameters.LockControl.ByteOffset,
+                                   Iopb->Parameters.LockControl.Length,
+                                   Iopb->Parameters.LockControl.ProcessId,
+                                   Iopb->Parameters.LockControl.Key,
+                                   FailImmediately,
+                                   ExclusiveLock,
+                                   &Iosb,
+                                   Context,
+                                   FALSE );
+
+            break;
+
+        case IRP_MN_UNLOCK_SINGLE:
+
+            Iosb.Status = FsRtlFastUnlockSingle( FileLock,
+                                                 Iopb->TargetFileObject,
+                                                 &Iopb->Parameters.LockControl.ByteOffset,
+                                                 Iopb->Parameters.LockControl.Length,
+                                                 Iopb->Parameters.LockControl.ProcessId,
+                                                 Iopb->Parameters.LockControl.Key,
+                                                 Context,
+                                                 FALSE );
+
+
+            break;
+
+        case IRP_MN_UNLOCK_ALL:
+
+            Iosb.Status = FsRtlFastUnlockAll( FileLock,
+                                              Iopb->TargetFileObject,
+                                              Iopb->Parameters.LockControl.ProcessId,
+                                              Context );
+
+
+            break;
+
+        case IRP_MN_UNLOCK_ALL_BY_KEY:
+
+            Iosb.Status = FsRtlFastUnlockAllByKey( FileLock,
+                                                   Iopb->TargetFileObject,
+                                                   Iopb->Parameters.LockControl.ProcessId,
+                                                   Iopb->Parameters.LockControl.Key,
+                                                   Context );
+
+            break;
+
+        default:
+
+            Iosb.Status = STATUS_INVALID_DEVICE_REQUEST;
+            break;
+    }
+
+    CallbackData->IoStatus = Iosb;
+
+    Status = Iosb.Status;
+
+    if( Status == STATUS_PENDING )
+    {
+        FltStatus = FLT_PREOP_PENDING;
+    }
+    else
+    {
+        FltStatus = FLT_PREOP_COMPLETE;
+    }
+
+    return FltStatus;
+}

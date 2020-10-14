@@ -2,6 +2,7 @@
 
 #include "irpContext.hpp"
 #include "privateFCBMgr.hpp"
+#include "metadata/Metadata.hpp"
 
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
@@ -37,6 +38,13 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreLockControl( PFLT_CALLBACK_DATA Data, 
             AssignCmnResultInfo( IrpContext, Data->IoStatus.Information );
             AssignCmnFltResult( IrpContext, FLT_PREOP_COMPLETE );
             __leave;
+        }
+
+        if( FlagOn( IrpContext->Fcb->Flags, FCB_STATE_METADATA_ASSOC ) )
+        {
+            Data->Iopb->Parameters.LockControl.ByteOffset.QuadPart += GetHDRSizeFromMetaData( IrpContext->Fcb->MetaDataInfo );
+
+            FltSetCallbackDataDirty( Data );
         }
 
         Ret = FltProcessFileLock( &IrpContext->Fcb->FileLock, Data, NULL );
