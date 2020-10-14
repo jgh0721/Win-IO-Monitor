@@ -11,7 +11,9 @@ typedef struct _METADATA_CONTEXT
     NPAGED_LOOKASIDE_LIST                   MetaDataLookASideList;
 
     PVOID                                   StubCodeX86;
+    ULONG                                   StubCodeX86Size;
     PVOID                                   StubCodeX64;
+    ULONG                                   StubCodeX64Size;
 
     ERESOURCE                               MetaDataLock;
     LIST_ENTRY                              ListHead;
