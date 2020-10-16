@@ -25,6 +25,7 @@
 #include "fltModWrite.hpp"
 #include "fltCcFlush.hpp"
 #include "fltQueryVolumeInformation.hpp"
+#include "fltEa.hpp"
 #include "fltCleanup.hpp"
 #include "fltClose.hpp"
 

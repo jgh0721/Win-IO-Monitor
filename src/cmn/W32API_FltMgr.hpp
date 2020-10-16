@@ -497,6 +497,34 @@ namespace nsW32API
         */
         DYNLOAD_FUNC_WITH_16( STATUS_INSUFFICIENT_RESOURCES, NTSTATUS, NTAPI, FltCreateFileEx2, __in PFLT_FILTER, Filter, __in_opt PFLT_INSTANCE, Instance, __out PHANDLE, FileHandle, __out_opt  PFILE_OBJECT*, FileObject, __in ACCESS_MASK, DesiredAccess, __in POBJECT_ATTRIBUTES, ObjectAttributes, __out PIO_STATUS_BLOCK, IoStatusBlock, __in_opt   PLARGE_INTEGER, AllocationSize, __in ULONG, FileAttributes, __in ULONG, ShareAccess, __in ULONG, CreateDisposition, __in ULONG, CreateOptions, __in_opt PVOID, EaBuffer, __in ULONG, EaLength, __in ULONG, Flags, __in_opt PIO_DRIVER_CREATE_CONTEXT, DriverContext );
 
+        /*!
+
+            Available in starting with Windows XP SP3 
+        */
+        DYNLOAD_FUNC_WITH_10( STATUS_EAS_NOT_SUPPORTED, NTSTATUS, FLTAPI, FltQueryEaFile,
+                              __in PFLT_INSTANCE, Instance,
+                              __in PFILE_OBJECT, FileObject,
+                              __out_bcount_part( Length, *LengthReturned ) PVOID, ReturnedEaData,
+                              __in ULONG, Length,
+                              __in BOOLEAN, ReturnSingleEntry,
+                              __in_bcount_opt( EaListLength ) PVOID, EaList,
+                              __in ULONG, EaListLength,
+                              __in_opt PULONG, EaIndex,
+                              __in BOOLEAN, RestartScan,
+                              __out_opt PULONG, LengthReturned
+        );
+
+        /*!
+
+            Available in starting with Windows XP SP3
+        */
+        DYNLOAD_FUNC_WITH_04( STATUS_EAS_NOT_SUPPORTED, NTSTATUS, FLTAPI, FltSetEaFile,
+                              __in PFLT_INSTANCE, Instance,
+                              __in PFILE_OBJECT, FileObject,
+                              __in_bcount( Length ) PVOID, EaBuffer,
+                              __in ULONG, Length
+        );
+
         DYNLOAD_FUNC_WITH_03( STATUS_INSUFFICIENT_RESOURCES, NTSTATUS, NTAPI, FltGetFileContext, __in PFLT_INSTANCE, Instance, __in PFILE_OBJECT, FileObject, __out PFLT_CONTEXT*, Context );
 
         DYNLOAD_FUNC_WITH_05( STATUS_INSUFFICIENT_RESOURCES, NTSTATUS, NTAPI, FltSetFileContext, __in PFLT_INSTANCE, Instance, __in PFILE_OBJECT, FileObject, __in FLT_SET_CONTEXT_OPERATION, Operation, __in PFLT_CONTEXT, NewContext, __out PFLT_CONTEXT*, OldContext );

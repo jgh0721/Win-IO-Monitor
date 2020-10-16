@@ -213,6 +213,9 @@
     <ClInclude Include="utilities\volumeMgr_Defs.hpp">
       <Filter>cache</Filter>
     </ClInclude>
+    <ClInclude Include="callbacks\fltEa.hpp">
+      <Filter>callbacks</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="WinIOIsolation.cpp">
@@ -343,6 +346,9 @@
     </ClCompile>
     <ClCompile Include="utilities\volumeMgr.cpp">
       <Filter>cache</Filter>
+    </ClCompile>
+    <ClCompile Include="callbacks\fltEa.cpp">
+      <Filter>callbacks</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

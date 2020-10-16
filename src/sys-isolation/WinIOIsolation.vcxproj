@@ -38,6 +38,7 @@
     <ClInclude Include="callbacks\fltClose.hpp" />
     <ClInclude Include="callbacks\fltCreateFile.hpp" />
     <ClInclude Include="callbacks\fltDirectoryControl.hpp" />
+    <ClInclude Include="callbacks\fltEa.hpp" />
     <ClInclude Include="callbacks\fltFileSystemControl.hpp" />
     <ClInclude Include="callbacks\fltFlushBuffers.hpp" />
     <ClInclude Include="callbacks\fltInstance.hpp" />
@@ -92,6 +93,7 @@
     <ClCompile Include="callbacks\fltClose.cpp" />
     <ClCompile Include="callbacks\fltCreateFile.cpp" />
     <ClCompile Include="callbacks\fltDirectoryControl.cpp" />
+    <ClCompile Include="callbacks\fltEa.cpp" />
     <ClCompile Include="callbacks\fltFileSystemControl.cpp" />
     <ClCompile Include="callbacks\fltFlushBuffers.cpp" />
     <ClCompile Include="callbacks\fltInstance.cpp" />

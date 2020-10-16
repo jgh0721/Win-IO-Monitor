@@ -83,9 +83,34 @@ namespace nsW32API
                                     __out_opt  PULONG LengthReturned
     );
 
+    NTSTATUS FltQueryEaFile( __in PFLT_INSTANCE Instance,
+                             __in PFILE_OBJECT FileObject,
+                             __out_bcount_part( Length, *LengthReturned ) PVOID ReturnedEaData,
+                             __in ULONG Length,
+                             __in BOOLEAN ReturnSingleEntry,
+                             __in_bcount_opt( EaListLength ) PVOID EaList,
+                             __in ULONG EaListLength,
+                             __in_opt PULONG EaIndex,
+                             __in BOOLEAN RestartScan,
+                             __out_opt PULONG LengthReturned
+    );
+
+    NTSTATUS FltSetEaFile( __in PFLT_INSTANCE Instance,
+                           __in PFILE_OBJECT FileObject,
+                           __in_bcount( Length ) PVOID EaBuffer,
+                           __in ULONG Length
+    );
+
     FLT_PREOP_CALLBACK_STATUS FltProcessFileLock( __in PFILE_LOCK FileLock,
                                                   __in PFLT_CALLBACK_DATA CallbackData,
                                                   __in_opt PVOID Context );
+
+    /*!
+        The IoReplaceFileObjectName routine replaces the name of a file object.
+
+        Support WinXP
+    */
+    NTSTATUS IoReplaceFileObjectName( __in PFILE_OBJECT FileObject, __in PWSTR NewFileName, __in USHORT FileNameLength );
 
 } // nsW32API
 

@@ -288,6 +288,100 @@ NTSTATUS nsW32API::FltQueryDirectoryFile( PFLT_INSTANCE Instance, PFILE_OBJECT F
     return Status;
 }
 
+NTSTATUS nsW32API::FltQueryEaFile( PFLT_INSTANCE Instance, PFILE_OBJECT FileObject, PVOID ReturnedEaData, ULONG Length, BOOLEAN ReturnSingleEntry, PVOID EaList, ULONG EaListLength, PULONG EaIndex, BOOLEAN RestartScan, PULONG LengthReturned )
+{
+    if( GlobalFltMgr.Is_FltQueryEaFile() == true )
+        return GlobalFltMgr.FltQueryEaFile( Instance, FileObject, ReturnedEaData, Length, ReturnSingleEntry, EaList, EaListLength, EaIndex, RestartScan, LengthReturned );
+
+    NTSTATUS            Status = STATUS_EAS_NOT_SUPPORTED;
+    PFLT_CALLBACK_DATA  CallbackData = NULLPTR;
+    PFLT_PARAMETERS     Params = NULLPTR;
+
+    do
+    {
+        Status = FltAllocateCallbackData( Instance, FileObject, &CallbackData );
+
+        if( !NT_SUCCESS( Status ) )
+            break;
+
+        CallbackData->Iopb->MajorFunction = IRP_MJ_QUERY_EA;
+        CallbackData->Iopb->MinorFunction = 0;
+
+        Params = &CallbackData->Iopb->Parameters;
+
+        if( RestartScan != FALSE )
+            SetFlag( CallbackData->Iopb->OperationFlags, SL_RESTART_SCAN );
+
+        if( ReturnSingleEntry != FALSE )
+            SetFlag( CallbackData->Iopb->OperationFlags, SL_RETURN_SINGLE_ENTRY );
+
+        Params->QueryEa.Length = Length;
+        Params->QueryEa.EaList = EaList;
+        Params->QueryEa.EaListLength = EaListLength;
+
+        if( ARGUMENT_PRESENT( EaIndex ) )
+        {
+            SetFlag( CallbackData->Iopb->OperationFlags, SL_INDEX_SPECIFIED );
+            Params->QueryEa.EaIndex = *EaIndex;
+        }
+        else
+        {
+            Params->QueryEa.EaIndex = 0;
+        }
+
+        Params->QueryEa.EaBuffer = ReturnedEaData;
+
+        FltPerformSynchronousIo( CallbackData );
+
+        Status = CallbackData->IoStatus.Status;
+
+        if( ARGUMENT_PRESENT( LengthReturned ) )
+            *LengthReturned = CallbackData->IoStatus.Information;
+
+    } while( false );
+
+    if( CallbackData != NULLPTR )
+        FltFreeCallbackData( CallbackData );
+
+    return Status;
+}
+
+NTSTATUS nsW32API::FltSetEaFile( PFLT_INSTANCE Instance, PFILE_OBJECT FileObject, PVOID EaBuffer, ULONG Length )
+{
+    if( GlobalFltMgr.Is_FltSetEaFile() == true )
+        return GlobalFltMgr.FltSetEaFile( Instance, FileObject, EaBuffer, Length );
+
+    NTSTATUS            Status = STATUS_EAS_NOT_SUPPORTED;
+    PFLT_CALLBACK_DATA  CallbackData = NULLPTR;
+    PFLT_PARAMETERS     Params = NULLPTR;
+
+    do
+    {
+        Status = FltAllocateCallbackData( Instance, FileObject, &CallbackData );
+
+        if( !NT_SUCCESS( Status ) )
+            break;
+
+        CallbackData->Iopb->MajorFunction = IRP_MJ_SET_EA;
+        CallbackData->Iopb->MinorFunction = 0;
+
+        Params = &CallbackData->Iopb->Parameters;
+
+        Params->SetEa.EaBuffer = EaBuffer;
+        Params->SetEa.Length = Length;
+
+        FltPerformSynchronousIo( CallbackData );
+
+        Status = CallbackData->IoStatus.Status;
+
+    } while( false );
+
+    if( CallbackData != NULLPTR )
+        FltFreeCallbackData( CallbackData );
+
+    return Status;
+}
+
 FLT_PREOP_CALLBACK_STATUS nsW32API::FltProcessFileLock( PFILE_LOCK FileLock, PFLT_CALLBACK_DATA CallbackData, PVOID Context )
 {
     FLT_PREOP_CALLBACK_STATUS FltStatus;
@@ -378,4 +472,57 @@ FLT_PREOP_CALLBACK_STATUS nsW32API::FltProcessFileLock( PFILE_LOCK FileLock, PFL
     }
 
     return FltStatus;
+}
+
+
+NTSTATUS nsW32API::IoReplaceFileObjectName( PFILE_OBJECT FileObject, PWSTR NewFileName, USHORT FileNameLength )
+{
+    if( nsUtils::VerifyVersionInfoEx( 6, 1, ">=" ) == true )
+        return GlobalNtOsKrnlMgr.IoReplaceFileObjectName( FileObject, NewFileName, FileNameLength );
+
+    PWSTR buffer = NULLPTR;
+    PUNICODE_STRING fileName = NULLPTR;
+    USHORT newMaxLength;
+
+    do
+    {
+        fileName = &FileObject->FileName;
+
+        //
+        // If the new name fits inside the current buffer we simply copy it over
+        // instead of allocating a new buffer (and keep the MaximumLength value
+        // the same).
+        //
+        if( FileNameLength <= fileName->MaximumLength )
+            break;
+
+        //
+        // Use an optimal buffer size
+        //
+        newMaxLength = FileNameLength;
+
+        buffer = ( PWSTR )ExAllocatePoolWithTag( PagedPool,
+                                                 newMaxLength,
+                                                 'main' );
+
+        if( !buffer )
+        {
+            return STATUS_INSUFFICIENT_RESOURCES;
+        }
+
+        if( fileName->Buffer != NULL )
+        {
+            ExFreePool( fileName->Buffer );
+        }
+
+        fileName->Buffer = buffer;
+        fileName->MaximumLength = newMaxLength;
+
+    } while( false );
+
+    fileName->Length = FileNameLength;
+    RtlZeroMemory( fileName->Buffer, fileName->MaximumLength );
+    RtlCopyMemory( fileName->Buffer, NewFileName, FileNameLength );
+
+    return STATUS_SUCCESS;
 }
