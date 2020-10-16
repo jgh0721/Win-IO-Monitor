@@ -82,6 +82,11 @@ PIRP_CONTEXT CreateIrpContext( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_
             SearchProcessInfo( IrpContext->ProcessId, &IrpContext->ProcessFullPath, &IrpContext->ProcessFileName );
         }
 
+        if( IrpContext->ProcessId > 4 && MajorFunction != IRP_MJ_READ && MajorFunction != IRP_MJ_WRITE )
+        {
+            ProcessFilter_Match( IrpContext->ProcessId, &IrpContext->ProcessFullPath, &IrpContext->ProcessFilter, &IrpContext->ProcessFilterEntry );
+        }
+
         if( MajorFunction == IRP_MJ_CREATE && IsPreIO == true )
         {
             /*!
@@ -253,6 +258,13 @@ VOID CloseIrpContext( __in PIRP_CONTEXT IrpContext )
         FltReleaseResource( &IrpContext->InstanceContext->VcbLock );
 
     ExFreeToNPagedLookasideList( &GlobalContext.DebugLookasideList, IrpContext->DebugText );
+
+    if( IrpContext->ProcessFilter != NULLPTR )
+    {
+        ProcessFilter_Close( IrpContext->ProcessFilter );
+        IrpContext->ProcessFilter = NULLPTR;
+        IrpContext->ProcessFilterEntry = NULLPTR;
+    }
 
     DeallocateBuffer( &IrpContext->ProcessFullPath );
     DeallocateBuffer( &IrpContext->SrcFileFullPath );

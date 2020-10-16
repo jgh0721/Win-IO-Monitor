@@ -4,6 +4,7 @@
 #include "fltBase.hpp"
 
 #include "privateFCBMgr_Defs.hpp"
+#include "policies/ProcessFilter.hpp"
 #include "utilities/bufferMgr_Defs.hpp"
 #include "utilities/contextMgr_Defs.hpp"
 
@@ -44,6 +45,8 @@ typedef struct _IRP_CONTEXT
     ULONG                               ProcessId;
     TyGenericBuffer< WCHAR >            ProcessFullPath;
     WCHAR*                              ProcessFileName;        // This just point to ProcessFullPath, dont free this buffer!
+    HANDLE                              ProcessFilter;
+    PROCESS_FILTER_ENTRY*               ProcessFilterEntry;
 
     TyGenericBuffer< WCHAR >            SrcFileFullPath;
     WCHAR*                              SrcFileFullPathWOVolume;    // SrcFileFullPath 에서 드라이브 문자 또는 디바이스 이름등을 제외한 순수한 경로 및 이름( \ 로 시작한다 )
