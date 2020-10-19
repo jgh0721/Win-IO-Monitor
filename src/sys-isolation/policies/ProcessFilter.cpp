@@ -107,7 +107,7 @@ void ProcessFilter_Release( __in PROCESS_FILTER*& ProcessFilter )
         return;
 
     ProcessFilter->RefCount = 0;
-    if( GlobalContext.GlobalFilter == ProcessFilter )
+    if( GlobalContext.ProcessFilter == ProcessFilter )
         return;
 
     auto Head = &ProcessFilter->ListHead;
