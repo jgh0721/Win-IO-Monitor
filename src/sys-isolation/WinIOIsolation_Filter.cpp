@@ -33,9 +33,9 @@ CONST FLT_OPERATION_REGISTRATION FilterCallbacks[] = {
 
     { IRP_MJ_SET_INFORMATION,               0,      FilterPreSetInformation,            FilterPostSetInformation    },
 
-    { IRP_MJ_QUERY_EA,                      0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
+    { IRP_MJ_QUERY_EA,                      0,      FilterPreQueryEA,                   FilterPostQueryEA    },
 
-    { IRP_MJ_SET_EA,                        0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
+    { IRP_MJ_SET_EA,                        0,      FilterPreSetEA,                     FilterPostSetEA    },
 
     { IRP_MJ_FLUSH_BUFFERS,                 0,      FilterPreFlushBuffers,              FilterPostFlushBuffers    },
 
