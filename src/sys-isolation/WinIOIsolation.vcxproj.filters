@@ -225,6 +225,9 @@
     <ClInclude Include="namechanger\NameChanger_Defs.hpp">
       <Filter>Features\NameChanger</Filter>
     </ClInclude>
+    <ClInclude Include="driverMgmt.hpp">
+      <Filter>Features</Filter>
+    </ClInclude>
     <ClInclude Include="callbacks\fltEa.hpp">
       <Filter>callbacks</Filter>
     </ClInclude>
@@ -361,6 +364,9 @@
     </ClCompile>
     <ClCompile Include="namechanger\NameChanger.cpp">
       <Filter>Features\NameChanger</Filter>
+    </ClCompile>
+    <ClCompile Include="driverMgmt.cpp">
+      <Filter>Features</Filter>
     </ClCompile>
     <ClCompile Include="callbacks\fltEa.cpp">
       <Filter>callbacks</Filter>

@@ -15,6 +15,8 @@
 #include "policies/GlobalFilter.hpp"
 #include "policies/ProcessFilter.hpp"
 
+#include "driverMgmt.hpp"
+
 #include "metadata/Metadata.hpp"
 
 #if defined(_MSC_VER)
@@ -87,7 +89,7 @@ void DriverUnload( PDRIVER_OBJECT DriverObject )
     RemoveControlDevice( GlobalContext );
 
     UninitializeVolumeNameMgr();
-    UninitializeMetaDataMgr();
+    UninitializeFeatureMgr();
 
     ExDeleteNPagedLookasideList( &GlobalContext.DebugLookasideList );
 
@@ -195,7 +197,7 @@ NTSTATUS InitializeFeatures( CTX_GLOBAL_DATA* GlobalContext )
 
     do
     {
-        IF_FAILED_BREAK( Status, InitializeMetaDataMgr() );
+        IF_FAILED_BREAK( Status, InitializeFeatureMgr() );
         IF_FAILED_BREAK( Status, InitializeVolumeNameMgr() );
 
         IF_FAILED_BREAK( Status, StartProcessNotify() );

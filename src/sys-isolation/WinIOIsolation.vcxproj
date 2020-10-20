@@ -56,6 +56,7 @@
     <ClInclude Include="callbacks\generateFileName.hpp" />
     <ClInclude Include="deviceCntl.hpp" />
     <ClInclude Include="deviceMgmt.hpp" />
+    <ClInclude Include="driverMgmt.hpp" />
     <ClInclude Include="fltBase.hpp" />
     <ClInclude Include="irpContext.hpp" />
     <ClInclude Include="irpContext_Defs.hpp" />
@@ -113,6 +114,7 @@
     <ClCompile Include="callbacks\generateFileName.cpp" />
     <ClCompile Include="deviceCntl.cpp" />
     <ClCompile Include="deviceMgmt.cpp" />
+    <ClCompile Include="driverMgmt.cpp" />
     <ClCompile Include="irpContext.cpp" />
     <ClCompile Include="metadata\Metadata.cpp" />
     <ClCompile Include="namechanger\NameChanger.cpp" />

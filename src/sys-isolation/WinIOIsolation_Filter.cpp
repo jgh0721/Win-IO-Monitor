@@ -1,5 +1,7 @@
 ﻿#include "WinIOIsolation_Filter.hpp"
 
+
+#include "driverMgmt.hpp"
 #include "utilities/osInfoMgr.hpp"
 #include "callbacks/callbacks.hpp"
 #include "utilities/contextMgr.hpp"
@@ -314,6 +316,8 @@ NTSTATUS FLTAPI ClientConnectNotify( PFLT_PORT ClientPort, PVOID ServerPortCooki
 {
     *ConnectionPortCookie = ClientPort;
     GlobalContext.ClientPort = ClientPort;
+    FeatureContext.CntlProcessId = (ULONG)PsGetCurrentProcessId();
+
     return STATUS_SUCCESS;
 }
 
@@ -323,6 +327,7 @@ void FLTAPI ClientDisconnectNotify( PVOID ConnectionCookie )
 
     FltCloseClientPort( GlobalContext.Filter, &GlobalContext.ClientPort );
     GlobalContext.ClientPort = NULLPTR;
+    FeatureContext.CntlProcessId = 0;
 }
 
 NTSTATUS FLTAPI ClientMessageNotify( PVOID PortCookie, PVOID InputBuffer, ULONG InputBufferLength, PVOID OutputBuffer,
