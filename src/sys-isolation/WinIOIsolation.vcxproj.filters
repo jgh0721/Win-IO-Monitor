@@ -34,8 +34,14 @@
     <Filter Include="cache">
       <UniqueIdentifier>{7cf29c1b-bf04-42f6-8f95-2d4e958644e7}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Features">
+      <UniqueIdentifier>{2bd2e9fc-20c7-41f0-83d0-a8e16bdddc3a}</UniqueIdentifier>
+    </Filter>
     <Filter Include="MetaData">
       <UniqueIdentifier>{8077c9af-b023-4924-a7d9-3c5bbd18760c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Features\NameChanger">
+      <UniqueIdentifier>{05dd4c5a-af19-40de-9afb-d245aea22396}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -213,6 +219,12 @@
     <ClInclude Include="utilities\volumeMgr_Defs.hpp">
       <Filter>cache</Filter>
     </ClInclude>
+    <ClInclude Include="namechanger\NameChanger.hpp">
+      <Filter>Features\NameChanger</Filter>
+    </ClInclude>
+    <ClInclude Include="namechanger\NameChanger_Defs.hpp">
+      <Filter>Features\NameChanger</Filter>
+    </ClInclude>
     <ClInclude Include="callbacks\fltEa.hpp">
       <Filter>callbacks</Filter>
     </ClInclude>
@@ -346,6 +358,9 @@
     </ClCompile>
     <ClCompile Include="utilities\volumeMgr.cpp">
       <Filter>cache</Filter>
+    </ClCompile>
+    <ClCompile Include="namechanger\NameChanger.cpp">
+      <Filter>Features\NameChanger</Filter>
     </ClCompile>
     <ClCompile Include="callbacks\fltEa.cpp">
       <Filter>callbacks</Filter>
