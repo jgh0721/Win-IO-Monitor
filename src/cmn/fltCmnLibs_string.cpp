@@ -47,9 +47,9 @@ namespace nsUtils
 		return ret;
     }
 
-    WCHAR* ReverseFindW( __in_z WCHAR* wszString, WCHAR ch )
+    WCHAR* ReverseFindW( __in_z WCHAR* wszString, WCHAR ch, int iCchLength /* = -1 */ )
 	{
-		size_t length = strlength( wszString );
+		size_t length = iCchLength == -1 ? strlength( wszString ) : iCchLength;
 
 		for( size_t i = length; i >= 0; i-- )
 		{
@@ -91,9 +91,9 @@ namespace nsUtils
 		return wszString;
     }
 
-    WCHAR* EndsWithW( WCHAR* wszString, const WCHAR* wszPattern )
+    WCHAR* EndsWithW( WCHAR* wszString, const WCHAR* wszPattern, int iCchLength /* = -1 */ )
     {
-		auto lhs = strlength( wszString );
+		auto lhs = iCchLength == -1 ? strlength( wszString ) : iCchLength;
 		auto rhs = strlength( wszPattern );
 
 		if( lhs < rhs )
