@@ -169,6 +169,18 @@ void UninitializeMetaDataInfo( METADATA_DRIVER*& MetaDataInfo )
     MetaDataInfo = NULLPTR;
 }
 
+LARGE_INTEGER GetMetaDataOffset( METADATA_DRIVER* MetaDataInfo )
+{
+    ASSERT( MetaDataInfo != NULLPTR );
+    if( MetaDataInfo == NULLPTR )
+        return LARGE_INTEGER{ 0,0 };
+
+    if( MetaDataInfo->MetaData.Type != METADATA_STB_TYPE )
+        return LARGE_INTEGER{ 0,0 };
+
+    return LARGE_INTEGER{ MetaDataInfo->MetaData.ContainorSize, 0 };
+}
+
 NTSTATUS WriteMetaData( IRP_CONTEXT* IrpContext, PFILE_OBJECT FileObject, METADATA_DRIVER* MetaDataInfo )
 {
     NTSTATUS Status = STATUS_SUCCESS;
@@ -192,13 +204,13 @@ NTSTATUS WriteMetaData( IRP_CONTEXT* IrpContext, PFILE_OBJECT FileObject, METADA
             break;
         }
 
-        LARGE_INTEGER FILE_BEGIN_OFFSET = { 0,0 };
+        LARGE_INTEGER FILE_BEGIN_OFFSET = GetMetaDataOffset( MetaDataInfo );
         ULONG BytesWritten = 0;
 
-        Status = FltWriteFile( IrpContext->FltObjects->Instance, 
-                               FileObject, 
-                               &FILE_BEGIN_OFFSET, METADATA_DRIVER_SIZE, MetaDataInfo, 
-                               FLTFL_IO_OPERATION_NON_CACHED | FLTFL_IO_OPERATION_DO_NOT_UPDATE_BYTE_OFFSET, 
+        Status = FltWriteFile( IrpContext->FltObjects->Instance,
+                               FileObject,
+                               &FILE_BEGIN_OFFSET, METADATA_DRIVER_SIZE, MetaDataInfo,
+                               FLTFL_IO_OPERATION_NON_CACHED | FLTFL_IO_OPERATION_DO_NOT_UPDATE_BYTE_OFFSET,
                                &BytesWritten, NULL, NULL );
 
         if( !NT_SUCCESS( Status ) )

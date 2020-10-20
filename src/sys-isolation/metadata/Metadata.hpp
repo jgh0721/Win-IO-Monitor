@@ -21,6 +21,8 @@ METADATA_DRIVER* AllocateMetaDataInfo();
 void InitializeMetaDataInfo( __inout METADATA_DRIVER* MetaDataInfo );
 void UninitializeMetaDataInfo( __in METADATA_DRIVER*& MetaDataInfo );
 
+LARGE_INTEGER GetMetaDataOffset( __in METADATA_DRIVER* MetaDataInfo );
+
 NTSTATUS WriteMetaData( __in IRP_CONTEXT* IrpContext, __in PFILE_OBJECT FileObject, __in METADATA_DRIVER* MetaDataInfo );
 NTSTATUS UpdateFileSizeOnMetaData( __in IRP_CONTEXT* IrpContext, __in PFILE_OBJECT FileObject, __in const LARGE_INTEGER& FileSize );
 NTSTATUS UpdateFileSizeOnMetaData( __in IRP_CONTEXT* IrpContext, __in PFILE_OBJECT FileObject, __in LONGLONG FileSize );
