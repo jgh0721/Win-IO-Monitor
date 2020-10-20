@@ -215,6 +215,43 @@ PIRP_CONTEXT CreateIrpContext( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_
                         VolumeMgr_Replace( IrpContext->DstFileFullPath.Buffer, IrpContext->DstFileFullPath.BufferSize );
 
                     } break;
+
+                    case nsW32API::FileLinkInformation:
+                    case nsW32API::FileLinkInformationEx: {
+
+                        if( FileInformationClass == nsW32API::FileLinkInformation )
+                        {
+                            auto InfoBuffer = ( FILE_LINK_INFORMATION* )( Data->Iopb->Parameters.SetFileInformation.InfoBuffer );
+                            Status = FltGetDestinationFileNameInformation( FltObjects->Instance, FltObjects->FileObject, InfoBuffer->RootDirectory,
+                                                                           InfoBuffer->FileName, InfoBuffer->FileNameLength,
+                                                                           FLT_FILE_NAME_NORMALIZED | FLT_FILE_NAME_QUERY_DEFAULT,
+                                                                           &DestinationFileName
+                            );
+                        }
+                        else if( FileInformationClass == nsW32API::FileLinkInformationEx )
+                        {
+                            auto InfoBuffer = ( nsW32API::FILE_LINK_INFORMATION_EX* )( Data->Iopb->Parameters.SetFileInformation.InfoBuffer );
+                            Status = FltGetDestinationFileNameInformation( FltObjects->Instance, FltObjects->FileObject, InfoBuffer->RootDirectory,
+                                                                           InfoBuffer->FileName, InfoBuffer->FileNameLength,
+                                                                           FLT_FILE_NAME_NORMALIZED | FLT_FILE_NAME_QUERY_DEFAULT,
+                                                                           &DestinationFileName
+                            );
+                        }
+
+                        if( !NT_SUCCESS( Status ) )
+                            break;
+
+                        IrpContext->DstFileFullPath = AllocateBuffer<WCHAR>( BUFFER_FILENAME, DestinationFileName->Name.Length + sizeof( WCHAR ) );
+                        if( IrpContext->DstFileFullPath.Buffer == NULLPTR )
+                        {
+                            Status = STATUS_INSUFFICIENT_RESOURCES;
+                            break;
+                        }
+
+                        RtlStringCbCopyW( IrpContext->DstFileFullPath.Buffer, IrpContext->DstFileFullPath.BufferSize, DestinationFileName->Name.Buffer );
+                        VolumeMgr_Replace( IrpContext->DstFileFullPath.Buffer, IrpContext->DstFileFullPath.BufferSize );
+
+                    } break;
                 } // switch FileInformationClass
 
             } break;

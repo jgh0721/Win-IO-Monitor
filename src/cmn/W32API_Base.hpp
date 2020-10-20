@@ -262,6 +262,27 @@ namespace nsW32API
     #define FILE_RENAME_FORCE_RESIZE_SOURCE_SR                  0x00000100 	// If FILE_RENAME_SUPPRESS_STORAGE_RESERVE_INHERITANCE is not also specified, when renaming a file to a new directory that is part of a different storage reserve area, always shrink the source directory's storage reserve area by the full size of the file being renamed. Requires manage volume access.
     #define FILE_RENAME_FORCE_RESIZE_SR                         0x00000180  // 
 
+    typedef struct _FILE_LINK_INFORMATION
+    {
+        BOOLEAN ReplaceIfExists;
+        HANDLE RootDirectory;
+        ULONG FileNameLength;
+        WCHAR FileName[ 1 ];
+    } FILE_LINK_INFORMATION, * PFILE_LINK_INFORMATION;
+
+    // _WIN32_WINNT >= _WIN32_WINNT_WIN10_RS1
+    typedef struct _FILE_LINK_INFORMATION_EX
+    {
+        union
+        {
+            BOOLEAN ReplaceIfExists;  // FileLinkInformation
+            ULONG Flags;              // FileLinkInformationEx
+        } DUMMYUNIONNAME;
+        HANDLE RootDirectory;
+        ULONG FileNameLength;
+        WCHAR FileName[ 1 ];
+    } FILE_LINK_INFORMATION_EX, * PFILE_LINK_INFORMATION_EX;
+
     typedef struct _FILE_DISPOSITION_INFORMATION
     {
         BOOLEAN DeleteFile;
