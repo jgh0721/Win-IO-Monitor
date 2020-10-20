@@ -34,14 +34,6 @@ PIRP_CONTEXT CreateIrpContext( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_
 
     __try
     {
-
-        Status = CtxGetContext( FltObjects, NULLPTR, FLT_INSTANCE_CONTEXT, ( PFLT_CONTEXT* )&InstanceContext );
-        if( !NT_SUCCESS( Status ) || InstanceContext == NULLPTR )
-        {
-            Status = STATUS_INTERNAL_ERROR;
-            __leave;
-        }
-
         IrpContext = ( PIRP_CONTEXT )ExAllocateFromNPagedLookasideList( &GlobalContext.IrpContextLookasideList );
         if( IrpContext == NULLPTR )
         {
@@ -57,8 +49,6 @@ PIRP_CONTEXT CreateIrpContext( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_
         RtlZeroMemory( IrpContext->DebugText, 1024 * sizeof( CHAR ) );
 
         IrpContext->EvtID           = CreateEvtID();
-        IrpContext->InstanceContext = InstanceContext;
-        FltReferenceContext( IrpContext->InstanceContext );
 
         if( IsOwnFileObject( FltObjects->FileObject ) == true )
         {
@@ -75,6 +65,24 @@ PIRP_CONTEXT CreateIrpContext( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_
                     IrpContext->ProcessFileName++;
             }
         }
+
+        if( IrpContext->Fcb != NULLPTR )
+        {
+            InstanceContext = IrpContext->Fcb->InstanceContext;
+            FltReferenceContext( InstanceContext );
+        }
+        else
+        {
+            Status = CtxGetContext( FltObjects, NULLPTR, FLT_INSTANCE_CONTEXT, ( PFLT_CONTEXT* )&InstanceContext );
+            if( !NT_SUCCESS( Status ) || InstanceContext == NULLPTR )
+            {
+                Status = STATUS_INTERNAL_ERROR;
+                __leave;
+            }
+        }
+
+        IrpContext->InstanceContext = InstanceContext;
+        FltReferenceContext( IrpContext->InstanceContext );
 
         if( IrpContext->ProcessFullPath.Buffer == NULLPTR )
         {
