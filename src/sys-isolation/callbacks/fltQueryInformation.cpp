@@ -5,6 +5,8 @@
 #include "metadata/Metadata.hpp"
 #include "pool.hpp"
 
+#include "fltDirectoryControl.hpp"
+
 #include "fltCmnLibs.hpp"
 
 #if defined(_MSC_VER)
@@ -226,7 +228,8 @@ NTSTATUS ProcessFileStandardInformation( IRP_CONTEXT* IrpContext )
             __leave;
         }
 
-        if( BooleanFlagOn( IrpContext->Fcb->Flags, FCB_STATE_METADATA_ASSOC ) )
+        if( ( IrpContext->ProcessFilter != NULLPTR ) && 
+            BooleanFlagOn( IrpContext->Fcb->Flags, FCB_STATE_METADATA_ASSOC ) )
         {
             FileStdInfo.EndOfFile = IrpContext->Fcb->AdvFcbHeader.FileSize;
             FileStdInfo.AllocationSize = IrpContext->Fcb->AdvFcbHeader.AllocationSize;
@@ -360,6 +363,12 @@ NTSTATUS ProcessFileNameInformation( IRP_CONTEXT* IrpContext )
         nameInfo->FileNameLength = nameLength;
         RtlCopyMemory( nameInfo->FileName, IrpContext->Fcb->FileFullPathWOVolume, nameLength );
 
+        if( ( IrpContext->ProcessFilter != NULLPTR ) &&
+            BooleanFlagOn( IrpContext->Fcb->Flags, FCB_STATE_METADATA_ASSOC ) )
+        {
+            CorrectFileName( IrpContext, IrpContext->Fcb->MetaDataInfo, nameInfo->FileName, nameInfo->FileNameLength );
+        }
+
         Status = STATUS_SUCCESS;
         Information = nameLength + sizeof( ULONG );
     }
@@ -467,7 +476,8 @@ NTSTATUS ProcessFileAllInformation( IRP_CONTEXT* IrpContext )
         {
             RtlCopyMemory( &InputBuffer->StandardInformation, &FileAllInformationBuffer->StandardInformation, sizeof( FILE_STANDARD_INFORMATION ) );
 
-            if( BooleanFlagOn( IrpContext->Fcb->Flags, FCB_STATE_METADATA_ASSOC ) )
+            if( ( IrpContext->ProcessFilter != NULLPTR ) &&
+                BooleanFlagOn( IrpContext->Fcb->Flags, FCB_STATE_METADATA_ASSOC ) )
             {
                 InputBuffer->StandardInformation.EndOfFile = IrpContext->Fcb->AdvFcbHeader.FileSize;
                 InputBuffer->StandardInformation.AllocationSize = IrpContext->Fcb->AdvFcbHeader.AllocationSize;
@@ -502,6 +512,12 @@ NTSTATUS ProcessFileAllInformation( IRP_CONTEXT* IrpContext )
 
             if( RemainSize < InputBuffer->NameInformation.FileNameLength + sizeof( ULONG ) )
                 InputBuffer->NameInformation.FileNameLength = RemainSize - sizeof( ULONG );
+
+            if( ( IrpContext->ProcessFilter != NULLPTR ) &&
+                BooleanFlagOn( IrpContext->Fcb->Flags, FCB_STATE_METADATA_ASSOC ) )
+            {
+                CorrectFileName( IrpContext, IrpContext->Fcb->MetaDataInfo, InputBuffer->NameInformation.FileName, InputBuffer->NameInformation.FileNameLength );
+            }
         }
 
         if( Length >= RequiredLength )
@@ -578,8 +594,12 @@ NTSTATUS ProcessFileStreamInformation( IRP_CONTEXT* IrpContext )
                 ( (InfoBuffer->StreamNameLength == (_countof( NTFS_DEFAULT_STREAM) * sizeof(WCHAR))) && 
                   (RtlCompareMemory( InfoBuffer->StreamName, NTFS_DEFAULT_STREAM, InfoBuffer->StreamNameLength ) == InfoBuffer->StreamNameLength ) ) )
             {
-                InfoBuffer->StreamSize.QuadPart = IrpContext->Fcb->AdvFcbHeader.FileSize.QuadPart;
-                InfoBuffer->StreamAllocationSize.QuadPart = IrpContext->Fcb->AdvFcbHeader.AllocationSize.QuadPart;
+                if( ( IrpContext->ProcessFilter != NULLPTR ) &&
+                    BooleanFlagOn( IrpContext->Fcb->Flags, FCB_STATE_METADATA_ASSOC ) )
+                {
+                    InfoBuffer->StreamSize.QuadPart = IrpContext->Fcb->AdvFcbHeader.FileSize.QuadPart;
+                    InfoBuffer->StreamAllocationSize.QuadPart = IrpContext->Fcb->AdvFcbHeader.AllocationSize.QuadPart;
+                }
             }
             else
             {
@@ -683,7 +703,8 @@ NTSTATUS ProcessFileNetworkOpenInformation( IRP_CONTEXT* IrpContext )
             __leave;
         }
 
-        if( BooleanFlagOn( IrpContext->Fcb->Flags, FCB_STATE_METADATA_ASSOC ) )
+        if( ( IrpContext->ProcessFilter != NULLPTR ) &&
+            BooleanFlagOn( IrpContext->Fcb->Flags, FCB_STATE_METADATA_ASSOC ) )
         {
             networkOpenInfo.EndOfFile = IrpContext->Fcb->AdvFcbHeader.FileSize;
             networkOpenInfo.AllocationSize = IrpContext->Fcb->AdvFcbHeader.AllocationSize;
