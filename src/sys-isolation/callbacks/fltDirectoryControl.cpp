@@ -3,6 +3,7 @@
 #include "irpContext.hpp"
 #include "privateFCBMgr.hpp"
 #include "utilities/bufferMgr.hpp"
+#include "utilities/fltUtilities.hpp"
 
 #include "W32API.hpp"
 #include "fltCmnLibs.hpp"
@@ -15,6 +16,7 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreDirectoryControl( PFLT_CALLBACK_DATA D
                                                             PVOID* CompletionContext )
 {
     FLT_PREOP_CALLBACK_STATUS                   FltStatus = FLT_PREOP_SUCCESS_WITH_CALLBACK;
+    IRP_CONTEXT*                                IrpContext = NULLPTR;
 
     UNREFERENCED_PARAMETER( Data );
     UNREFERENCED_PARAMETER( FltObjects );
@@ -22,11 +24,121 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreDirectoryControl( PFLT_CALLBACK_DATA D
 
     __try
     {
+        if( Data->Iopb->MinorFunction != IRP_MN_QUERY_DIRECTORY )
+            __leave;
 
+        if( Data->Iopb->Parameters.DirectoryControl.QueryDirectory.FileName == NULLPTR || 
+            Data->Iopb->Parameters.DirectoryControl.QueryDirectory.FileName->Buffer == NULLPTR )
+            __leave;
+
+        IrpContext = CreateIrpContext( Data, FltObjects );
+
+        if( IrpContext->ProcessFilter != NULLPTR )
+        {
+            // TODO: 캐시 필요
+            const auto& Parameters = Data->Iopb->Parameters.DirectoryControl.QueryDirectory;
+
+            if( nsUtils::ReverseFindW( Parameters.FileName->Buffer, L'.', Parameters.FileName->Length / 2 ) == NULLPTR )
+                __leave;
+
+            if( nsUtils::EndsWithW( Parameters.FileName->Buffer, L".EXE", Parameters.FileName->Length / 2 ) != NULLPTR )
+                __leave;
+
+            auto RequiredSize = IrpContext->SrcFileFullPath.BufferSize + Data->Iopb->Parameters.DirectoryControl.QueryDirectory.FileName->Length + (CONTAINOR_SUFFIX_MAX * sizeof(WCHAR));
+            auto Src = AllocateBuffer<WCHAR>( BUFFER_FILENAME, RequiredSize );
+
+            RtlStringCbCatW( Src.Buffer, Src.BufferSize, IrpContext->SrcFileFullPathWOVolume );
+            RtlStringCbCatW( Src.Buffer, Src.BufferSize, L"\\" );
+            RtlStringCbCatNW( Src.Buffer, Src.BufferSize, 
+                              Data->Iopb->Parameters.DirectoryControl.QueryDirectory.FileName->Buffer, 
+                              Data->Iopb->Parameters.DirectoryControl.QueryDirectory.FileName->Length );
+            RtlStringCbCatW( Src.Buffer, Src.BufferSize, L".EXE" );
+
+            METADATA_DRIVER MetaDataInfo;
+            if( IsOwnFile( IrpContext, Src.Buffer, &MetaDataInfo ) == true )
+            {
+                NTSTATUS Status = STATUS_SUCCESS;
+
+                do
+                {
+                    UNICODE_STRING FileName;
+                    RtlZeroMemory( Src.Buffer, Src.BufferSize );
+                    RtlStringCbCatNW( Src.Buffer, Src.BufferSize, Parameters.FileName->Buffer, Parameters.FileName->Length );
+                    RtlStringCbCatW( Src.Buffer, Src.BufferSize, L".EXE" );
+                    RtlInitUnicodeString( &FileName, Src.Buffer );
+                    ULONG LengthReturned = 0;
+
+                    Status = nsW32API::FltQueryDirectoryFile( FltObjects->Instance, FltObjects->FileObject,
+                                                              Parameters.DirectoryBuffer, Parameters.Length,
+                                                              ( nsW32API::FILE_INFORMATION_CLASS )Parameters.FileInformationClass,
+                                                              BooleanFlagOn( Data->Iopb->OperationFlags, SL_RETURN_SINGLE_ENTRY ),
+                                                              &FileName,
+                                                              BooleanFlagOn( Data->Iopb->OperationFlags, SL_RESTART_SCAN ), &LengthReturned );
+
+                    if( NT_SUCCESS( Status ) || Status == STATUS_NO_MORE_FILES )
+                    {
+                        auto FileInformationClass = ( nsW32API::FILE_INFORMATION_CLASS )Data->Iopb->Parameters.DirectoryControl.QueryDirectory.FileInformationClass;
+                        IrpContext->UserBuffer = FltMapUserBuffer( Data );
+
+                        switch( FileInformationClass )
+                        {
+                            case FileDirectoryInformation:
+                            {
+                                TuneFileDirectoryInformation( IrpContext );
+                            } break;
+                            case FileFullDirectoryInformation:
+                            {
+                                TuneFileFullDirectoryInformation( IrpContext );
+                            } break;
+                            case FileBothDirectoryInformation:
+                            {
+                                TuneFileBothDirectoryInformation( IrpContext );
+                            } break;
+                            case FileNamesInformation: {} break;
+                            case FileObjectIdInformation: {} break;
+                            case FileQuotaInformation: {} break;
+                            case FileReparsePointInformation: {} break;
+                            case FileIdBothDirectoryInformation:
+                            {
+                                TuneFileIdBothDirectoryInformation( IrpContext );
+                            } break;
+                            case FileIdFullDirectoryInformation:
+                            {
+                                TuneFileIdFullDirectoryInformation( IrpContext );
+                            } break;
+                            case FileIdGlobalTxDirectoryInformation: {} break;
+                            case nsW32API::FileIdExtdDirectoryInformation: {} break;
+                            case nsW32API::FileIdExtdBothDirectoryInformation: {} break;
+                        }
+
+                        if( Status == STATUS_NO_MORE_FILES )
+                            Status = STATUS_SUCCESS;
+
+                        AssignCmnResult( IrpContext, Status );
+                        AssignCmnResultInfo( IrpContext, LengthReturned );
+                        AssignCmnFltResult( IrpContext, FLT_PREOP_COMPLETE );
+
+                        FltSetCallbackDataDirty( Data );
+                    }
+
+                } while( false );
+            }
+
+            DeallocateBuffer( &Src );
+        }
     }
     __finally
     {
+        if( IrpContext != NULLPTR )
+        {
+            if( FlagOn( IrpContext->CompleteStatus, COMPLETE_RETURN_FLTSTATUS ) )
+                FltStatus = IrpContext->PreFltStatus;
 
+            if( FltStatus == FLT_PREOP_COMPLETE )
+                PrintIrpContext( IrpContext, true );
+        }
+
+        CloseIrpContext( IrpContext );
     }
 
     return FltStatus;
@@ -81,7 +193,7 @@ FLT_POSTOP_CALLBACK_STATUS FLTAPI FilterPostDirectoryControl( PFLT_CALLBACK_DATA
     return FltStatus;
 }
 
-FLT_POSTOP_CALLBACK_STATUS FilterPostDirectoryControlWhenSafe( PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID CompletionContext, FLT_POST_OPERATION_FLAGS Flags )
+FLT_POSTOP_CALLBACK_STATUS FLTAPI FilterPostDirectoryControlWhenSafe( PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID CompletionContext, FLT_POST_OPERATION_FLAGS Flags )
 {
     FLT_POSTOP_CALLBACK_STATUS                  FltStatus = FLT_POSTOP_FINISHED_PROCESSING;
     FILE_OBJECT*                                FileObject = FltObjects->FileObject;
@@ -103,7 +215,6 @@ FLT_POSTOP_CALLBACK_STATUS FilterPostDirectoryControlWhenSafe( PFLT_CALLBACK_DAT
             __leave;
 
         IrpContext = CreateIrpContext( Data, FltObjects );
-
         auto FileInformationClass = (nsW32API::FILE_INFORMATION_CLASS)Data->Iopb->Parameters.DirectoryControl.QueryDirectory.FileInformationClass;
 
         switch( FileInformationClass )
@@ -135,7 +246,9 @@ FLT_POSTOP_CALLBACK_STATUS FilterPostDirectoryControlWhenSafe( PFLT_CALLBACK_DAT
     __finally
     {
         if( IrpContext != NULLPTR )
+        {
             PrintIrpContext( IrpContext, true );
+        }
 
         CloseIrpContext( IrpContext );
     }
@@ -177,12 +290,11 @@ NTSTATUS TuneFileDirectoryInformation( IRP_CONTEXT* IrpContext )
             ConcernedType = IsConcernedFile( IrpContext, &IrpContext->DstFileFullPath, &MetaDataInfo );
             if( ConcernedType != CONCERNED_NONE )
             {
-                switch( ConcernedType )
-                {
-                    case CONCERNED_SIZE: {
-                        CorrectFileSize( IrpContext, &MetaDataInfo, &InfoBuffer->AllocationSize, &InfoBuffer->EndOfFile );
-                    } break;
-                }
+                if( FlagOn( ConcernedType, CONCERNED_SIZE ) )
+                    CorrectFileSize( IrpContext, &MetaDataInfo, &InfoBuffer->AllocationSize, &InfoBuffer->EndOfFile );
+
+                if( FlagOn( ConcernedType, CONCERNED_NAME ) )
+                    CorrectFileName( IrpContext, &MetaDataInfo, InfoBuffer->FileName, InfoBuffer->FileNameLength );
             }
 
             InfoBuffer = ( FILE_DIRECTORY_INFORMATION* )Add2Ptr( InfoBuffer, Offset );
@@ -232,13 +344,11 @@ NTSTATUS TuneFileFullDirectoryInformation( IRP_CONTEXT* IrpContext )
             ConcernedType = IsConcernedFile( IrpContext, &IrpContext->DstFileFullPath, &MetaDataInfo );
             if( ConcernedType != CONCERNED_NONE )
             {
-                switch( ConcernedType )
-                {
-                    case CONCERNED_SIZE:
-                    {
-                        CorrectFileSize( IrpContext, &MetaDataInfo, &InfoBuffer->AllocationSize, &InfoBuffer->EndOfFile );
-                    } break;
-                }
+                if( FlagOn( ConcernedType, CONCERNED_SIZE ) )
+                    CorrectFileSize( IrpContext, &MetaDataInfo, &InfoBuffer->AllocationSize, &InfoBuffer->EndOfFile );
+
+                if( FlagOn( ConcernedType, CONCERNED_NAME ) )
+                    CorrectFileName( IrpContext, &MetaDataInfo, InfoBuffer->FileName, InfoBuffer->FileNameLength );
             }
 
             InfoBuffer = ( FILE_FULL_DIR_INFORMATION* )Add2Ptr( InfoBuffer, Offset );
@@ -288,13 +398,11 @@ NTSTATUS TuneFileBothDirectoryInformation( IRP_CONTEXT* IrpContext )
             ConcernedType = IsConcernedFile( IrpContext, &IrpContext->DstFileFullPath, &MetaDataInfo );
             if( ConcernedType != CONCERNED_NONE )
             {
-                switch( ConcernedType )
-                {
-                    case CONCERNED_SIZE:
-                    {
-                        CorrectFileSize( IrpContext, &MetaDataInfo, &InfoBuffer->AllocationSize, &InfoBuffer->EndOfFile );
-                    } break;
-                }
+                if( FlagOn( ConcernedType, CONCERNED_SIZE ) )
+                    CorrectFileSize( IrpContext, &MetaDataInfo, &InfoBuffer->AllocationSize, &InfoBuffer->EndOfFile );
+
+                if( FlagOn( ConcernedType, CONCERNED_NAME ) )
+                    CorrectFileName( IrpContext, &MetaDataInfo, InfoBuffer->FileName, InfoBuffer->FileNameLength );
             }
 
             InfoBuffer = ( FILE_BOTH_DIR_INFORMATION* )Add2Ptr( InfoBuffer, Offset );
@@ -344,13 +452,11 @@ NTSTATUS TuneFileIdBothDirectoryInformation( IRP_CONTEXT* IrpContext )
             ConcernedType = IsConcernedFile( IrpContext, &IrpContext->DstFileFullPath, &MetaDataInfo );
             if( ConcernedType != CONCERNED_NONE )
             {
-                switch( ConcernedType )
-                {
-                    case CONCERNED_SIZE:
-                    {
-                        CorrectFileSize( IrpContext, &MetaDataInfo, &InfoBuffer->AllocationSize, &InfoBuffer->EndOfFile );
-                    } break;
-                }
+                if( FlagOn( ConcernedType, CONCERNED_SIZE ) )
+                    CorrectFileSize( IrpContext, &MetaDataInfo, &InfoBuffer->AllocationSize, &InfoBuffer->EndOfFile );
+
+                if( FlagOn( ConcernedType, CONCERNED_NAME ) )
+                    CorrectFileName( IrpContext, &MetaDataInfo, InfoBuffer->FileName, InfoBuffer->FileNameLength );
             }
 
             InfoBuffer = ( FILE_ID_BOTH_DIR_INFORMATION* )Add2Ptr( InfoBuffer, Offset );
@@ -400,13 +506,11 @@ NTSTATUS TuneFileIdFullDirectoryInformation( IRP_CONTEXT* IrpContext )
             ConcernedType = IsConcernedFile( IrpContext, &IrpContext->DstFileFullPath, &MetaDataInfo );
             if( ConcernedType != CONCERNED_NONE )
             {
-                switch( ConcernedType )
-                {
-                    case CONCERNED_SIZE:
-                    {
-                        CorrectFileSize( IrpContext, &MetaDataInfo, &InfoBuffer->AllocationSize, &InfoBuffer->EndOfFile );
-                    } break;
-                }
+                if( FlagOn( ConcernedType, CONCERNED_SIZE ) )
+                    CorrectFileSize( IrpContext, &MetaDataInfo, &InfoBuffer->AllocationSize, &InfoBuffer->EndOfFile );
+
+                if( FlagOn( ConcernedType, CONCERNED_NAME ) )
+                    CorrectFileName( IrpContext, &MetaDataInfo, InfoBuffer->FileName, InfoBuffer->FileNameLength );
             }
 
             InfoBuffer = ( FILE_ID_FULL_DIR_INFORMATION* )Add2Ptr( InfoBuffer, Offset );
@@ -489,6 +593,9 @@ ULONG IsConcernedFile( IRP_CONTEXT* IrpContext, TyGenericBuffer<WCHAR>* FileFull
         if( nsUtils::stricmp( FileFullPath->Buffer, L"\\pagefile.sys" ) == 0 )
             break;
 
+        if( IrpContext->ProcessFilter == NULLPTR )
+            break;
+
         if( IsOwnFile( IrpContext, FileFullPath->Buffer, MetaDataInfo ) == false )
             break;
 
@@ -526,6 +633,38 @@ NTSTATUS CorrectFileSize( IRP_CONTEXT* IrpContext, METADATA_DRIVER* MetaDataInfo
 
         EndOfFile->QuadPart = MetaDataInfo->MetaData.ContentSize;
         AllocatoinSize->QuadPart = ROUND_TO_SIZE( EndOfFile->QuadPart, IrpContext->InstanceContext->ClusterSize );
+
+    } while( false );
+
+    return Status;
+}
+
+NTSTATUS CorrectFileName( IRP_CONTEXT* IrpContext, METADATA_DRIVER* MetaDataInfo, PWCH FileName, ULONG& FileNameLength )
+{
+    NTSTATUS Status = STATUS_SUCCESS;
+
+    do
+    {
+        ASSERT( IrpContext != NULLPTR );
+        ASSERT( MetaDataInfo != NULLPTR );
+        ASSERT( FileName != NULLPTR && FileNameLength > 0 );
+        if( IrpContext == NULLPTR || MetaDataInfo == NULLPTR || FileName == NULLPTR || FileNameLength == 0 )
+        {
+            Status = STATUS_INVALID_PARAMETER;
+            break;
+        }
+
+        auto SuffixLength = nsUtils::strlength( MetaDataInfo->MetaData.ContainorSuffix ) * sizeof( WCHAR );
+        if( FileNameLength <= SuffixLength )
+        {
+            Status = STATUS_SUCCESS;
+            break;
+        }
+
+        for( int idx = (FileNameLength / 2) - 1; idx >= ( FileNameLength - SuffixLength ) / 2; --idx )
+            FileName[ idx ] = L'\0';
+
+        FileNameLength -= SuffixLength;
 
     } while( false );
 

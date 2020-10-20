@@ -61,5 +61,6 @@ enum TyEnConcernedType
 ULONG IsConcernedFile( __in IRP_CONTEXT* IrpContext, __in TyGenericBuffer<WCHAR>* FileFullPath, __out METADATA_DRIVER* MetaDataInfo );
 
 NTSTATUS CorrectFileSize( __in IRP_CONTEXT* IrpContext, __in METADATA_DRIVER* MetaDataInfo, __inout LARGE_INTEGER* AllocatoinSize, __inout LARGE_INTEGER* EndOfFile );
+NTSTATUS CorrectFileName( __in IRP_CONTEXT* IrpContext, __in METADATA_DRIVER* MetaDataInfo, __in_z PWCH FileName, __inout ULONG& FileNameLength );
 
 #endif // HDR_ISOLATION_DIRECTORY_CONTROL
