@@ -301,3 +301,51 @@ bool IsMetaDataDriverInfo( PVOID Buffer )
 
     return true;
 }
+
+///////////////////////////////////////////////////////////////////////////////
+/// StubCode Management
+
+void SetMetaDataStubCode( PVOID StubCodeX86, ULONG StubCodeX86Size, PVOID StubCodeX64, ULONG StubCodeX64Size )
+{
+    if( StubCodeX86 != NULLPTR && StubCodeX86 > 0 )
+    {
+        MetaDataContext.StubCodeX86Size = ROUND_TO_SIZE( StubCodeX86Size, 512 );
+        MetaDataContext.StubCodeX86 = ExAllocatePoolWithTag( NonPagedPool, StubCodeX86Size, POOL_MAIN_TAG );
+
+        RtlZeroMemory( MetaDataContext.StubCodeX86, MetaDataContext.StubCodeX86Size );
+        RtlCopyMemory( MetaDataContext.StubCodeX86, StubCodeX86, StubCodeX86Size );
+        KdPrint( ( "[WinIOSol] %s StubCodeX86 = %p|%d|%d\n"
+                   , __FUNCTION__, MetaDataContext.StubCodeX86, MetaDataContext.StubCodeX86Size, StubCodeX86Size ) );
+    }
+
+    if( StubCodeX64 != NULLPTR && StubCodeX64Size > 0 )
+    {
+        MetaDataContext.StubCodeX64Size = ROUND_TO_SIZE( StubCodeX64Size, 512 );
+        MetaDataContext.StubCodeX64 = ExAllocatePoolWithTag( NonPagedPool, StubCodeX64Size, POOL_MAIN_TAG );
+
+        RtlZeroMemory( MetaDataContext.StubCodeX64, MetaDataContext.StubCodeX64Size );
+        RtlCopyMemory( MetaDataContext.StubCodeX64, StubCodeX64, StubCodeX64Size );
+        KdPrint( ( "[WinIOSol] %s StubCodeX64 = %p|%d|%d\n"
+                   , __FUNCTION__, MetaDataContext.StubCodeX64, MetaDataContext.StubCodeX64Size, StubCodeX64Size ) );
+    }
+}
+
+PVOID GetStubCodeX86()
+{
+    return MetaDataContext.StubCodeX86;
+}
+
+ULONG GetStubCodeX86Size()
+{
+    return MetaDataContext.StubCodeX86Size;
+}
+
+PVOID GetStubCodeX64()
+{
+    return MetaDataContext.StubCodeX64;
+}
+
+ULONG GetStubCodeX64Size()
+{
+    return MetaDataContext.StubCodeX64Size;
+}

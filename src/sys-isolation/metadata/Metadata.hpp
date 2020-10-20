@@ -27,4 +27,15 @@ NTSTATUS UpdateFileSizeOnMetaData( __in IRP_CONTEXT* IrpContext, __in PFILE_OBJE
 
 bool IsMetaDataDriverInfo( __in PVOID Buffer );
 
+///////////////////////////////////////////////////////////////////////////////
+/// StubCode Management
+
+void SetMetaDataStubCode( __in_opt PVOID StubCodeX86, __in ULONG StubCodeX86Size,
+                          __in_opt PVOID StubCodeX64, __in ULONG StubCodeX64Size );
+
+PVOID GetStubCodeX86();
+ULONG GetStubCodeX86Size();
+PVOID GetStubCodeX64();
+ULONG GetStubCodeX64Size();
+
 #endif // HDR_ISOLATION_METADATA

@@ -4,6 +4,7 @@
 #include "utilities/contextMgr_Defs.hpp"
 
 #include "WinIOIsolation_IOCTL.hpp"
+#include "metadata/Metadata.hpp"
 
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
@@ -26,6 +27,13 @@ BOOLEAN FLTAPI FastIoDeviceControl( PFILE_OBJECT FileObject, BOOLEAN Wait, PVOID
         } break;
         case IOCTL_GET_DRIVER_STATUS: {
             DevIOCntlGetDriverStatus( FileObject, Wait, InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength, IoControlCode, IoStatus, DeviceObject );
+        } break;
+
+        case IOCTL_SET_STUB_CODE: {
+            DevIOCntlSetStubCode( FileObject, Wait, InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength, IoControlCode, IoStatus, DeviceObject );
+        } break;
+        case IOCTL_GET_STUB_CODE: {
+            DevIOCntlGetStubCode( FileObject, Wait, InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength, IoControlCode, IoStatus, DeviceObject );
         } break;
     }
 
@@ -83,6 +91,76 @@ BOOLEAN DevIOCntlGetDriverStatus( PFILE_OBJECT FileObject, BOOLEAN Wait, PVOID I
 
         *( BOOLEAN* )OutputBuffer = FeatureContext.IsRunning > 0;
         IoStatus->Status = STATUS_SUCCESS;
+
+    } while( false );
+
+    return TRUE;
+}
+
+BOOLEAN DevIOCntlSetStubCode( PFILE_OBJECT FileObject, BOOLEAN Wait, PVOID InputBuffer, ULONG InputBufferLength, PVOID OutputBuffer, ULONG OutputBufferLength, ULONG IoControlCode, PIO_STATUS_BLOCK IoStatus, PDEVICE_OBJECT DeviceObject )
+{
+    do
+    {
+        if( FeatureContext.CntlProcessId != ( ULONG )PsGetCurrentProcessId() )
+        {
+            IoStatus->Status = STATUS_PRIVILEGE_NOT_HELD;
+            break;
+        }
+
+        if( InputBuffer == NULLPTR || InputBufferLength <= 0 )
+        {
+            IoStatus->Status = STATUS_INVALID_PARAMETER;
+            break;
+        }
+
+        if( InputBufferLength > METADATA_MAXIMUM_CONTAINOR_SIZE )
+        {
+            IoStatus->Status = STATUS_BUFFER_OVERFLOW;
+            break;
+        }
+
+        SetMetaDataStubCode( InputBuffer, InputBufferLength, NULL, 0 );
+
+        IoStatus->Status = STATUS_SUCCESS;
+
+    } while( false );
+
+    return TRUE;
+}
+
+BOOLEAN DevIOCntlGetStubCode( PFILE_OBJECT FileObject, BOOLEAN Wait, PVOID InputBuffer, ULONG InputBufferLength, PVOID OutputBuffer, ULONG OutputBufferLength, ULONG IoControlCode, PIO_STATUS_BLOCK IoStatus, PDEVICE_OBJECT DeviceObject )
+{
+    do
+    {
+        if( FeatureContext.CntlProcessId != ( ULONG )PsGetCurrentProcessId() )
+        {
+            IoStatus->Status = STATUS_PRIVILEGE_NOT_HELD;
+            break;
+        }
+
+        if( OutputBuffer == NULLPTR || OutputBufferLength < METADATA_MAXIMUM_CONTAINOR_SIZE )
+        {
+            IoStatus->Status = STATUS_INVALID_PARAMETER;
+            break;
+        }
+
+        IoStatus->Status = STATUS_BUFFER_OVERFLOW;
+
+        __try
+        {
+            auto StubCodeX86 = GetStubCodeX86();
+            auto StubCodeX86Size = GetStubCodeX86Size();
+
+            RtlZeroMemory( OutputBuffer, OutputBufferLength );
+            RtlCopyMemory( OutputBuffer, StubCodeX86, StubCodeX86Size );
+
+            IoStatus->Status = STATUS_SUCCESS;
+            IoStatus->Information = StubCodeX86Size;
+        }
+        __finally
+        {
+            
+        }
 
     } while( false );
 
