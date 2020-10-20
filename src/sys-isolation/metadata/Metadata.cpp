@@ -1,5 +1,7 @@
 ﻿#include "Metadata.hpp"
 
+#include "fltCmnLibs.hpp"
+
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
 #endif
@@ -84,16 +86,15 @@ METADATA_TYPE GetFileMetaDataInfo( __in IRP_CONTEXT* IrpContext, __in PFILE_OBJE
         if( FileObject == NULLPTR )
             break;
 
-        // Currently, only support NOR_TYPE
-
-        static LARGE_INTEGER FILE_BEGIN_OFFSET = { 0, 0 };
+        BYTE CONTAINOR_MAGIC_NUMBER[ 2 ] = { 0, };
+        LARGE_INTEGER READ_OFFSET = { 0, 0 };
+        ULONG BytesRead = 0;
 
         METADATA_DRIVER MetaDataBuffer;
         RtlZeroMemory( &MetaDataBuffer, METADATA_DRIVER_SIZE );
-        ULONG BytesRead = 0;
 
-        Status = FltReadFile( IrpContext->FltObjects->Instance, FileObject, &FILE_BEGIN_OFFSET, METADATA_DRIVER_SIZE,
-                              ( PVOID )&MetaDataBuffer,
+        Status = FltReadFile( IrpContext->FltObjects->Instance, FileObject,
+                              &READ_OFFSET, _countof( CONTAINOR_MAGIC_NUMBER ), ( PVOID )&CONTAINOR_MAGIC_NUMBER[ 0 ],
                               FLTFL_IO_OPERATION_DO_NOT_UPDATE_BYTE_OFFSET | FLTFL_IO_OPERATION_NON_CACHED,
                               &BytesRead, NULL, NULL );
 
@@ -107,13 +108,75 @@ METADATA_TYPE GetFileMetaDataInfo( __in IRP_CONTEXT* IrpContext, __in PFILE_OBJE
             break;
         }
 
+        if( RtlCompareMemory( CONTAINOR_MAGIC_NUMBER, "MZ", 2 ) == 2 )
+        {
+            FILE_STANDARD_INFORMATION fsi;
+            Status = FltQueryInformationFile( IrpContext->FltObjects->Instance, FileObject, &fsi, sizeof( fsi ), FileStandardInformation, &BytesRead );
+
+            ULONG BufferSize = fsi.EndOfFile.QuadPart > METADATA_MAXIMUM_CONTAINOR_SIZE + METADATA_DRIVER_SIZE ? METADATA_MAXIMUM_CONTAINOR_SIZE + METADATA_DRIVER_SIZE : fsi.EndOfFile.QuadPart;
+            PBYTE Buffer = (PBYTE)ExAllocatePool( NonPagedPool, BufferSize );
+
+            Status = FltReadFile( IrpContext->FltObjects->Instance, FileObject, &READ_OFFSET, BufferSize, Buffer,
+                                  FLTFL_IO_OPERATION_DO_NOT_UPDATE_BYTE_OFFSET | FLTFL_IO_OPERATION_NON_CACHED,
+                                  &BytesRead, NULL, NULL );
+
+            SIZE_T MatchCount = 0;
+            int idx = BufferSize - METADATA_MAGIC_TEXT_SIZE + 1;    // 바로 밑에서 -- 를 하면서 반복문을 시작하기 때문에 1 을 더한다
+            while( ( MatchCount != METADATA_MAGIC_TEXT_SIZE ) && ( --idx >= 0 ) )
+            {
+                MatchCount = RtlCompareMemory( &Buffer[ idx ], METADATA_MAGIC_TEXT, METADATA_MAGIC_TEXT_SIZE );
+            }
+
+            if( Buffer != NULLPTR )
+                ExFreePool( Buffer );
+
+            if( MatchCount != METADATA_MAGIC_TEXT_SIZE )
+                break;
+
+            READ_OFFSET.QuadPart = idx;
+
+            Status = FltReadFile( IrpContext->FltObjects->Instance, FileObject, &READ_OFFSET, METADATA_DRIVER_SIZE,
+                                  ( PVOID )&MetaDataBuffer,
+                                  FLTFL_IO_OPERATION_DO_NOT_UPDATE_BYTE_OFFSET | FLTFL_IO_OPERATION_NON_CACHED,
+                                  &BytesRead, NULL, NULL );
+
+            if( !NT_SUCCESS( Status ) )
+            {
+                KdPrint( ( "[WinIOSol] %s EvtID=%09d %s %s Status=0x%08x,%s Src=%ws\n",
+                           ">>", IrpContext->EvtID, __FUNCTION__, "FltReadFile FAILED"
+                           , Status, ntkernel_error_category::find_ntstatus( Status )->message
+                           , IrpContext->SrcFileFullPath.Buffer
+                           ) );
+                break;
+            }
+        }
+        else
+        {
+            READ_OFFSET = { 0,0 };
+
+            Status = FltReadFile( IrpContext->FltObjects->Instance, FileObject, &READ_OFFSET, METADATA_DRIVER_SIZE,
+                                  ( PVOID )&MetaDataBuffer,
+                                  FLTFL_IO_OPERATION_DO_NOT_UPDATE_BYTE_OFFSET | FLTFL_IO_OPERATION_NON_CACHED,
+                                  &BytesRead, NULL, NULL );
+
+            if( !NT_SUCCESS( Status ) )
+            {
+                KdPrint( ( "[WinIOSol] %s EvtID=%09d %s %s Status=0x%08x,%s Src=%ws\n",
+                           ">>", IrpContext->EvtID, __FUNCTION__, "FltReadFile FAILED"
+                           , Status, ntkernel_error_category::find_ntstatus( Status )->message
+                           , IrpContext->SrcFileFullPath.Buffer
+                           ) );
+                break;
+            }
+        }
+
         if( IsMetaDataDriverInfo( &MetaDataBuffer ) == false )
             break;
 
         if( ARGUMENT_PRESENT( MetaDataInfo ) )
             RtlCopyMemory( MetaDataInfo, &MetaDataBuffer, METADATA_DRIVER_SIZE );
 
-        MetadataType = METADATA_NOR_TYPE;
+        MetadataType = MetaDataBuffer.MetaData.Type;
 
     } while( false );
 
