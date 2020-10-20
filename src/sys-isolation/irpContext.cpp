@@ -627,7 +627,7 @@ void PrintIrpContextQUERY_INFORMATION( PIRP_CONTEXT IrpContext, bool IsResultMod
 
                     RtlStringCbPrintfA( &DebugText[ Length ], 1024 - ( Length * sizeof( WCHAR ) ),
                                         "StreamName=%.*S|StreamSize=%I64d|StreamAllocationSize=%I64d",
-                                        InfoBuffer->StreamNameLength == 0 ? 7 : InfoBuffer->StreamNameLength / sizeof( WCHAR ), InfoBuffer->StreamNameLength,
+                                        InfoBuffer->StreamNameLength == 0 ? 7 : InfoBuffer->StreamNameLength / sizeof( WCHAR ), InfoBuffer->StreamName,
                                         InfoBuffer->StreamSize.QuadPart, InfoBuffer->StreamAllocationSize.QuadPart
                     );
 
