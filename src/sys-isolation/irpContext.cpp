@@ -220,6 +220,19 @@ PIRP_CONTEXT CreateIrpContext( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_
             } break;
         } // switch MajorFunction
 
+        if( IrpContext->SrcFileFullPath.Buffer != NULLPTR )
+            IrpContext->SrcFileName = nsUtils::ReverseFindW( IrpContext->SrcFileFullPath.Buffer, L'\\' );
+        if( IrpContext->SrcFileName == NULLPTR )
+            IrpContext->SrcFileFullPath.Buffer;
+        else
+            IrpContext->SrcFileName++;
+
+        if( IrpContext->DstFileFullPath.Buffer != NULLPTR )
+            IrpContext->DstFileName = nsUtils::ReverseFindW( IrpContext->DstFileFullPath.Buffer, L'\\' );
+        if( IrpContext->DstFileName == NULLPTR )
+            IrpContext->DstFileFullPath.Buffer;
+        else
+            IrpContext->DstFileName++;
     }
     __finally
     {

@@ -50,7 +50,9 @@ typedef struct _IRP_CONTEXT
 
     TyGenericBuffer< WCHAR >            SrcFileFullPath;
     WCHAR*                              SrcFileFullPathWOVolume;    // SrcFileFullPath 에서 드라이브 문자 또는 디바이스 이름등을 제외한 순수한 경로 및 이름( \ 로 시작한다 )
+    WCHAR*                              SrcFileName;                // SrcFileFullPath 에서 경로 부분을 제외한 파일이름 + 확장자
     TyGenericBuffer< WCHAR >            DstFileFullPath;
+    WCHAR*                              DstFileName;                // DstFileFullPath 에서 경로 부분을 제외한 파일이름 + 확장자 
 
     bool                                IsAudit;
 
