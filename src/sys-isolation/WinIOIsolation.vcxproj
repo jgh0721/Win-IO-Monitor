@@ -30,6 +30,8 @@
     <ClInclude Include="..\cmn\W32API_LibMgr.hpp" />
     <ClInclude Include="..\cmn\W32API_NtOsKrnl.hpp" />
     <ClInclude Include="..\cmn\W32API_NTSTATUS.hpp" />
+    <ClInclude Include="..\cmn\WinIOIsolation_API.hpp" />
+    <ClInclude Include="..\cmn\WinIOIsolation_Event.hpp" />
     <ClInclude Include="..\cmn\WinIOIsolation_IOCTL.hpp" />
     <ClInclude Include="callbacks\cacheManagerCallbacks.hpp" />
     <ClInclude Include="callbacks\callbacks.hpp" />

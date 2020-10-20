@@ -37,11 +37,14 @@
     <Filter Include="Features">
       <UniqueIdentifier>{2bd2e9fc-20c7-41f0-83d0-a8e16bdddc3a}</UniqueIdentifier>
     </Filter>
-    <Filter Include="MetaData">
+    <Filter Include="Features\MetaData">
       <UniqueIdentifier>{8077c9af-b023-4924-a7d9-3c5bbd18760c}</UniqueIdentifier>
     </Filter>
     <Filter Include="Features\NameChanger">
       <UniqueIdentifier>{05dd4c5a-af19-40de-9afb-d245aea22396}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Features\Encryption">
+      <UniqueIdentifier>{ac03d97f-1863-4099-8eaf-c79a08f97e66}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -208,10 +211,10 @@
       <Filter>Policies\ProcessFilter</Filter>
     </ClInclude>
     <ClInclude Include="metadata\Metadata.hpp">
-      <Filter>MetaData</Filter>
+      <Filter>Features\MetaData</Filter>
     </ClInclude>
     <ClInclude Include="metadata\Metadata_Defs.hpp">
-      <Filter>MetaData</Filter>
+      <Filter>Features\MetaData</Filter>
     </ClInclude>
     <ClInclude Include="utilities\volumeMgr.hpp">
       <Filter>cache</Filter>
@@ -224,6 +227,12 @@
     </ClInclude>
     <ClInclude Include="namechanger\NameChanger_Defs.hpp">
       <Filter>Features\NameChanger</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cmn\WinIOIsolation_Event.hpp">
+      <Filter>common files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cmn\WinIOIsolation_API.hpp">
+      <Filter>common files</Filter>
     </ClInclude>
     <ClInclude Include="driverMgmt.hpp">
       <Filter>Features</Filter>
@@ -357,7 +366,7 @@
       <Filter>Policies\ProcessFilter</Filter>
     </ClCompile>
     <ClCompile Include="metadata\Metadata.cpp">
-      <Filter>MetaData</Filter>
+      <Filter>Features\MetaData</Filter>
     </ClCompile>
     <ClCompile Include="utilities\volumeMgr.cpp">
       <Filter>cache</Filter>

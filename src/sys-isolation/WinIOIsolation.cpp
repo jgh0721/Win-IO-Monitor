@@ -18,6 +18,7 @@
 #include "driverMgmt.hpp"
 
 #include "metadata/Metadata.hpp"
+#include "WinIOIsolation_Event.hpp"
 
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
