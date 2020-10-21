@@ -64,6 +64,88 @@ NTSTATUS FLTAPI DriverEntry( PDRIVER_OBJECT DriverObject, PUNICODE_STRING Regist
         FastIODispatch->FastIoDeviceControl = (PFAST_IO_DEVICE_CONTROL)FastIoDeviceControl;
         DriverObject->FastIoDispatch = FastIODispatch;
 
+        /*!
+            Create Test Case
+
+                1. Load X86 Stub Code
+                2. Set Process Filter
+        */
+
+        {
+            NTSTATUS Status = STATUS_SUCCESS;
+            HANDLE StubCodeX86 = NULL;
+            IO_STATUS_BLOCK IoStatus;
+            OBJECT_ATTRIBUTES OA;
+            UNICODE_STRING UNI;
+
+            PVOID Buffer = NULLPTR;
+            ULONG BufferSize = 0;
+            FILE_STANDARD_INFORMATION fsi;
+
+            RtlInitUnicodeString( &UNI, L"\\??\\C:\\Windows\\System32\\Drivers\\StubCodeX86.EXE" );
+            InitializeObjectAttributes( &OA, &UNI, OBJ_KERNEL_HANDLE | OBJ_CASE_INSENSITIVE, NULL, 0 );
+
+            do
+            {
+                Status = ZwCreateFile( &StubCodeX86, GENERIC_READ, &OA, &IoStatus, NULL, FILE_ATTRIBUTE_NORMAL,
+                                       FILE_SHARE_VALID_FLAGS, FILE_OPEN,
+                                       FILE_NON_DIRECTORY_FILE | FILE_SYNCHRONOUS_IO_ALERT, NULL, 0 );
+
+                if( NT_SUCCESS( Status ) && IoStatus.Information == FILE_OPENED )
+                {
+                    Status = ZwQueryInformationFile( StubCodeX86, &IoStatus, &fsi, sizeof( fsi ), FileStandardInformation );
+                    if( !NT_SUCCESS( Status ) )
+                        break;
+                    
+                    BufferSize = fsi.EndOfFile.QuadPart;
+                    Buffer = ExAllocatePool( PagedPool, BufferSize );
+                    if( Buffer == NULLPTR )
+                        break;
+
+                    LARGE_INTEGER ByteOffset = { 0, 0 };
+                    Status = ZwReadFile( StubCodeX86, NULL, NULL, NULL, &IoStatus, Buffer, BufferSize, &ByteOffset, NULL );
+                    if( !NT_SUCCESS( Status ) )
+                        break;
+
+                    SetMetaDataStubCode( Buffer, BufferSize, NULL, 0 );
+                }
+
+            } while( false );
+
+            if( Buffer != NULLPTR )
+                ExFreePool( Buffer );
+
+            if( StubCodeX86 != NULL )
+                ZwClose( StubCodeX86 );
+        }
+
+        {
+            GlobalFilter_Add( L"*.txt", true );
+            GlobalFilter_Add( L"*.exe", true );
+        }
+
+        {
+            auto PFilterEntry = (PROCESS_FILTER_ENTRY*)ExAllocatePool( NonPagedPool, sizeof( PROCESS_FILTER_ENTRY ) );
+            auto PFilterMaskEntry = (PROCESS_FILTER_MASK_ENTRY*)ExAllocatePool( NonPagedPool, sizeof( PROCESS_FILTER_MASK_ENTRY ) );
+
+            RtlZeroMemory( PFilterEntry, sizeof( PROCESS_FILTER_ENTRY ) );
+            RtlZeroMemory( PFilterMaskEntry, sizeof( PROCESS_FILTER_MASK_ENTRY ) );
+
+            RtlStringCchCatW( PFilterEntry->ProcessFilterMask, MAX_PATH, L"*syn.exe" );
+            PFilterEntry->ProcessFilter = PROCESS_NOTIFY_CREATION_TERMINATION;
+
+            InitializeListHead( &PFilterEntry->IncludeListHead );
+            InitializeListHead( &PFilterEntry->ExcludeListHead );
+
+            PFilterMaskEntry->FilterCategory = MSG_CATE_FILESYSTEM;
+            PFilterMaskEntry->FilterType = FS_PRE_CREATE;
+            RtlStringCchCatW( PFilterMaskEntry->FilterMask, MAX_PATH, L"*.txt" );
+
+            InsertTailList( &PFilterEntry->IncludeListHead, &PFilterMaskEntry->ListEntry );
+
+            ProcessFilter_Add( PFilterEntry );
+        }
+
         Status = STATUS_SUCCESS;
 
     } while( false );
