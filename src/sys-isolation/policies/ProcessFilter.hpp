@@ -23,10 +23,16 @@
     Specified Type Is Empty, STATUS_NO_DATA_DETECTED
 */
 
+#define PROCESS_NOTIFY_CREATION_TERMINATION     0x1
+#define PROCESS_DENY_CREATION                   0x2
+#define PROCESS_DENY_TERMINATION                0x4
+#define PROCESS_APPLY_CHILD_PROCESS             0x8
+
 typedef struct _PROCESS_FILTER_ENTRY
 {
     ULONG           ProcessId;
     WCHAR           ProcessFilterMask[ MAX_PATH ];
+    ULONG           ProcessFilter;                  // PROCESS_XXXX 
 
     LIST_ENTRY      IncludeListHead;
     LIST_ENTRY      ExcludeListHead;
@@ -37,7 +43,10 @@ typedef struct _PROCESS_FILTER_ENTRY
 
 typedef struct _PROCESS_FILTER_MASK_ENTRY
 {
+    ULONG           FilterCategory;                 // MSG_CATEGORY
+    ULONGLONG       FilterType;                     // MSG_FS_TYPE or MSG_FS_NOTIFY_TYPE or MSG_PROC_TYPE
     WCHAR           FilterMask[ MAX_PATH ];
+    BOOLEAN         IsManagedFile;
 
     LIST_ENTRY      ListEntry;
     

@@ -15,7 +15,7 @@
 FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreDirectoryControl( PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects,
                                                             PVOID* CompletionContext )
 {
-    FLT_PREOP_CALLBACK_STATUS                   FltStatus = FLT_PREOP_SUCCESS_WITH_CALLBACK;
+    FLT_PREOP_CALLBACK_STATUS                   FltStatus = FLT_PREOP_SUCCESS_NO_CALLBACK;
     IRP_CONTEXT*                                IrpContext = NULLPTR;
 
     UNREFERENCED_PARAMETER( Data );
@@ -27,105 +27,105 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreDirectoryControl( PFLT_CALLBACK_DATA D
         if( Data->Iopb->MinorFunction != IRP_MN_QUERY_DIRECTORY )
             __leave;
 
-        if( Data->Iopb->Parameters.DirectoryControl.QueryDirectory.FileName == NULLPTR || 
+        IrpContext = CreateIrpContext( Data, FltObjects );
+
+        if( IrpContext->IsConcerned == false )
+            __leave;
+
+        AssignCmnFltResult( IrpContext, FLT_PREOP_SUCCESS_WITH_CALLBACK );
+
+        if( Data->Iopb->Parameters.DirectoryControl.QueryDirectory.FileName == NULLPTR ||
             Data->Iopb->Parameters.DirectoryControl.QueryDirectory.FileName->Buffer == NULLPTR )
             __leave;
 
-        IrpContext = CreateIrpContext( Data, FltObjects );
+        // TODO: 캐시 필요
+        const auto& Parameters = Data->Iopb->Parameters.DirectoryControl.QueryDirectory;
 
-        if( IrpContext->ProcessFilter != NULLPTR )
+        if( nsUtils::ReverseFindW( Parameters.FileName->Buffer, L'.', Parameters.FileName->Length / 2 ) == NULLPTR )
+            __leave;
+
+        if( nsUtils::EndsWithW( Parameters.FileName->Buffer, L".EXE", Parameters.FileName->Length / 2 ) != NULLPTR )
+            __leave;
+
+        auto RequiredSize = IrpContext->SrcFileFullPath.BufferSize + Data->Iopb->Parameters.DirectoryControl.QueryDirectory.FileName->Length + (CONTAINOR_SUFFIX_MAX * sizeof(WCHAR));
+        IrpContext->DstFileFullPath = AllocateBuffer<WCHAR>( BUFFER_FILENAME, RequiredSize );
+
+        RtlStringCbCatW( IrpContext->DstFileFullPath.Buffer, IrpContext->DstFileFullPath.BufferSize, IrpContext->SrcFileFullPathWOVolume );
+        RtlStringCbCatW( IrpContext->DstFileFullPath.Buffer, IrpContext->DstFileFullPath.BufferSize, L"\\" );
+        RtlStringCbCatNW( IrpContext->DstFileFullPath.Buffer, IrpContext->DstFileFullPath.BufferSize,
+                          Data->Iopb->Parameters.DirectoryControl.QueryDirectory.FileName->Buffer, 
+                          Data->Iopb->Parameters.DirectoryControl.QueryDirectory.FileName->Length );
+        RtlStringCbCatW( IrpContext->DstFileFullPath.Buffer, IrpContext->DstFileFullPath.BufferSize, L".EXE" );
+
+        METADATA_DRIVER MetaDataInfo;
+        if( IsOwnFile( IrpContext, IrpContext->DstFileFullPath.Buffer, &MetaDataInfo ) == false )
+            __leave;
+
+        NTSTATUS Status = STATUS_SUCCESS;
+
+        do
         {
-            // TODO: 캐시 필요
-            const auto& Parameters = Data->Iopb->Parameters.DirectoryControl.QueryDirectory;
+            UNICODE_STRING FileName;
+            RtlZeroMemory( IrpContext->DstFileFullPath.Buffer, IrpContext->DstFileFullPath.BufferSize );
+            RtlStringCbCatNW( IrpContext->DstFileFullPath.Buffer, IrpContext->DstFileFullPath.BufferSize, Parameters.FileName->Buffer, Parameters.FileName->Length );
+            RtlStringCbCatW( IrpContext->DstFileFullPath.Buffer, IrpContext->DstFileFullPath.BufferSize, L".EXE" );
+            RtlInitUnicodeString( &FileName, IrpContext->DstFileFullPath.Buffer );
+            ULONG LengthReturned = 0;
 
-            if( nsUtils::ReverseFindW( Parameters.FileName->Buffer, L'.', Parameters.FileName->Length / 2 ) == NULLPTR )
-                __leave;
+            Status = nsW32API::FltQueryDirectoryFile( FltObjects->Instance, FltObjects->FileObject,
+                                                      Parameters.DirectoryBuffer, Parameters.Length,
+                                                      ( nsW32API::FILE_INFORMATION_CLASS )Parameters.FileInformationClass,
+                                                      BooleanFlagOn( Data->Iopb->OperationFlags, SL_RETURN_SINGLE_ENTRY ),
+                                                      &FileName,
+                                                      BooleanFlagOn( Data->Iopb->OperationFlags, SL_RESTART_SCAN ), &LengthReturned );
 
-            if( nsUtils::EndsWithW( Parameters.FileName->Buffer, L".EXE", Parameters.FileName->Length / 2 ) != NULLPTR )
-                __leave;
-
-            auto RequiredSize = IrpContext->SrcFileFullPath.BufferSize + Data->Iopb->Parameters.DirectoryControl.QueryDirectory.FileName->Length + (CONTAINOR_SUFFIX_MAX * sizeof(WCHAR));
-            auto Src = AllocateBuffer<WCHAR>( BUFFER_FILENAME, RequiredSize );
-
-            RtlStringCbCatW( Src.Buffer, Src.BufferSize, IrpContext->SrcFileFullPathWOVolume );
-            RtlStringCbCatW( Src.Buffer, Src.BufferSize, L"\\" );
-            RtlStringCbCatNW( Src.Buffer, Src.BufferSize, 
-                              Data->Iopb->Parameters.DirectoryControl.QueryDirectory.FileName->Buffer, 
-                              Data->Iopb->Parameters.DirectoryControl.QueryDirectory.FileName->Length );
-            RtlStringCbCatW( Src.Buffer, Src.BufferSize, L".EXE" );
-
-            METADATA_DRIVER MetaDataInfo;
-            if( IsOwnFile( IrpContext, Src.Buffer, &MetaDataInfo ) == true )
+            if( NT_SUCCESS( Status ) || Status == STATUS_NO_MORE_FILES )
             {
-                NTSTATUS Status = STATUS_SUCCESS;
+                auto FileInformationClass = ( nsW32API::FILE_INFORMATION_CLASS )Data->Iopb->Parameters.DirectoryControl.QueryDirectory.FileInformationClass;
+                IrpContext->UserBuffer = FltMapUserBuffer( Data );
 
-                do
+                switch( FileInformationClass )
                 {
-                    UNICODE_STRING FileName;
-                    RtlZeroMemory( Src.Buffer, Src.BufferSize );
-                    RtlStringCbCatNW( Src.Buffer, Src.BufferSize, Parameters.FileName->Buffer, Parameters.FileName->Length );
-                    RtlStringCbCatW( Src.Buffer, Src.BufferSize, L".EXE" );
-                    RtlInitUnicodeString( &FileName, Src.Buffer );
-                    ULONG LengthReturned = 0;
-
-                    Status = nsW32API::FltQueryDirectoryFile( FltObjects->Instance, FltObjects->FileObject,
-                                                              Parameters.DirectoryBuffer, Parameters.Length,
-                                                              ( nsW32API::FILE_INFORMATION_CLASS )Parameters.FileInformationClass,
-                                                              BooleanFlagOn( Data->Iopb->OperationFlags, SL_RETURN_SINGLE_ENTRY ),
-                                                              &FileName,
-                                                              BooleanFlagOn( Data->Iopb->OperationFlags, SL_RESTART_SCAN ), &LengthReturned );
-
-                    if( NT_SUCCESS( Status ) || Status == STATUS_NO_MORE_FILES )
+                    case FileDirectoryInformation:
                     {
-                        auto FileInformationClass = ( nsW32API::FILE_INFORMATION_CLASS )Data->Iopb->Parameters.DirectoryControl.QueryDirectory.FileInformationClass;
-                        IrpContext->UserBuffer = FltMapUserBuffer( Data );
+                        TuneFileDirectoryInformation( IrpContext );
+                    } break;
+                    case FileFullDirectoryInformation:
+                    {
+                        TuneFileFullDirectoryInformation( IrpContext );
+                    } break;
+                    case FileBothDirectoryInformation:
+                    {
+                        TuneFileBothDirectoryInformation( IrpContext );
+                    } break;
+                    case FileNamesInformation: {} break;
+                    case FileObjectIdInformation: {} break;
+                    case FileQuotaInformation: {} break;
+                    case FileReparsePointInformation: {} break;
+                    case FileIdBothDirectoryInformation:
+                    {
+                        TuneFileIdBothDirectoryInformation( IrpContext );
+                    } break;
+                    case FileIdFullDirectoryInformation:
+                    {
+                        TuneFileIdFullDirectoryInformation( IrpContext );
+                    } break;
+                    case FileIdGlobalTxDirectoryInformation: {} break;
+                    case nsW32API::FileIdExtdDirectoryInformation: {} break;
+                    case nsW32API::FileIdExtdBothDirectoryInformation: {} break;
+                }
 
-                        switch( FileInformationClass )
-                        {
-                            case FileDirectoryInformation:
-                            {
-                                TuneFileDirectoryInformation( IrpContext );
-                            } break;
-                            case FileFullDirectoryInformation:
-                            {
-                                TuneFileFullDirectoryInformation( IrpContext );
-                            } break;
-                            case FileBothDirectoryInformation:
-                            {
-                                TuneFileBothDirectoryInformation( IrpContext );
-                            } break;
-                            case FileNamesInformation: {} break;
-                            case FileObjectIdInformation: {} break;
-                            case FileQuotaInformation: {} break;
-                            case FileReparsePointInformation: {} break;
-                            case FileIdBothDirectoryInformation:
-                            {
-                                TuneFileIdBothDirectoryInformation( IrpContext );
-                            } break;
-                            case FileIdFullDirectoryInformation:
-                            {
-                                TuneFileIdFullDirectoryInformation( IrpContext );
-                            } break;
-                            case FileIdGlobalTxDirectoryInformation: {} break;
-                            case nsW32API::FileIdExtdDirectoryInformation: {} break;
-                            case nsW32API::FileIdExtdBothDirectoryInformation: {} break;
-                        }
+                if( Status == STATUS_NO_MORE_FILES )
+                    Status = STATUS_SUCCESS;
 
-                        if( Status == STATUS_NO_MORE_FILES )
-                            Status = STATUS_SUCCESS;
+                AssignCmnResult( IrpContext, Status );
+                AssignCmnResultInfo( IrpContext, LengthReturned );
+                AssignCmnFltResult( IrpContext, FLT_PREOP_COMPLETE );
 
-                        AssignCmnResult( IrpContext, Status );
-                        AssignCmnResultInfo( IrpContext, LengthReturned );
-                        AssignCmnFltResult( IrpContext, FLT_PREOP_COMPLETE );
-
-                        FltSetCallbackDataDirty( Data );
-                    }
-
-                } while( false );
+                FltSetCallbackDataDirty( Data );
             }
 
-            DeallocateBuffer( &Src );
-        }
+        } while( false );
     }
     __finally
     {

@@ -63,6 +63,9 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
         if( BooleanFlagOn( Data->Iopb->OperationFlags, SL_OPEN_PAGING_FILE ) )
             __leave;
 
+        if( BooleanFlagOn( Data->Iopb->OperationFlags, SL_OPEN_TARGET_DIRECTORY ) )
+            __leave;
+
         auto SecurityContext = Data->Iopb->Parameters.Create.SecurityContext;
 
         Args.FileObject = Data->Iopb->TargetFileObject;
@@ -76,9 +79,6 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
         if( BooleanFlagOn( Args.CreateOptions, FILE_DIRECTORY_FILE ) )
             __leave;
 
-        if( BooleanFlagOn( Data->Iopb->OperationFlags, SL_OPEN_TARGET_DIRECTORY ) )
-            __leave;
-
         IrpContext = CreateIrpContext( Data, FltObjects );
         if( IrpContext == NULLPTR )
             __leave;
@@ -86,16 +86,16 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
         if( IrpContext->SrcFileFullPath.Buffer == NULLPTR )
             __leave;
 
-        if( nsUtils::WildcardMatch_straight( IrpContext->SrcFileFullPathWOVolume, L"*isolationtest.txt*" ) == false && 
-            nsUtils::WildcardMatch_straight( IrpContext->SrcFileFullPathWOVolume, L"*metadatatest.txt*" ) == false )
+        if( IrpContext->IsConcerned == false )
             __leave;
 
-        IrpContext->IsAudit = true;
         IrpContext->Params = &Args;
 
         InitializeVolumeProperties( IrpContext );
 
-        Args.CreateFileName = AllocateBuffer<WCHAR>( BUFFER_FILENAME, IrpContext->SrcFileFullPath.BufferSize + _countof( IrpContext->InstanceContext->DeviceNameBuffer ) );
+        Args.CreateFileName = AllocateBuffer<WCHAR>( BUFFER_FILENAME, 
+                                                     IrpContext->SrcFileFullPath.BufferSize + 
+                                                     _countof( IrpContext->InstanceContext->DeviceNameBuffer ) + ( CONTAINOR_SUFFIX_MAX * sizeof(WCHAR) ) );
 
         RtlStringCbCatW( Args.CreateFileName.Buffer, Args.CreateFileName.BufferSize, IrpContext->InstanceContext->DeviceNameBuffer );
         RtlStringCbCatW( Args.CreateFileName.Buffer, Args.CreateFileName.BufferSize, IrpContext->SrcFileFullPathWOVolume );
@@ -108,13 +108,11 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
         ClearFlag( Args.CreateOptions, FILE_OPEN_REQUIRING_OPLOCK );
 
         AcquireCmnResource( IrpContext, INST_EXCLUSIVE );
-        IrpContext->Fcb = Vcb_SearchFCB( IrpContext->InstanceContext, IrpContext->SrcFileFullPathWOVolume );
+        IrpContext->Fcb = Vcb_SearchFCB( IrpContext, IrpContext->SrcFileFullPathWOVolume );
 
         if( IsOwnFileObject( Args.FileObject ) == false && IrpContext->Fcb == NULLPTR )
         {
-            FltReleaseResource( &IrpContext->InstanceContext->VcbLock );
-            ClearFlag( IrpContext->CompleteStatus, COMPLETE_FREE_INST_RSRC );
-
+            ReleaseCmnResource( IrpContext, INST_EXCLUSIVE );
             CreateFileNonExistFCB( IrpContext );
         }
         else
@@ -136,7 +134,7 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
     {
         if( IrpContext != NULLPTR )
         {
-            if( IrpContext->IsAudit == true )
+            if( IrpContext->IsConcerned == true )
                 PrintIrpContext( IrpContext, true );
 
             if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_FREE_LOWER_FILEOBJECT ) )
@@ -323,6 +321,16 @@ NTSTATUS CreateFileExistFCB( IRP_CONTEXT* IrpContext )
             }
         }
 
+        if( IrpContext->Fcb->MetaDataInfo != NULLPTR && 
+            IrpContext->Fcb->MetaDataInfo->MetaData.Type == METADATA_STB_TYPE )
+        {
+            RtlZeroMemory( Args->CreateFileName.Buffer, Args->CreateFileName.BufferSize );
+            RtlStringCbCatW( Args->CreateFileName.Buffer, Args->CreateFileName.BufferSize, IrpContext->InstanceContext->DeviceNameBuffer );
+            RtlStringCbCatW( Args->CreateFileName.Buffer, Args->CreateFileName.BufferSize, IrpContext->Fcb->FileFullPathWOVolume );
+            RtlStringCbCatW( Args->CreateFileName.Buffer, Args->CreateFileName.BufferSize, IrpContext->Fcb->MetaDataInfo->MetaData.ContainorSuffix );
+            RtlInitUnicodeString( &Args->CreateFileNameUS, Args->CreateFileName.Buffer );
+        }
+
         IO_STATUS_BLOCK IoStatus;
         Status = nsW32API::FltCreateFileEx( GlobalContext.Filter,
                                             IrpContext->FltObjects->Instance,
@@ -430,6 +438,26 @@ NTSTATUS CreateFileNonExistFCB( IRP_CONTEXT* IrpContext )
 
     __try
     {
+        GetFileStatus( IrpContext );
+
+        // 만약 성공했는데, 해당 객체가 디렉토리라면 무시한다
+        if( FlagOn( Args->FileStatus, FILE_DIRECTORY ) )
+        {
+            AssignCmnFltResult( IrpContext, FLT_PREOP_SUCCESS_NO_CALLBACK );
+            __leave;
+        }
+
+        // TODO: Notify To Client, and receive Client Response.
+
+        if( Args->MetaDataInfo.MetaData.Type == METADATA_STB_TYPE )
+        {
+            RtlZeroMemory( Args->CreateFileName.Buffer, Args->CreateFileName.BufferSize );
+            RtlStringCbCatW( Args->CreateFileName.Buffer, Args->CreateFileName.BufferSize, IrpContext->InstanceContext->DeviceNameBuffer );
+            RtlStringCbCatW( Args->CreateFileName.Buffer, Args->CreateFileName.BufferSize, IrpContext->SrcFileFullPathWOVolume );
+            RtlStringCbCatW( Args->CreateFileName.Buffer, Args->CreateFileName.BufferSize, Args->MetaDataInfo.MetaData.ContainorSuffix );
+            RtlInitUnicodeString( &Args->CreateFileNameUS, Args->CreateFileName.Buffer );
+        }
+
         IO_STATUS_BLOCK IoStatus;
         Status = nsW32API::FltCreateFileEx( GlobalContext.Filter,
                                             IrpContext->FltObjects->Instance,
@@ -457,44 +485,17 @@ NTSTATUS CreateFileNonExistFCB( IRP_CONTEXT* IrpContext )
             __leave;
         }
 
-        SetFlag( Args->FileStatus, FILE_ALREADY_EXISTS );
         AssignCmnResultInfo( IrpContext, IoStatus.Information );
-
-        ULONG BytesReturned = 0;
-        FILE_STANDARD_INFORMATION fsi;
-        RtlZeroMemory( &fsi, sizeof( fsi ) );
-
-        NTSTATUS Status = FltQueryInformationFile( IrpContext->FltObjects->Instance, Args->LowerFileObject,
-                                                   &fsi, sizeof( fsi ), FileStandardInformation, &BytesReturned );
-
-        if( NT_SUCCESS( Status ) )
-        {
-            Args->FileSize = fsi.EndOfFile;
-            Args->FileAllocationSize = fsi.AllocationSize;
-
-            // 만약 성공했는데, 해당 객체가 디렉토리라면 무시한다
-            if( fsi.Directory != FALSE )
-            {
-                SetFlag( IrpContext->CompleteStatus, COMPLETE_FREE_LOWER_FILEOBJECT );
-                AssignCmnFltResult( IrpContext, FLT_PREOP_SUCCESS_NO_CALLBACK );
-                __leave;
-            }
-        }
-        else
-        {
-            KdPrint( ( "[WinIOSol] EvtID=%09d %s %s Status=0x%08x,%s\n"
-                       , IrpContext->EvtID, __FUNCTION__, "FltQueryInformationFile FAILED"
-                       , Status, ntkernel_error_category::find_ntstatus( Status )->message ) );
-        }
-
-        GetFileMetaDataInfo( IrpContext, Args->LowerFileObject, &Args->MetaDataInfo );
 
         if( IoStatus.Information == FILE_CREATED || 
             IoStatus.Information == FILE_SUPERSEDED || 
             IoStatus.Information == FILE_OVERWRITTEN )
         {
-            if( nsUtils::WildcardMatch_straight( IrpContext->SrcFileFullPathWOVolume, L"*metadatatest.txt*" ) == true )
+            if( !FlagOn( Args->FileStatus, FILE_ALREADY_EXISTS ) )
+            {
                 Args->IsMetaDataOnCreate = TRUE;
+                Args->IsStubCodeOnCreate = TRUE;
+            }
         }
 
         AcquireCmnResource( IrpContext, INST_EXCLUSIVE );
@@ -550,13 +551,43 @@ NTSTATUS CreateFileNonExistFCB( IRP_CONTEXT* IrpContext )
 
         if( Args->IsMetaDataOnCreate != FALSE )
         {
-            LARGE_INTEGER FILE_BEGIN_OFFSET = { 0,0 };
+            LARGE_INTEGER WRITE_OFFSET = { 0,0 };
             ULONG BytesWritten = 0;
 
             InitializeMetaDataInfo( IrpContext->Fcb->MetaDataInfo );
 
+            if( Args->IsStubCodeOnCreate != FALSE )
+            {
+                IrpContext->Fcb->MetaDataInfo->MetaData.Type = METADATA_STB_TYPE;
+                IrpContext->Fcb->MetaDataInfo->MetaData.ContainorSize = GetStubCodeX86Size();
+                RtlStringCchCatW( IrpContext->Fcb->MetaDataInfo->MetaData.ContainorSuffix,
+                                  _countof( IrpContext->Fcb->MetaDataInfo->MetaData.ContainorSuffix ),
+                                  L".EXE" );
+            }
+
+            if( Args->IsStubCodeOnCreate != FALSE )
+            {
+                WRITE_OFFSET = { 0,0 };
+
+                Status = FltWriteFile( IrpContext->FltObjects->Instance, IrpContext->Fcb->LowerFileObject, 
+                                       &WRITE_OFFSET, GetStubCodeX86Size(), GetStubCodeX86(), 
+                                       FLTFL_IO_OPERATION_DO_NOT_UPDATE_BYTE_OFFSET | FLTFL_IO_OPERATION_NON_CACHED, 
+                                       &BytesWritten, NULL, NULL );
+
+                if( !NT_SUCCESS( Status ) )
+                {
+                    KdPrint( ( "[WinIOSol] EvtID=%09d %s %s Line=%d Status=0x%08x,%s Src=%wZ\n"
+                               , IrpContext->EvtID, __FUNCTION__, "FltWriteFile FAILED", __LINE__
+                               , Status, ntkernel_error_category::find_ntstatus( Status )->message
+                               , &Args->CreateFileNameUS
+                               ) );
+                }
+
+                WRITE_OFFSET.QuadPart = IrpContext->Fcb->MetaDataInfo->MetaData.ContainorSize;
+            }
+
             Status = FltWriteFile( IrpContext->FltObjects->Instance,
-                                   IrpContext->Fcb->LowerFileObject, &FILE_BEGIN_OFFSET, METADATA_DRIVER_SIZE, 
+                                   IrpContext->Fcb->LowerFileObject, &WRITE_OFFSET, METADATA_DRIVER_SIZE,
                                    ( PVOID )IrpContext->Fcb->MetaDataInfo,
                                    FLTFL_IO_OPERATION_DO_NOT_UPDATE_BYTE_OFFSET | FLTFL_IO_OPERATION_NON_CACHED,
                                    &BytesWritten, NULL, NULL );
@@ -1102,4 +1133,91 @@ NTSTATUS ProcessPreCreate_OVERWRITE_IF_EXIST( IRP_CONTEXT* Args )
     }
 
     return Args->Status;
+}
+
+NTSTATUS GetFileStatus( IRP_CONTEXT* IrpContext )
+{
+    HANDLE FileHandle = NULL;
+    FILE_OBJECT* FileObject = NULLPTR;
+    NTSTATUS Status = STATUS_SUCCESS;
+
+    IO_STATUS_BLOCK IoStatus;
+
+    auto Args = ( CREATE_ARGS* )IrpContext->Params;
+
+    do
+    {
+        Status = nsW32API::FltCreateFileEx( IrpContext->FltObjects->Filter,
+                                            IrpContext->FltObjects->Instance,
+                                            &FileHandle,
+                                            &FileObject,
+                                            FILE_SPECIAL_ACCESS,
+                                            &Args->CreateObjectAttributes,
+                                            &IoStatus, NULL,
+                                            FILE_ATTRIBUTE_NORMAL, 0,
+                                            FILE_OPEN,
+                                            FILE_NON_DIRECTORY_FILE,
+                                            NULL, 0, IO_IGNORE_SHARE_ACCESS_CHECK );
+
+        if( !NT_SUCCESS( Status ) || IoStatus.Information != FILE_OPENED )
+        {
+            UNICODE_STRING Uni;
+            OBJECT_ATTRIBUTES Oa;
+            auto Alternate = CloneBuffer( &Args->CreateFileName );
+            RtlStringCbCatW( Alternate.Buffer, Alternate.BufferSize, L".EXE" );
+            RtlInitUnicodeString( &Uni, Alternate.Buffer );
+            InitializeObjectAttributes( &Oa, &Uni, OBJ_KERNEL_HANDLE | OBJ_CASE_INSENSITIVE, NULL, 0 );
+
+            Status = nsW32API::FltCreateFileEx( IrpContext->FltObjects->Filter,
+                                                IrpContext->FltObjects->Instance,
+                                                &FileHandle,
+                                                &FileObject,
+                                                FILE_SPECIAL_ACCESS,
+                                                &Oa,
+                                                &IoStatus, NULL,
+                                                FILE_ATTRIBUTE_NORMAL, 0,
+                                                FILE_OPEN,
+                                                FILE_NON_DIRECTORY_FILE,
+                                                NULL, 0, IO_IGNORE_SHARE_ACCESS_CHECK );
+
+            DeallocateBuffer( &Alternate );
+        }
+
+        if( IoStatus.Information != FILE_OPENED )
+            break;
+
+        SetFlag( Args->FileStatus, FILE_ALREADY_EXISTS );
+
+        FILE_STANDARD_INFORMATION fsi;
+        ULONG LengthReturned = 0;
+        RtlZeroMemory( &fsi, sizeof( fsi ) );
+
+        Status = FltQueryInformationFile( IrpContext->FltObjects->Instance, FileObject,
+                                          &fsi, sizeof( fsi ), FileStandardInformation, &LengthReturned );
+
+        if( NT_SUCCESS( Status ) )
+        {
+            Args->FileSize = fsi.EndOfFile;
+            Args->FileAllocationSize = fsi.AllocationSize;
+
+            if( fsi.Directory != FALSE )
+                SetFlag( Args->FileStatus, FILE_DIRECTORY );
+
+            GetFileMetaDataInfo( IrpContext, FileObject, &Args->MetaDataInfo );
+        }
+        else
+        {
+            KdPrint( ( "[WinIOSol] EvtID=%09d %s %s Status=0x%08x,%s\n"
+                       , IrpContext->EvtID, __FUNCTION__, "FltQueryInformationFile FAILED"
+                       , Status, ntkernel_error_category::find_ntstatus( Status )->message ) );
+        }
+
+    } while( false );
+
+    if( FileHandle != NULL )
+        FltClose( FileHandle );
+    if( FileObject != NULLPTR )
+        ObDereferenceObject( FileObject );
+
+    return Status;
 }

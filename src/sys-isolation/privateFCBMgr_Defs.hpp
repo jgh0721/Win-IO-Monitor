@@ -24,7 +24,6 @@
 #define FCB_STATE_MAIN_SHARED       0x40000
 #define FCB_STATE_MAIN_EXCLUSIVE    0x80000
 
-
 typedef struct _FCB_CUSTOM
 {
 
@@ -109,17 +108,22 @@ typedef struct _FCB
     HANDLE                                      LowerFileHandle;
     SHARE_ACCESS                                LowerShareAccess;
 
+    CTX_INSTANCE_CONTEXT*                       InstanceContext;
+
     TyGenericBuffer<WCHAR>                      FileFullPath;
     // SrcFileFullPath 에서 드라이브 문자 또는 디바이스 이름등을 제외한 순수한 경로 및 이름( \ 로 시작한다 )
     WCHAR*                                      FileFullPathWOVolume;
     // FileFullPath 에서 마지막 이름 부분만 가르킴, 직접 해제하지 말 것
     WCHAR*                                      FileName;
 
-    CTX_INSTANCE_CONTEXT*                       InstanceContext;
-
     ///////////////////////////////////////////////////////////////////////////
 
     METADATA_DRIVER*                            MetaDataInfo;
+
+    // for Type3
+    TyGenericBuffer<WCHAR>                      PretendFileFullPath;
+    WCHAR*                                      PretendFileFullPathWOVolume;
+    WCHAR*                                      PretendFileName;
 
     ///////////////////////////////////////////////////////////////////////////
 

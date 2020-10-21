@@ -8,6 +8,9 @@
 #include "utilities/fltUtilities.hpp"
 #include "utilities/volumeMgr.hpp"
 
+#include "policies/GlobalFilter.hpp"
+#include "policies/ProcessFilter.hpp"
+
 #include "fltCmnLibs.hpp"
 
 #if defined(_MSC_VER)
@@ -54,7 +57,6 @@ PIRP_CONTEXT CreateIrpContext( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_
         {
             IrpContext->Fcb = ( FCB* )FltObjects->FileObject->FsContext;
             IrpContext->Ccb = ( CCB* )FltObjects->FileObject->FsContext2;
-            IrpContext->SrcFileFullPath = CloneBuffer( &IrpContext->Fcb->FileFullPath );
 
             if( IrpContext->Ccb != NULLPTR )
             {
@@ -90,9 +92,17 @@ PIRP_CONTEXT CreateIrpContext( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_
             SearchProcessInfo( IrpContext->ProcessId, &IrpContext->ProcessFullPath, &IrpContext->ProcessFileName );
         }
 
-        if( IrpContext->ProcessId > 4 && MajorFunction != IRP_MJ_READ && MajorFunction != IRP_MJ_WRITE )
+        if( IsOwnFileObject( FltObjects->FileObject ) == true )
         {
-            ProcessFilter_Match( IrpContext->ProcessId, &IrpContext->ProcessFullPath, &IrpContext->ProcessFilter, &IrpContext->ProcessFilterEntry );
+            if( IrpContext->ProcessFilter != NULLPTR )
+                IrpContext->SrcFileFullPath = CloneBuffer( &IrpContext->Fcb->FileFullPath );
+            else
+            {
+                if( IrpContext->Fcb->PretendFileFullPath.Buffer != NULLPTR )
+                    IrpContext->SrcFileFullPath = CloneBuffer( &IrpContext->Fcb->PretendFileFullPath );
+                else
+                    IrpContext->SrcFileFullPath = CloneBuffer( &IrpContext->Fcb->FileFullPath );
+            }
         }
 
         if( MajorFunction == IRP_MJ_CREATE && IsPreIO == true )
@@ -212,14 +222,15 @@ PIRP_CONTEXT CreateIrpContext( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_
                         if( !NT_SUCCESS( Status ) )
                             break;
 
-                        IrpContext->DstFileFullPath = AllocateBuffer<WCHAR>( BUFFER_FILENAME, DestinationFileName->Name.Length + sizeof( WCHAR ) );
+                        IrpContext->DstFileFullPath = AllocateBuffer<WCHAR>( BUFFER_FILENAME, DestinationFileName->Name.Length + sizeof( WCHAR ) +
+                                                                             ( CONTAINOR_SUFFIX_MAX * sizeof( WCHAR ) ) );
                         if( IrpContext->DstFileFullPath.Buffer == NULLPTR )
                         {
                             Status = STATUS_INSUFFICIENT_RESOURCES;
                             break;
                         }
 
-                        RtlStringCbCopyW( IrpContext->DstFileFullPath.Buffer, IrpContext->DstFileFullPath.BufferSize, DestinationFileName->Name.Buffer );
+                        RtlStringCbCopyNW( IrpContext->DstFileFullPath.Buffer, IrpContext->DstFileFullPath.BufferSize, DestinationFileName->Name.Buffer, DestinationFileName->Name.Length );
                         VolumeMgr_Replace( IrpContext->DstFileFullPath.Buffer, IrpContext->DstFileFullPath.BufferSize );
 
                     } break;
@@ -249,14 +260,15 @@ PIRP_CONTEXT CreateIrpContext( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_
                         if( !NT_SUCCESS( Status ) )
                             break;
 
-                        IrpContext->DstFileFullPath = AllocateBuffer<WCHAR>( BUFFER_FILENAME, DestinationFileName->Name.Length + sizeof( WCHAR ) );
+                        IrpContext->DstFileFullPath = AllocateBuffer<WCHAR>( BUFFER_FILENAME, DestinationFileName->Name.Length + sizeof( WCHAR ) +
+                                                                             ( CONTAINOR_SUFFIX_MAX * sizeof( WCHAR ) ) );
                         if( IrpContext->DstFileFullPath.Buffer == NULLPTR )
                         {
                             Status = STATUS_INSUFFICIENT_RESOURCES;
                             break;
                         }
 
-                        RtlStringCbCopyW( IrpContext->DstFileFullPath.Buffer, IrpContext->DstFileFullPath.BufferSize, DestinationFileName->Name.Buffer );
+                        RtlStringCbCopyNW( IrpContext->DstFileFullPath.Buffer, IrpContext->DstFileFullPath.BufferSize, DestinationFileName->Name.Buffer, DestinationFileName->Name.Length );
                         VolumeMgr_Replace( IrpContext->DstFileFullPath.Buffer, IrpContext->DstFileFullPath.BufferSize );
 
                     } break;
@@ -278,6 +290,9 @@ PIRP_CONTEXT CreateIrpContext( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_
             IrpContext->DstFileFullPath.Buffer;
         else
             IrpContext->DstFileName++;
+
+        CheckEventTo( IrpContext );
+
     }
     __finally
     {
@@ -1068,120 +1083,6 @@ void PrintIrpContextCLOSE( PIRP_CONTEXT IrpContext, bool IsResultMode )
     }
 }
 
-VOID AcquireCmnResource( PIRP_CONTEXT IrpContext, LONG RsrcFlags )
-{
-    //ASSERT( IrpContext != NULLPTR );
-    //if( IrpContext == NULLPTR )
-    //    return;
-
-    //ASSERT( IrpContext->Fcb != NULLPTR );
-    //if( IrpContext->Fcb == NULLPTR )
-    //    return;
-
-    if( BooleanFlagOn( RsrcFlags, FCB_MAIN_EXCLUSIVE ) )
-    {
-        if( BooleanFlagOn( RsrcFlags, FCB_MAIN_SHARED ) || 
-            ( ExIsResourceAcquiredSharedLite( &IrpContext->Fcb->MainResource ) > 0 && ExIsResourceAcquiredExclusiveLite( &IrpContext->Fcb->MainResource ) == 0 ) 
-             )
-        {
-            KdBreakPoint();
-            ASSERT( false );
-            return;
-        }
-
-        FltAcquireResourceExclusive( &IrpContext->Fcb->MainResource );
-        SetFlag( IrpContext->CompleteStatus, COMPLETE_FREE_MAIN_RSRC );
-    }
-
-    if( BooleanFlagOn( RsrcFlags, FCB_MAIN_SHARED ) )
-    {
-        if( BooleanFlagOn( RsrcFlags, FCB_MAIN_EXCLUSIVE ) )
-        {
-            KdBreakPoint();
-            ASSERT( false );
-            return;
-        }
-
-        FltAcquireResourceShared( &IrpContext->Fcb->MainResource );
-        SetFlag( IrpContext->CompleteStatus, COMPLETE_FREE_MAIN_RSRC );
-    }
-
-
-    if( BooleanFlagOn( RsrcFlags, FCB_PGIO_EXCLUSIVE ) )
-    {
-        if( BooleanFlagOn( RsrcFlags, FCB_PGIO_SHARED ) || 
-            ( ExIsResourceAcquiredSharedLite( &IrpContext->Fcb->PagingIoResource ) > 0 && ExIsResourceAcquiredExclusiveLite( &IrpContext->Fcb->PagingIoResource ) == 0 )
-            )
-        {
-            KdBreakPoint();
-            ASSERT( false );
-            return;
-        }
-
-        FltAcquireResourceExclusive( &IrpContext->Fcb->PagingIoResource );
-        SetFlag( IrpContext->CompleteStatus, COMPLETE_FREE_PGIO_RSRC );
-    }
-
-    if( BooleanFlagOn( RsrcFlags, FCB_PGIO_SHARED ) )
-    {
-        if( BooleanFlagOn( RsrcFlags, FCB_PGIO_EXCLUSIVE ) )
-        {
-            KdBreakPoint();
-            ASSERT( false );
-            return;
-        }
-
-        FltAcquireResourceShared( &IrpContext->Fcb->PagingIoResource );
-        SetFlag( IrpContext->CompleteStatus, COMPLETE_FREE_PGIO_RSRC );
-    }
-
-
-    if( BooleanFlagOn( RsrcFlags, INST_EXCLUSIVE ) )
-    {
-        if( BooleanFlagOn( RsrcFlags, INST_SHARED ) || 
-            ( ExIsResourceAcquiredSharedLite( &IrpContext->InstanceContext->VcbLock ) > 0 && ExIsResourceAcquiredExclusiveLite( &IrpContext->InstanceContext->VcbLock ) == 0 )
-            )
-        {
-            KdBreakPoint();
-            ASSERT( false );
-            return;
-        }
-
-        FltAcquireResourceExclusive( &IrpContext->InstanceContext->VcbLock );
-        SetFlag( IrpContext->CompleteStatus, COMPLETE_FREE_INST_RSRC );
-    }
-
-    if( BooleanFlagOn( RsrcFlags, INST_SHARED ) )
-    {
-        if( BooleanFlagOn( RsrcFlags, INST_EXCLUSIVE ) )
-        {
-            KdBreakPoint();
-            ASSERT( false );
-            return;
-        }
-
-        FltAcquireResourceShared( &IrpContext->InstanceContext->VcbLock );
-        SetFlag( IrpContext->CompleteStatus, COMPLETE_FREE_INST_RSRC );
-    }
-}
-
-void ReleaseCmnResource( PIRP_CONTEXT IrpContext, LONG RsrcFlags )
-{
-    ASSERT( IrpContext != NULLPTR );
-    if( IrpContext == NULLPTR )
-        return;
-
-    if( BooleanFlagOn( RsrcFlags, INST_SHARED ) || 
-        BooleanFlagOn( RsrcFlags, INST_EXCLUSIVE ) )
-    {
-        if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_FREE_INST_RSRC ) )
-        {
-            FltReleaseResource( &IrpContext->InstanceContext->VcbLock );
-            ClearFlag( IrpContext->CompleteStatus, COMPLETE_FREE_INST_RSRC );
-        }
-    }
-}
-
 void PrintIrpContextQUERY_VOLUME_INFORMATION( PIRP_CONTEXT IrpContext, bool IsResultMode )
 {
     const auto& Data = IrpContext->Data;
@@ -1323,4 +1224,379 @@ void PrintIrpContextLOCK_CONTROL( PIRP_CONTEXT IrpContext, bool IsResultMode )
                    , IoStatus.Status, ntkernel_error_category::find_ntstatus( IoStatus.Status )->message
                    ) );
     }
+}
+
+VOID AcquireCmnResource( PIRP_CONTEXT IrpContext, LONG RsrcFlags )
+{
+    //ASSERT( IrpContext != NULLPTR );
+    //if( IrpContext == NULLPTR )
+    //    return;
+
+    //ASSERT( IrpContext->Fcb != NULLPTR );
+    //if( IrpContext->Fcb == NULLPTR )
+    //    return;
+
+    if( BooleanFlagOn( RsrcFlags, FCB_MAIN_EXCLUSIVE ) )
+    {
+        if( BooleanFlagOn( RsrcFlags, FCB_MAIN_SHARED ) || 
+            ( ExIsResourceAcquiredSharedLite( &IrpContext->Fcb->MainResource ) > 0 && ExIsResourceAcquiredExclusiveLite( &IrpContext->Fcb->MainResource ) == 0 ) 
+             )
+        {
+            KdBreakPoint();
+            ASSERT( false );
+            return;
+        }
+
+        FltAcquireResourceExclusive( &IrpContext->Fcb->MainResource );
+        SetFlag( IrpContext->CompleteStatus, COMPLETE_FREE_MAIN_RSRC );
+    }
+
+    if( BooleanFlagOn( RsrcFlags, FCB_MAIN_SHARED ) )
+    {
+        if( BooleanFlagOn( RsrcFlags, FCB_MAIN_EXCLUSIVE ) )
+        {
+            KdBreakPoint();
+            ASSERT( false );
+            return;
+        }
+
+        FltAcquireResourceShared( &IrpContext->Fcb->MainResource );
+        SetFlag( IrpContext->CompleteStatus, COMPLETE_FREE_MAIN_RSRC );
+    }
+
+
+    if( BooleanFlagOn( RsrcFlags, FCB_PGIO_EXCLUSIVE ) )
+    {
+        if( BooleanFlagOn( RsrcFlags, FCB_PGIO_SHARED ) || 
+            ( ExIsResourceAcquiredSharedLite( &IrpContext->Fcb->PagingIoResource ) > 0 && ExIsResourceAcquiredExclusiveLite( &IrpContext->Fcb->PagingIoResource ) == 0 )
+            )
+        {
+            KdBreakPoint();
+            ASSERT( false );
+            return;
+        }
+
+        FltAcquireResourceExclusive( &IrpContext->Fcb->PagingIoResource );
+        SetFlag( IrpContext->CompleteStatus, COMPLETE_FREE_PGIO_RSRC );
+    }
+
+    if( BooleanFlagOn( RsrcFlags, FCB_PGIO_SHARED ) )
+    {
+        if( BooleanFlagOn( RsrcFlags, FCB_PGIO_EXCLUSIVE ) )
+        {
+            KdBreakPoint();
+            ASSERT( false );
+            return;
+        }
+
+        FltAcquireResourceShared( &IrpContext->Fcb->PagingIoResource );
+        SetFlag( IrpContext->CompleteStatus, COMPLETE_FREE_PGIO_RSRC );
+    }
+
+
+    if( BooleanFlagOn( RsrcFlags, INST_EXCLUSIVE ) )
+    {
+        if( BooleanFlagOn( RsrcFlags, INST_SHARED ) || 
+            ( ExIsResourceAcquiredSharedLite( &IrpContext->InstanceContext->VcbLock ) > 0 && ExIsResourceAcquiredExclusiveLite( &IrpContext->InstanceContext->VcbLock ) == 0 )
+            )
+        {
+            KdBreakPoint();
+            ASSERT( false );
+            return;
+        }
+
+        FltAcquireResourceExclusive( &IrpContext->InstanceContext->VcbLock );
+        SetFlag( IrpContext->CompleteStatus, COMPLETE_FREE_INST_RSRC );
+    }
+
+    if( BooleanFlagOn( RsrcFlags, INST_SHARED ) )
+    {
+        if( BooleanFlagOn( RsrcFlags, INST_EXCLUSIVE ) )
+        {
+            KdBreakPoint();
+            ASSERT( false );
+            return;
+        }
+
+        FltAcquireResourceShared( &IrpContext->InstanceContext->VcbLock );
+        SetFlag( IrpContext->CompleteStatus, COMPLETE_FREE_INST_RSRC );
+    }
+}
+
+void ReleaseCmnResource( PIRP_CONTEXT IrpContext, LONG RsrcFlags )
+{
+    ASSERT( IrpContext != NULLPTR );
+    if( IrpContext == NULLPTR )
+        return;
+
+    if( BooleanFlagOn( RsrcFlags, INST_SHARED ) || 
+        BooleanFlagOn( RsrcFlags, INST_EXCLUSIVE ) )
+    {
+        if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_FREE_INST_RSRC ) )
+        {
+            FltReleaseResource( &IrpContext->InstanceContext->VcbLock );
+            ClearFlag( IrpContext->CompleteStatus, COMPLETE_FREE_INST_RSRC );
+        }
+    }
+}
+
+NTSTATUS CheckEventTo( IRP_CONTEXT* IrpContext )
+{
+    NTSTATUS Status = STATUS_UNSUCCESSFUL;
+
+    do
+    {
+        if( IrpContext == NULLPTR )
+            break;
+
+        const auto& MajorFunction = IrpContext->Data->Iopb->MajorFunction;
+        switch( MajorFunction )
+        {
+            case IRP_MJ_CREATE: {
+                Status = CheckEventToWithCREATE( IrpContext, CHECK_EVENT_GLOBAL_DIR_FILTER | CHECK_EVENT_PROCESS_DIR_FILTER );
+            } break;
+            case IRP_MJ_DIRECTORY_CONTROL: {
+                Status = CheckEventToWithDIRECTORY_CONTROL( IrpContext, CHECK_EVENT_PROCESS_ONLY );
+            } break;
+            case IRP_MJ_QUERY_INFORMATION: {
+                Status = CheckEventToWithQUERY_INFORMATION( IrpContext, CHECK_EVENT_PROCESS_ONLY );
+            } break;
+            case IRP_MJ_SET_INFORMATION: {
+                Status = CheckEventToWithQUERY_INFORMATION( IrpContext, CHECK_EVENT_PROCESS_ONLY );
+            } break;
+            case IRP_MJ_CLEANUP: {} break;
+            case IRP_MJ_CLOSE: {} break;
+        }
+        
+    } while( false );
+
+    return Status;
+}
+
+NTSTATUS CheckEventToWithCREATE( IRP_CONTEXT* IrpContext, ULONG CheckFlags )
+{
+    NTSTATUS Status = STATUS_UNSUCCESSFUL;
+
+    do
+    {
+        IrpContext->IsConcerned = false;
+
+        if( FlagOn( CheckFlags, CHECK_EVENT_GLOBAL_DIR_FILTER ) )
+        {
+            Status = GlobalFilter_Match( IrpContext->SrcFileFullPath.Buffer, false );
+            if( Status == STATUS_SUCCESS )
+            {
+                IrpContext->IsConcerned = false;
+                break;
+            }
+
+            Status = GlobalFilter_Match( IrpContext->SrcFileFullPath.Buffer, true );
+            if( Status == STATUS_SUCCESS )
+            {
+                IrpContext->IsConcerned = true;
+            }
+        }
+
+        if( IrpContext->ProcessId <= 4 )
+            break;
+
+        if( FlagOn( CheckFlags, CHECK_EVENT_PROCESS_ONLY ) || FlagOn( CheckFlags, CHECK_EVENT_PROCESS_DIR_FILTER ) )
+        {
+            IrpContext->IsConcerned = false;
+
+            Status = ProcessFilter_Match( IrpContext->ProcessId, &IrpContext->ProcessFullPath, &IrpContext->ProcessFilter, &IrpContext->ProcessFilterEntry );
+
+            IrpContext->IsConcerned = IrpContext->ProcessFilter != NULLPTR;
+
+            if( FlagOn( CheckFlags, CHECK_EVENT_PROCESS_ONLY ) )
+                break;
+
+            if( FlagOn( CheckFlags, CHECK_EVENT_PROCESS_DIR_FILTER ) )
+            {
+                bool isInclude = false;
+                Status = ProcessFilter_SubMatch( IrpContext->ProcessFilterEntry, &IrpContext->SrcFileFullPath, &isInclude );
+                if( Status == STATUS_NO_DATA_DETECTED )
+                    break;
+
+                if( Status == STATUS_SUCCESS )
+                    IrpContext->IsConcerned = isInclude;
+                else
+                    IrpContext->IsConcerned = false;
+            }
+        }
+        
+    } while( false );
+
+    return Status;
+}
+
+NTSTATUS CheckEventToWithDIRECTORY_CONTROL( IRP_CONTEXT* IrpContext, ULONG CheckFlags )
+{
+    NTSTATUS Status = STATUS_UNSUCCESSFUL;
+
+    do
+    {
+        IrpContext->IsConcerned = false;
+
+        if( FlagOn( CheckFlags, CHECK_EVENT_GLOBAL_DIR_FILTER ) )
+        {
+            Status = GlobalFilter_Match( IrpContext->SrcFileFullPath.Buffer, false );
+            if( Status == STATUS_SUCCESS )
+            {
+                IrpContext->IsConcerned = false;
+                break;
+            }
+
+            Status = GlobalFilter_Match( IrpContext->SrcFileFullPath.Buffer, true );
+            if( Status == STATUS_SUCCESS )
+            {
+                IrpContext->IsConcerned = true;
+            }
+        }
+
+        if( IrpContext->ProcessId <= 4 )
+            break;
+
+        if( FlagOn( CheckFlags, CHECK_EVENT_PROCESS_ONLY ) || FlagOn( CheckFlags, CHECK_EVENT_PROCESS_DIR_FILTER ) )
+        {
+            IrpContext->IsConcerned = false;
+
+            Status = ProcessFilter_Match( IrpContext->ProcessId, &IrpContext->ProcessFullPath, &IrpContext->ProcessFilter, &IrpContext->ProcessFilterEntry );
+
+            IrpContext->IsConcerned = IrpContext->ProcessFilter != NULLPTR;
+
+            if( FlagOn( CheckFlags, CHECK_EVENT_PROCESS_ONLY ) )
+                break;
+
+            if( FlagOn( CheckFlags, CHECK_EVENT_PROCESS_DIR_FILTER ) )
+            {
+                bool isInclude = false;
+                Status = ProcessFilter_SubMatch( IrpContext->ProcessFilterEntry, &IrpContext->SrcFileFullPath, &isInclude );
+                if( Status == STATUS_NO_DATA_DETECTED )
+                    break;
+
+                if( Status == STATUS_SUCCESS )
+                    IrpContext->IsConcerned = isInclude;
+                else
+                    IrpContext->IsConcerned = false;
+            }
+        }
+
+    } while( false );
+
+    return Status;
+}
+
+NTSTATUS CheckEventToWithQUERY_INFORMATION( IRP_CONTEXT* IrpContext, ULONG CheckFlags )
+{
+    NTSTATUS Status = STATUS_UNSUCCESSFUL;
+
+    do
+    {
+        IrpContext->IsConcerned = false;
+
+        if( FlagOn( CheckFlags, CHECK_EVENT_GLOBAL_DIR_FILTER ) )
+        {
+            Status = GlobalFilter_Match( IrpContext->SrcFileFullPath.Buffer, false );
+            if( Status == STATUS_SUCCESS )
+            {
+                IrpContext->IsConcerned = false;
+                break;
+            }
+
+            Status = GlobalFilter_Match( IrpContext->SrcFileFullPath.Buffer, true );
+            if( Status == STATUS_SUCCESS )
+            {
+                IrpContext->IsConcerned = true;
+            }
+        }
+
+        if( IrpContext->ProcessId <= 4 )
+            break;
+
+        if( FlagOn( CheckFlags, CHECK_EVENT_PROCESS_ONLY ) || FlagOn( CheckFlags, CHECK_EVENT_PROCESS_DIR_FILTER ) )
+        {
+            IrpContext->IsConcerned = false;
+
+            Status = ProcessFilter_Match( IrpContext->ProcessId, &IrpContext->ProcessFullPath, &IrpContext->ProcessFilter, &IrpContext->ProcessFilterEntry );
+
+            IrpContext->IsConcerned = IrpContext->ProcessFilter != NULLPTR;
+
+            if( FlagOn( CheckFlags, CHECK_EVENT_PROCESS_ONLY ) )
+                break;
+
+            if( FlagOn( CheckFlags, CHECK_EVENT_PROCESS_DIR_FILTER ) )
+            {
+                bool isInclude = false;
+                Status = ProcessFilter_SubMatch( IrpContext->ProcessFilterEntry, &IrpContext->SrcFileFullPath, &isInclude );
+                if( Status == STATUS_NO_DATA_DETECTED )
+                    break;
+
+                if( Status == STATUS_SUCCESS )
+                    IrpContext->IsConcerned = isInclude;
+                else
+                    IrpContext->IsConcerned = false;
+            }
+        }
+
+    } while( false );
+
+    return Status;
+}
+
+NTSTATUS CheckEventToWithSET_INFORMATION( IRP_CONTEXT* IrpContext, ULONG CheckFlags )
+{
+    NTSTATUS Status = STATUS_UNSUCCESSFUL;
+
+    do
+    {
+        IrpContext->IsConcerned = false;
+
+        if( FlagOn( CheckFlags, CHECK_EVENT_GLOBAL_DIR_FILTER ) )
+        {
+            Status = GlobalFilter_Match( IrpContext->SrcFileFullPath.Buffer, false );
+            if( Status == STATUS_SUCCESS )
+            {
+                IrpContext->IsConcerned = false;
+                break;
+            }
+
+            Status = GlobalFilter_Match( IrpContext->SrcFileFullPath.Buffer, true );
+            if( Status == STATUS_SUCCESS )
+            {
+                IrpContext->IsConcerned = true;
+            }
+        }
+
+        if( IrpContext->ProcessId <= 4 )
+            break;
+
+        if( FlagOn( CheckFlags, CHECK_EVENT_PROCESS_ONLY ) || FlagOn( CheckFlags, CHECK_EVENT_PROCESS_DIR_FILTER ) )
+        {
+            IrpContext->IsConcerned = false;
+
+            Status = ProcessFilter_Match( IrpContext->ProcessId, &IrpContext->ProcessFullPath, &IrpContext->ProcessFilter, &IrpContext->ProcessFilterEntry );
+
+            IrpContext->IsConcerned = IrpContext->ProcessFilter != NULLPTR;
+
+            if( FlagOn( CheckFlags, CHECK_EVENT_PROCESS_ONLY ) )
+                break;
+
+            if( FlagOn( CheckFlags, CHECK_EVENT_PROCESS_DIR_FILTER ) )
+            {
+                bool isInclude = false;
+                Status = ProcessFilter_SubMatch( IrpContext->ProcessFilterEntry, &IrpContext->SrcFileFullPath, &isInclude );
+                if( Status == STATUS_NO_DATA_DETECTED )
+                    break;
+
+                if( Status == STATUS_SUCCESS )
+                    IrpContext->IsConcerned = isInclude;
+                else
+                    IrpContext->IsConcerned = false;
+            }
+        }
+
+    } while( false );
+
+    return Status;
 }

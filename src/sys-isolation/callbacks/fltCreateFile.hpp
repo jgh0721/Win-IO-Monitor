@@ -54,8 +54,9 @@ VOID InitializeVolumeProperties( __in PIRP_CONTEXT IrpContext );
 
 enum TyEnFileStatus
 {
-    FILE_ALREADY_EXISTS = 0x1,
-    FILE_ALREADY_READONLY = 0x2
+    FILE_ALREADY_EXISTS     = 0x1,
+    FILE_ALREADY_READONLY   = 0x2,
+    FILE_DIRECTORY          = 0x4
 };
 
 typedef struct _CREATE_ARGS
@@ -73,13 +74,14 @@ typedef struct _CREATE_ARGS
     OBJECT_ATTRIBUTES       CreateObjectAttributes;
     bool                    DeleteOnClose;
     bool                    RequiringOplock;
-
+    
     FCB*                    Fcb;
     FILE_OBJECT*            LowerFileObject;
     HANDLE                  LowerFileHandle;
 
     METADATA_DRIVER         MetaDataInfo;
-    BOOLEAN                 IsMetaDataOnCreate; // 해당 파일이 새로 생성되었고, 메타 데이터 생성 필요함 여부 
+    BOOLEAN                 IsMetaDataOnCreate; // 해당 파일이 새로 생성되었고, 메타 데이터 생성 필요함 여부
+    BOOLEAN                 IsStubCodeOnCreate; // 해당 파일이 새로 생성되었고, 스텁 코드 및 메타 데이터 생성이 필요함 여부( 반드시 IsMetaDataOnCreate 가 TRUE 여야한다 )
     
 } CREATE_ARGS, * PCREATE_ARGS;
 
@@ -101,5 +103,8 @@ NTSTATUS ProcessPreCreate_OVERWRITE_EXIST( __in IRP_CONTEXT* Args );
 NTSTATUS ProcessPreCreate_OVERWRITE_IF( __in IRP_CONTEXT* Args );
 NTSTATUS ProcessPreCreate_OVERWRITE_IF_NEW( __in IRP_CONTEXT* Args );
 NTSTATUS ProcessPreCreate_OVERWRITE_IF_EXIST( __in IRP_CONTEXT* Args );
+
+
+NTSTATUS GetFileStatus( __in IRP_CONTEXT* IrpContext );
 
 #endif // HDR_ISOLATION_CREATE

@@ -77,4 +77,19 @@ VOID ReleaseCmnResource( __in PIRP_CONTEXT IrpContext, __in LONG RsrcFlags );
     IrpContext->PreFltStatus = FltResult; \
     SetFlag( IrpContext->CompleteStatus, COMPLETE_RETURN_FLTSTATUS )
 
+#define CHECK_EVENT_GLOBAL_DIR_FILTER   0x1
+#define CHECK_EVENT_PROCESS_ONLY        0x2
+// this include CHECK_EVENT_PROCESS_ONLY
+#define CHECK_EVENT_PROCESS_DIR_FILTER  0x4
+
+#define CHECK_EVENT_IS_ENCRYPTED        0x10
+#define CHECK_EVENT_IS_RENAME           0x20
+
+NTSTATUS CheckEventTo( __in IRP_CONTEXT* IrpContext );
+
+NTSTATUS CheckEventToWithCREATE( __in IRP_CONTEXT* IrpContext, __in ULONG CheckFlags );
+NTSTATUS CheckEventToWithDIRECTORY_CONTROL( __in IRP_CONTEXT* IrpContext, __in ULONG CheckFlags );
+NTSTATUS CheckEventToWithQUERY_INFORMATION( __in IRP_CONTEXT* IrpContext, __in ULONG CheckFlags );
+NTSTATUS CheckEventToWithSET_INFORMATION( __in IRP_CONTEXT* IrpContext, __in ULONG CheckFlags );
+
 #endif // HDR_ISOLATION_IRPCONTEXT

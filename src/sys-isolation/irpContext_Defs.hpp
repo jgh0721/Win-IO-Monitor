@@ -54,7 +54,7 @@ typedef struct _IRP_CONTEXT
     TyGenericBuffer< WCHAR >            DstFileFullPath;
     WCHAR*                              DstFileName;                // DstFileFullPath 에서 경로 부분을 제외한 파일이름 + 확장자 
 
-    bool                                IsAudit;
+    bool                                IsConcerned;
 
     PVOID                               Params;                 // 각 IRP 마다 사용하는 고유의 입력 / 출력 변수 구조체에 대한 포인터
     PVOID                               Result;
