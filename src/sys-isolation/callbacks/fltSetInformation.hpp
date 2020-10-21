@@ -34,4 +34,6 @@ NTSTATUS ProcessSetFileRenameInformationEx( __in IRP_CONTEXT* IrpContext );
 NTSTATUS ProcessSetFileDispositionInformation( __in IRP_CONTEXT* IrpContext );
 NTSTATUS ProcessSetFileDispositionInformationEx( __in IRP_CONTEXT* IrpContext );
 
+NTSTATUS ProcessSetFileInformation( __in IRP_CONTEXT* IrpContext );
+
 #endif // HDR_ISOLATION_SET_INFORMATION

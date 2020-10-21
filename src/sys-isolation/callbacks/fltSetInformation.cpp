@@ -1,8 +1,11 @@
 ﻿#include "fltSetInformation.hpp"
 
+#include "utilities/bufferMgr.hpp"
 #include "privateFCBMgr.hpp"
 #include "irpContext.hpp"
 #include "metadata/Metadata.hpp"
+
+#include "fltCmnLibs.hpp"
 
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
@@ -13,7 +16,6 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreSetInformation( PFLT_CALLBACK_DATA Dat
 {
     FLT_PREOP_CALLBACK_STATUS                   FltStatus = FLT_PREOP_SUCCESS_NO_CALLBACK;
     IRP_CONTEXT*                                IrpContext = NULLPTR;
-    PFLT_CALLBACK_DATA                          NewCallbackData = NULLPTR;
 
     UNREFERENCED_PARAMETER( CompletionContext );
 
@@ -49,12 +51,12 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreSetInformation( PFLT_CALLBACK_DATA Dat
             case FilePositionInformation: {
                 ProcessSetFilePositionInformation( IrpContext );
             } break;
-            //case FileRenameInformation: {
-            //    ProcessSetFileRenameInformation( IrpContext );
-            //} break;
-            //case nsW32API::FileRenameInformationEx: {
-            //    ProcessSetFileRenameInformationEx( IrpContext );
-            //} break;
+            case FileRenameInformation: {
+                ProcessSetFileRenameInformation( IrpContext );
+            } break;
+            case nsW32API::FileRenameInformationEx: {
+                ProcessSetFileRenameInformationEx( IrpContext );
+            } break;
             //case FileDispositionInformation: {
             //    ProcessSetFileDispositionInformation( IrpContext );
             //} break;
@@ -62,30 +64,8 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreSetInformation( PFLT_CALLBACK_DATA Dat
             //    ProcessSetFileDispositionInformationEx( IrpContext );
             //} break;
 
-            default:
-            {
-                NTSTATUS Status = STATUS_SUCCESS;
-
-                Status = FltAllocateCallbackData( FltObjects->Instance, IrpContext->Ccb->LowerFileObject, &NewCallbackData );
-
-                if( !NT_SUCCESS( Status ) )
-                {
-                    KdPrint( ( "[WinIOSol] EvtID=%09d %s %s Status=0x%08x,%s\n",
-                               IrpContext->EvtID, __FUNCTION__
-                               , "FltAllocateCallbackData FAILED"
-                               , Status, ntkernel_error_category::find_ntstatus( Status )->message
-                               ) );
-
-                    AssignCmnResult( IrpContext, Status );
-                    break;
-                }
-
-                RtlCopyMemory( NewCallbackData->Iopb, Data->Iopb, sizeof( FLT_IO_PARAMETER_BLOCK ) );
-                NewCallbackData->Iopb->TargetFileObject = IrpContext->Ccb->LowerFileObject != NULLPTR ? IrpContext->Ccb->LowerFileObject : Fcb->LowerFileObject;
-                FltPerformSynchronousIo( NewCallbackData );
-
-                AssignCmnResult( IrpContext, NewCallbackData->IoStatus.Status );
-                AssignCmnResultInfo( IrpContext, NewCallbackData->IoStatus.Information );
+            default: {
+                ProcessSetFileInformation( IrpContext );
             } break;
         }
 
@@ -93,9 +73,6 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreSetInformation( PFLT_CALLBACK_DATA Dat
     }
     __finally
     {
-        if( NewCallbackData != NULLPTR )
-            FltFreeCallbackData( NewCallbackData );
-
         if( IrpContext != NULLPTR )
         {
             if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_RETURN_FLTSTATUS ) )
@@ -572,17 +549,111 @@ NTSTATUS ProcessSetFileRenameInformation( IRP_CONTEXT* IrpContext )
     auto FileInformationClass = ( nsW32API::FILE_INFORMATION_CLASS )IrpContext->Data->Iopb->Parameters.SetFileInformation.FileInformationClass;
     auto ParentOfTarget = IrpContext->Data->Iopb->Parameters.SetFileInformation.ParentOfTarget;
 
-    auto InfoBuffer = IrpContext->Data->Iopb->Parameters.SetFileInformation.InfoBuffer;
+    auto InfoBuffer = ( PFILE_RENAME_INFORMATION )IrpContext->Data->Iopb->Parameters.SetFileInformation.InfoBuffer;
+
+    PFLT_CALLBACK_DATA                          NewCallbackData = NULLPTR;
+    nsW32API::FILE_RENAME_INFORMATION*          NewInfoBuffer = NULLPTR;
+    TyGenericBuffer<WCHAR>                      Test;
 
     __try
     {
         AcquireCmnResource( IrpContext, INST_EXCLUSIVE );
         AcquireCmnResource( IrpContext, FCB_MAIN_EXCLUSIVE );
 
+        if( IrpContext->ProcessFilter != NULLPTR )
+        {
+            // Approved Process
+
+            // Non-Pretended File
+            if( Fcb->MetaDataInfo == NULLPTR || 
+                Fcb->MetaDataInfo->MetaData.Type != METADATA_STB_TYPE )
+            {
+                Status = ProcessSetFileInformation( IrpContext );
+                __leave;
+            }
+
+            auto Test = AllocateBuffer<WCHAR>( BUFFER_FILENAME, IrpContext->SrcFileFullPath.BufferSize + CONTAINOR_SUFFIX_MAX * sizeof( WCHAR ) );
+
+            // if dst filename equals pretended filename + suffix then reject request
+            RtlStringCbPrintfW( Test.Buffer, Test.BufferSize, L"%s%s", IrpContext->SrcFileName, Fcb->MetaDataInfo->MetaData.ContainorSuffix );
+
+            if( nsUtils::stricmp( Test.Buffer, IrpContext->DstFileName ) == 0 )
+            {
+                Status = STATUS_ACCESS_DENIED;
+                AssignCmnResult( IrpContext, Status );
+                __leave;
+            }
+
+            Status = FltAllocateCallbackData( IrpContext->FltObjects->Instance, IrpContext->Ccb->LowerFileObject, &NewCallbackData );
+
+            if( !NT_SUCCESS( Status ) )
+            {
+                KdPrint( ( "[WinIOSol] EvtID=%09d %s %s Status=0x%08x,%s\n",
+                           IrpContext->EvtID, __FUNCTION__
+                           , "FltAllocateCallbackData FAILED"
+                           , Status, ntkernel_error_category::find_ntstatus( Status )->message
+                           ) );
+
+                AssignCmnResult( IrpContext, Status );
+                __leave;
+            }
+
+            RtlCopyMemory( NewCallbackData->Iopb, IrpContext->Data->Iopb, sizeof( FLT_IO_PARAMETER_BLOCK ) );
+            NewCallbackData->Iopb->TargetFileObject = IrpContext->Ccb->LowerFileObject != NULLPTR ? IrpContext->Ccb->LowerFileObject : IrpContext->Fcb->LowerFileObject;
+
+            auto RequiredSize = Length + ( nsUtils::strlength( Fcb->MetaDataInfo->MetaData.ContainorSuffix ) * sizeof(WCHAR) );
+            auto NewInfoBuffer = ( nsW32API::FILE_RENAME_INFORMATION* )ExAllocatePool( PagedPool, RequiredSize );
+
+            RtlZeroMemory( NewInfoBuffer, RequiredSize );
+
+            NewCallbackData->Iopb->Parameters.SetFileInformation.Length = RequiredSize;
+            NewCallbackData->Iopb->Parameters.SetFileInformation.FileInformationClass = (::FILE_INFORMATION_CLASS)FileInformationClass;
+            NewCallbackData->Iopb->Parameters.SetFileInformation.ParentOfTarget = ParentOfTarget;
+            NewCallbackData->Iopb->Parameters.SetFileInformation.ReplaceIfExists = IrpContext->Data->Iopb->Parameters.SetFileInformation.ReplaceIfExists;;
+            NewCallbackData->Iopb->Parameters.SetFileInformation.InfoBuffer = NewInfoBuffer;
+
+            RtlCopyMemory( NewInfoBuffer, InfoBuffer, Length );
+            RtlStringCbCatW( NewInfoBuffer->FileName, RequiredSize, Fcb->MetaDataInfo->MetaData.ContainorSuffix );
+            NewInfoBuffer->FileNameLength = InfoBuffer->FileNameLength + ( nsUtils::strlength( Fcb->MetaDataInfo->MetaData.ContainorSuffix ) * sizeof( WCHAR ) );
+
+            FltPerformSynchronousIo( NewCallbackData );
+
+            AssignCmnResult( IrpContext, NewCallbackData->IoStatus.Status );
+            AssignCmnResultInfo( IrpContext, NewCallbackData->IoStatus.Information );
+        }
+        else
+        {
+            // Non-Approved Process
+
+            // Non-Pretended File
+            if( Fcb->MetaDataInfo == NULLPTR ||
+                Fcb->MetaDataInfo->MetaData.Type != METADATA_STB_TYPE )
+            {
+                Status = ProcessSetFileInformation( IrpContext );
+                __leave;
+            }
+
+            if( nsUtils::EndsWithW( IrpContext->DstFileName, Fcb->MetaDataInfo->MetaData.ContainorSuffix ) == NULLPTR )
+            {
+                Status = STATUS_ACCESS_DENIED;
+                AssignCmnResult( IrpContext, Status );
+                __leave;
+            }
+
+            Status = ProcessSetFileInformation( IrpContext );
+            __leave;
+        }
+
     }
     __finally
     {
+        if( NewInfoBuffer != NULLPTR )
+            ExFreePool( NewInfoBuffer );
 
+        DeallocateBuffer( &Test );
+
+        if( NewCallbackData != NULLPTR )
+            FltFreeCallbackData( NewCallbackData );
     }
 
     return Status;
@@ -599,17 +670,110 @@ NTSTATUS ProcessSetFileRenameInformationEx( IRP_CONTEXT* IrpContext )
     auto FileInformationClass = ( nsW32API::FILE_INFORMATION_CLASS )IrpContext->Data->Iopb->Parameters.SetFileInformation.FileInformationClass;
     auto ParentOfTarget = IrpContext->Data->Iopb->Parameters.SetFileInformation.ParentOfTarget;
 
-    auto InfoBuffer = IrpContext->Data->Iopb->Parameters.SetFileInformation.InfoBuffer;
+    auto InfoBuffer = (nsW32API::FILE_RENAME_INFORMATION_EX*)IrpContext->Data->Iopb->Parameters.SetFileInformation.InfoBuffer;
+
+    PFLT_CALLBACK_DATA                          NewCallbackData = NULLPTR;
+    nsW32API::FILE_RENAME_INFORMATION*          NewInfoBuffer = NULLPTR;
+    TyGenericBuffer<WCHAR>                      Test;
 
     __try
     {
         AcquireCmnResource( IrpContext, INST_EXCLUSIVE );
         AcquireCmnResource( IrpContext, FCB_MAIN_EXCLUSIVE );
 
+        if( IrpContext->ProcessFilter != NULLPTR )
+        {
+            // Approved Process
+
+            // Non-Pretended File
+            if( Fcb->MetaDataInfo == NULLPTR ||
+                Fcb->MetaDataInfo->MetaData.Type != METADATA_STB_TYPE )
+            {
+                Status = ProcessSetFileInformation( IrpContext );
+                __leave;
+            }
+
+            auto Test = AllocateBuffer<WCHAR>( BUFFER_FILENAME, IrpContext->SrcFileFullPath.BufferSize + CONTAINOR_SUFFIX_MAX * sizeof( WCHAR ) );
+
+            // if dst filename equals pretended filename + suffix then reject request
+            RtlStringCbPrintfW( Test.Buffer, Test.BufferSize, L"%s%s", IrpContext->SrcFileName, Fcb->MetaDataInfo->MetaData.ContainorSuffix );
+
+            if( nsUtils::stricmp( Test.Buffer, IrpContext->DstFileName ) == 0 )
+            {
+                Status = STATUS_ACCESS_DENIED;
+                AssignCmnResult( IrpContext, Status );
+                __leave;
+            }
+
+            Status = FltAllocateCallbackData( IrpContext->FltObjects->Instance, IrpContext->Ccb->LowerFileObject, &NewCallbackData );
+
+            if( !NT_SUCCESS( Status ) )
+            {
+                KdPrint( ( "[WinIOSol] EvtID=%09d %s %s Status=0x%08x,%s\n",
+                           IrpContext->EvtID, __FUNCTION__
+                           , "FltAllocateCallbackData FAILED"
+                           , Status, ntkernel_error_category::find_ntstatus( Status )->message
+                           ) );
+
+                AssignCmnResult( IrpContext, Status );
+                __leave;
+            }
+
+            RtlCopyMemory( NewCallbackData->Iopb, IrpContext->Data->Iopb, sizeof( FLT_IO_PARAMETER_BLOCK ) );
+            NewCallbackData->Iopb->TargetFileObject = IrpContext->Ccb->LowerFileObject != NULLPTR ? IrpContext->Ccb->LowerFileObject : IrpContext->Fcb->LowerFileObject;
+
+            auto RequiredSize = Length + ( nsUtils::strlength( Fcb->MetaDataInfo->MetaData.ContainorSuffix ) * sizeof( WCHAR ) );
+            auto NewInfoBuffer = ( nsW32API::FILE_RENAME_INFORMATION_EX* )ExAllocatePool( PagedPool, RequiredSize );
+
+            RtlZeroMemory( NewInfoBuffer, RequiredSize );
+
+            NewCallbackData->Iopb->Parameters.SetFileInformation.Length = RequiredSize;
+            NewCallbackData->Iopb->Parameters.SetFileInformation.FileInformationClass = ( ::FILE_INFORMATION_CLASS )FileInformationClass;
+            NewCallbackData->Iopb->Parameters.SetFileInformation.ParentOfTarget = ParentOfTarget;
+            NewCallbackData->Iopb->Parameters.SetFileInformation.ReplaceIfExists = IrpContext->Data->Iopb->Parameters.SetFileInformation.ReplaceIfExists;;
+            NewCallbackData->Iopb->Parameters.SetFileInformation.InfoBuffer = NewInfoBuffer;
+
+            RtlCopyMemory( NewInfoBuffer, InfoBuffer, Length );
+            RtlStringCbCatW( NewInfoBuffer->FileName, RequiredSize, Fcb->MetaDataInfo->MetaData.ContainorSuffix );
+            NewInfoBuffer->FileNameLength = InfoBuffer->FileNameLength + ( nsUtils::strlength( Fcb->MetaDataInfo->MetaData.ContainorSuffix ) * sizeof( WCHAR ) );
+
+            FltPerformSynchronousIo( NewCallbackData );
+
+            AssignCmnResult( IrpContext, NewCallbackData->IoStatus.Status );
+            AssignCmnResultInfo( IrpContext, NewCallbackData->IoStatus.Information );
+        }
+        else
+        {
+            // Non-Approved Process
+
+            // Non-Pretended File
+            if( Fcb->MetaDataInfo == NULLPTR ||
+                Fcb->MetaDataInfo->MetaData.Type != METADATA_STB_TYPE )
+            {
+                Status = ProcessSetFileInformation( IrpContext );
+                __leave;
+            }
+
+            if( nsUtils::EndsWithW( IrpContext->DstFileName, Fcb->MetaDataInfo->MetaData.ContainorSuffix ) == NULLPTR )
+            {
+                Status = STATUS_ACCESS_DENIED;
+                AssignCmnResult( IrpContext, Status );
+                __leave;
+            }
+
+            Status = ProcessSetFileInformation( IrpContext );
+            __leave;
+        }
     }
     __finally
     {
+        if( NewInfoBuffer != NULLPTR )
+            ExFreePool( NewInfoBuffer );
 
+        DeallocateBuffer( &Test );
+
+        if( NewCallbackData != NULLPTR )
+            FltFreeCallbackData( NewCallbackData );
     }
 
     return Status;
@@ -665,6 +829,43 @@ NTSTATUS ProcessSetFileDispositionInformationEx( IRP_CONTEXT* IrpContext )
     {
 
     }
+
+    return Status;
+}
+
+NTSTATUS ProcessSetFileInformation( IRP_CONTEXT* IrpContext )
+{
+    NTSTATUS                                    Status = STATUS_SUCCESS;
+    PFLT_CALLBACK_DATA                          NewCallbackData = NULLPTR;
+    const auto&                                 Data = IrpContext->Data;
+
+    do
+    {
+        Status = FltAllocateCallbackData( IrpContext->FltObjects->Instance, IrpContext->Ccb->LowerFileObject, &NewCallbackData );
+
+        if( !NT_SUCCESS( Status ) )
+        {
+            KdPrint( ( "[WinIOSol] EvtID=%09d %s %s Status=0x%08x,%s\n",
+                       IrpContext->EvtID, __FUNCTION__
+                       , "FltAllocateCallbackData FAILED"
+                       , Status, ntkernel_error_category::find_ntstatus( Status )->message
+                       ) );
+
+            AssignCmnResult( IrpContext, Status );
+            break;
+        }
+
+        RtlCopyMemory( NewCallbackData->Iopb, Data->Iopb, sizeof( FLT_IO_PARAMETER_BLOCK ) );
+        NewCallbackData->Iopb->TargetFileObject = IrpContext->Ccb->LowerFileObject != NULLPTR ? IrpContext->Ccb->LowerFileObject : IrpContext->Fcb->LowerFileObject;
+        FltPerformSynchronousIo( NewCallbackData );
+
+        AssignCmnResult( IrpContext, NewCallbackData->IoStatus.Status );
+        AssignCmnResultInfo( IrpContext, NewCallbackData->IoStatus.Information );
+
+    } while( false );
+
+    if( NewCallbackData != NULLPTR )
+        FltFreeCallbackData( NewCallbackData );
 
     return Status;
 }
