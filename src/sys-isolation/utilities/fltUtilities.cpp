@@ -189,3 +189,24 @@ NTSTATUS FltCreateFileOwn( IRP_CONTEXT* IrpContext, const WCHAR* FileFullPath, H
     DeallocateBuffer( &SrcFileFullPath );
     return Status;
 }
+
+WCHAR* ExtractFileFullPathWOVolume( CTX_INSTANCE_CONTEXT* InstanceContext, TyGenericBuffer<WCHAR>* FileFullPath )
+{
+    ASSERT( FileFullPath != NULLPTR );
+    ASSERT( FileFullPath->Buffer != NULLPTR );
+
+    WCHAR* FileFullPathWOVolume = NULLPTR;
+
+    if( FileFullPath->Buffer[ 1 ] == L':' )
+        FileFullPathWOVolume = &FileFullPath->Buffer[ 2 ];
+    else
+    {
+        ASSERT( InstanceContext != NULLPTR );
+        FileFullPathWOVolume = &FileFullPath->Buffer[ InstanceContext->DeviceNameCch ];
+    }
+
+    if( FileFullPathWOVolume == NULLPTR )
+        FileFullPathWOVolume = FileFullPath->Buffer;
+
+    return FileFullPathWOVolume;
+}

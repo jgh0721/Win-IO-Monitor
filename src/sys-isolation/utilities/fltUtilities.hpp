@@ -41,4 +41,6 @@ NTSTATUS FltCreateFileOwn( __in IRP_CONTEXT* IrpContext, __in_z const WCHAR* Fil
                            __in ULONG CreateOptions = FILE_NON_DIRECTORY_FILE,
                            __in ULONG Flags = IO_IGNORE_SHARE_ACCESS_CHECK );
 
+WCHAR* ExtractFileFullPathWOVolume( __in CTX_INSTANCE_CONTEXT* InstanceContext, __in TyGenericBuffer<WCHAR>* FileFullPath );
+
 #endif // HDR_DRIVER_UTILITIES
