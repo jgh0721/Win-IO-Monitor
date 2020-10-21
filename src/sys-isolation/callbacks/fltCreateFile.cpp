@@ -76,6 +76,9 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
         if( BooleanFlagOn( Args.CreateOptions, FILE_DIRECTORY_FILE ) )
             __leave;
 
+        if( BooleanFlagOn( Data->Iopb->OperationFlags, SL_OPEN_TARGET_DIRECTORY ) )
+            __leave;
+
         IrpContext = CreateIrpContext( Data, FltObjects );
         if( IrpContext == NULLPTR )
             __leave;
