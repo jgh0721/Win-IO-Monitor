@@ -24,6 +24,9 @@ typedef struct _METADATA_CONTEXT
 
 METADATA_CONTEXT MetaDataContext;
 
+///////////////////////////////////////////////////////////////////////////////
+/// MetaData Mgr
+
 NTSTATUS InitializeMetaDataMgr()
 {
     NTSTATUS Status = STATUS_UNSUCCESSFUL;
@@ -69,6 +72,40 @@ NTSTATUS UninitializeMetaDataMgr()
     } while( false );
 
     return Status;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/// MetaData Base Management
+
+METADATA_DRIVER* AllocateMetaDataInfo()
+{
+    auto MetaDataInfo = ( METADATA_DRIVER* )ExAllocateFromNPagedLookasideList( &MetaDataContext.MetaDataLookASideList );
+    if( MetaDataInfo != NULLPTR )
+        RtlZeroMemory( MetaDataInfo, METADATA_DRIVER_SIZE );
+
+    return MetaDataInfo;
+}
+
+void InitializeMetaDataInfo( METADATA_DRIVER* MetaDataInfo )
+{
+    ASSERT( MetaDataInfo != NULLPTR );
+    if( MetaDataInfo == NULLPTR )
+        return;
+
+    RtlZeroMemory( MetaDataInfo, METADATA_DRIVER_SIZE );
+    RtlCopyMemory( MetaDataInfo->MetaData.Magic, METADATA_MAGIC_TEXT, METADATA_MAGIC_TEXT_SIZE );
+
+    MetaDataInfo->MetaData.Version = 1;
+    MetaDataInfo->MetaData.Type = METADATA_NOR_TYPE;
+}
+
+void UninitializeMetaDataInfo( METADATA_DRIVER*& MetaDataInfo )
+{
+    if( MetaDataInfo == NULLPTR )
+        return;
+
+    ExFreeToNPagedLookasideList( &MetaDataContext.MetaDataLookASideList, MetaDataInfo );
+    MetaDataInfo = NULLPTR;
 }
 
 METADATA_TYPE GetFileMetaDataInfo( __in IRP_CONTEXT* IrpContext, __in PFILE_OBJECT FileObject, __out_opt METADATA_DRIVER* MetaDataInfo )
@@ -201,36 +238,6 @@ LONGLONG GetHDRSizeFromMetaData( METADATA_DRIVER* MetaDataInfo )
     return METADATA_DRIVER_SIZE + MetaDataInfo->MetaData.SolutionMetaDataSize + MetaDataInfo->MetaData.ContainorSize;
 }
 
-METADATA_DRIVER* AllocateMetaDataInfo()
-{
-    auto MetaDataInfo = ( METADATA_DRIVER* )ExAllocateFromNPagedLookasideList( &MetaDataContext.MetaDataLookASideList );
-    if( MetaDataInfo != NULLPTR )
-        RtlZeroMemory( MetaDataInfo, METADATA_DRIVER_SIZE );
-
-    return MetaDataInfo;
-}
-
-void InitializeMetaDataInfo( METADATA_DRIVER* MetaDataInfo )
-{
-    ASSERT( MetaDataInfo != NULLPTR );
-    if( MetaDataInfo == NULLPTR )
-        return;
-
-    RtlZeroMemory( MetaDataInfo, METADATA_DRIVER_SIZE );
-    RtlCopyMemory( MetaDataInfo->MetaData.Magic, METADATA_MAGIC_TEXT, METADATA_MAGIC_TEXT_SIZE );
-
-    MetaDataInfo->MetaData.Version = 1;
-    MetaDataInfo->MetaData.Type = METADATA_NOR_TYPE;
-}
-
-void UninitializeMetaDataInfo( METADATA_DRIVER*& MetaDataInfo )
-{
-    if( MetaDataInfo == NULLPTR )
-        return;
-    
-    ExFreeToNPagedLookasideList( &MetaDataContext.MetaDataLookASideList, MetaDataInfo );
-    MetaDataInfo = NULLPTR;
-}
 
 LARGE_INTEGER GetMetaDataOffset( METADATA_DRIVER* MetaDataInfo )
 {

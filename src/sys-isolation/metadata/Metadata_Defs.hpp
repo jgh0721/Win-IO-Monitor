@@ -69,7 +69,7 @@
                         Real = reject
                 Rename :
                         Normal = allow
-                        Pretend = allow, but cannot change extension
+                        Pretend = not visible
                         Real = allow, but cannot change extension
                 Delete :
                         Normal = allow
