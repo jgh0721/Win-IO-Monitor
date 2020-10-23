@@ -23,7 +23,9 @@ METADATA_DRIVER* AllocateMetaDataInfo();
 void InitializeMetaDataInfo( __inout METADATA_DRIVER* MetaDataInfo );
 void UninitializeMetaDataInfo( __in METADATA_DRIVER*& MetaDataInfo );
 
-METADATA_TYPE GetFileMetaDataInfo( __in IRP_CONTEXT* IrpContext, __in PFILE_OBJECT FileObject, __out_opt METADATA_DRIVER* MetaDataInfo );
+METADATA_TYPE GetFileMetaDataInfo( __in IRP_CONTEXT* IrpContext, __in PFILE_OBJECT FileObject, __out_opt METADATA_DRIVER* MetaDataInfo, __out PVOID* SolutionMetaData = NULLPTR, __out ULONG* SolutionMetaDataSize = 0 );
+METADATA_TYPE GetFileMetaDataInfo( __in const wchar_t* SrcFileFullPath, __out_opt METADATA_DRIVER* MetaDataInfo, __out_opt PVOID* SolutionMetaData = NULLPTR, __out_opt ULONG* SolutionMetaDataSize = 0 );
+
 LONGLONG GetFileSizeFromMetaData( __in METADATA_DRIVER* MetaDataInfo );
 LONGLONG GetHDRSizeFromMetaData( __in METADATA_DRIVER* MetaDataInfo );
 LARGE_INTEGER GetMetaDataOffset( __in METADATA_DRIVER* MetaDataInfo );

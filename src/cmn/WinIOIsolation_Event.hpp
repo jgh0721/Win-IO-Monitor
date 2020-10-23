@@ -1,12 +1,22 @@
 ﻿#ifndef HDR_WINIOISOLATION_EVENT
 #define HDR_WINIOISOLATION_EVENT
 
+#if defined(USE_ON_KERNEL )
+#include "fltBase.hpp"
+#else
+#include <Rpc.h>
+#endif
+
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
 #endif
 
 #ifndef CONTAINOR_SUFFIX_MAX
 #define CONTAINOR_SUFFIX_MAX 12
+#endif
+
+#ifndef MAX_SOLUTION_METADATA_SIZE
+#define MAX_SOLUTION_METADATA_SIZE 16384
 #endif
 
 typedef enum _ENCRYPTION_METHOD
@@ -38,12 +48,26 @@ typedef struct
     ULONG                                   EncryptConfigCount;
     ENCRYPT_CONFIG                          EncryptConfig[ ENCRYPTION_MAX ];
 
-    ULONG                                   LengthOfStubCodeX86;         // BYTE
-    ULONG                                   OffsetOfStubCodeX86;         // BYTE
-    ULONG                                   LengthOfStubCodeX64;         // BYTE
-    ULONG                                   OffsetOfStubCodeX64;         // BYTE
+    ULONG                                   LengthOfStubCodeX86;        // BYTE
+    ULONG                                   OffsetOfStubCodeX86;        // BYTE
+    ULONG                                   LengthOfStubCodeX64;        // BYTE
+    ULONG                                   OffsetOfStubCodeX64;        // BYTE
+
+    ULONG                                   SolutionMetaDataSize;       // BYTE, Must be multiply by Sector Size( Generally, Sector size is 512 )           
 
 } DRIVER_CONFIG;
+
+typedef struct _USER_FILE_SOLUTION_DATA
+{
+    ULONG                                   SizeOfStruct;
+
+    ULONG                                   LengthOfFileName;           // BYTE
+    ULONG                                   OffsetOfFileName;
+
+    ULONG                                   LengthOfSolutionData;       // BYTE
+    ULONG                                   OffsetOfSolutionData;
+    
+} USER_FILE_SOLUTION_DATA, *PUSER_SOLUTION_DATA;
 
 typedef enum _MSG_CATEGORY
 {
@@ -92,6 +116,35 @@ typedef enum _MSG_PROC_TYPE
     PROC_WAS_TERMINATED                     = 0x00000002
 } MSG_PROC_TYPE;
 
+typedef enum
+{
+    PROCESS_NOTIFY_CREATION_TERMINATION = 0x1,
+    PROCESS_DENY_CREATION = 0x2,
+    PROCESS_DENY_TERMINATION = 0x4,
+    PROCESS_APPLY_CHILD_PROCESS = 0x8
+
+} PROCESS_FILTER_TYPE;
+
+typedef struct _USER_PROCESS_FILTER
+{
+    UUID                                    Id;
+    ULONG                                   ProcessId;
+    WCHAR                                   ProcessFilterMask[ MAX_PATH ];
+    ULONG                                   ProcessFilter;      // PROCESS_FILTER_TYPE 의 조합
+
+} USER_PROCESS_FILTER, * PUSER_PROCESS_FILTER;
+
+typedef struct _USER_PROCESS_FILTER_ENTRY
+{
+    UUID                                    Id;
+    MSG_CATEGORY                            FilterCategory;
+    ULONGLONG                               FilterType;         // MSG_FS_TYPE or MSG_FS_NOTIFY_TYPE or MSG_PROC_TYPE
+    WCHAR                                   FilterMask[ MAX_PATH ];
+    BOOLEAN                                 IsManagedFile;      // 만약, FilterMask 가 빈 문자열이고, 이 값이 TRUE 라면, 파일이름 / 확장자 등에 상관없이 관리되는 파일( 암호화된 파일 ) 이 설정된다
+    BOOLEAN                                 IsInclude;          // TRUE 포함, FALSE 예외
+
+} USER_PROCESS_FILTER_ENTRY, * PUSER_PROCESS_FILTER_ENTRY;
+
 typedef union TyMsgParameters
 {
     struct
@@ -104,25 +157,33 @@ typedef union TyMsgParameters
 
         BOOLEAN                             IsAlreadyExists;
         BOOLEAN                             IsContainSolutionMetaData;
+        ULONG                               SolutionMetaDataSize;
+        BYTE                                SolutionMetaData[ MAX_SOLUTION_METADATA_SIZE ];
     } Create;
 
     struct
     {
-        BOOLEAN                             IsCreateMetaData;
-        BOOLEAN                             IsApplyToNameChanger;
-        BOOLEAN                             IsEncrypt;
+        BOOLEAN                             IsUseIsolation;         // managed by this driver
 
-        ENCRYPTION_METHOD                   EncryptionMethod;
+        BOOLEAN                             IsUseContainor;
         WCHAR                               NameChangeSuffix[ CONTAINOR_SUFFIX_MAX ];
 
+        BOOLEAN                             IsUseEncryption;
+        ENCRYPTION_METHOD                   EncryptionMethod;
+
+        BOOLEAN                             IsUseSolutionMetaData;
+        ULONG                               SolutionMetaDataSize;
+        BYTE                                SolutionMetaData[ MAX_SOLUTION_METADATA_SIZE ];
     } CreateResult;
 
     struct
     {
         // caller process has rights for read/write decrypted data on encrypted file
         BOOLEAN                             IsAccessEncryption;
-        BOOLEAN                             IsUpdateMetaData;
+        BOOLEAN                             IsApplyWithSolutionMetaData;
 
+        ULONG                               SolutionMetaDataSize;
+        BYTE                                SolutionMetaData[ MAX_SOLUTION_METADATA_SIZE ];
     } OpenResult;
 
 } MSG_PARAMETERS, *PMSG_PARAMETERS;
@@ -160,8 +221,6 @@ typedef struct _MSG_REPLY_PACKET
     NTSTATUS                                Status;
 
     MSG_PARAMETERS                          Parameters;
-
-    BYTE                                    SolutionMetaData[ 1 ];    // BYTE ARRAY
 
 } MSG_REPLY_PACKET, *PMSG_REPLY_PACKET;
 

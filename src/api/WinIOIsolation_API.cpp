@@ -333,3 +333,152 @@ DWORD ResetGlobalFilter()
 
     return dwRet;
 }
+
+///////////////////////////////////////////////////////////////////////////////
+/// File Management
+
+DWORD GetFileType( const wchar_t* wszFileFullPath, ULONG* FileType )
+{
+    DWORD dwRet = ERROR_SUCCESS;
+    DWORD dwRetLen = 0;
+    HANDLE hDevice = INVALID_HANDLE_VALUE;
+
+    do
+    {
+        hDevice = CreateFileW( L"\\\\." DEVICE_NAME,
+                               GENERIC_READ | GENERIC_WRITE,
+                               FILE_SHARE_READ | FILE_SHARE_WRITE,
+                               NULL,
+                               OPEN_EXISTING,
+                               FILE_ATTRIBUTE_NORMAL,
+                               NULL );
+
+        if( hDevice == INVALID_HANDLE_VALUE )
+        {
+            dwRet = GetLastError();
+            break;
+        }
+
+        BOOL bSuccess = DeviceIoControl( hDevice, IOCTL_FILE_GET_FILE_TYPE,
+                                         (LPVOID)wszFileFullPath, (wcslen( wszFileFullPath ) + 1) * sizeof(WCHAR),
+                                         FileType, sizeof(ULONG),
+                                         ( LPDWORD )&dwRetLen, NULL );
+
+
+        if( bSuccess != FALSE )
+            dwRet = ERROR_SUCCESS;
+        else
+            dwRet = GetLastError();
+
+    } while( false );
+
+    return dwRet;
+}
+
+DWORD SetFileSolutionMetaData( const wchar_t* wszFileFullPath, PVOID Buffer, ULONG* BufferSize )
+{
+    DWORD dwRet = ERROR_SUCCESS;
+    DWORD dwRetLen = 0;
+    HANDLE hDevice = INVALID_HANDLE_VALUE;
+    USER_FILE_SOLUTION_DATA* UserFileSolutionData = NULL;
+
+    do
+    {
+        if( wszFileFullPath == NULL || Buffer == NULL || BufferSize == NULL )
+        {
+            dwRet = STATUS_INVALID_PARAMETER;
+            break;
+        }
+
+        hDevice = CreateFileW( L"\\\\." DEVICE_NAME,
+                               GENERIC_READ | GENERIC_WRITE,
+                               FILE_SHARE_READ | FILE_SHARE_WRITE,
+                               NULL,
+                               OPEN_EXISTING,
+                               FILE_ATTRIBUTE_NORMAL,
+                               NULL );
+
+        if( hDevice == INVALID_HANDLE_VALUE )
+        {
+            dwRet = GetLastError();
+            break;
+        }
+
+        ULONG RequiredSize = sizeof( USER_FILE_SOLUTION_DATA );
+        RequiredSize += ( wcslen( wszFileFullPath ) + 1 ) * sizeof( WCHAR );
+        RequiredSize += *BufferSize;
+
+        UserFileSolutionData = ( USER_FILE_SOLUTION_DATA* )malloc( RequiredSize );
+        memset( UserFileSolutionData, '\0', RequiredSize );
+
+        UserFileSolutionData->SizeOfStruct = RequiredSize;
+
+        UserFileSolutionData->LengthOfFileName = ( wcslen( wszFileFullPath ) + 1 ) * sizeof( WCHAR );
+        UserFileSolutionData->OffsetOfFileName = sizeof( USER_FILE_SOLUTION_DATA );
+        swprintf( ( PWCH )( ( PBYTE )( UserFileSolutionData ) + UserFileSolutionData->OffsetOfFileName ),
+                  L"%s", wszFileFullPath );
+
+        UserFileSolutionData->LengthOfSolutionData = *BufferSize;
+        UserFileSolutionData->OffsetOfSolutionData = UserFileSolutionData->OffsetOfFileName + UserFileSolutionData->LengthOfFileName;
+        memcpy( ( ( PBYTE )( UserFileSolutionData )+UserFileSolutionData->OffsetOfSolutionData ),
+                Buffer, *BufferSize );
+
+        BOOL bSuccess = DeviceIoControl( hDevice, IOCTL_FILE_SET_SOLUTION_DATA,
+                                         ( LPVOID )UserFileSolutionData, RequiredSize,
+                                         NULL, 0,
+                                         ( LPDWORD )&dwRetLen, NULL );
+
+        if( bSuccess != FALSE )
+            dwRet = ERROR_SUCCESS;
+        else
+            dwRet = GetLastError();
+
+        *BufferSize = dwRetLen;
+
+    } while( false );
+
+    if( UserFileSolutionData != NULL )
+        free( UserFileSolutionData );
+
+    return dwRet;
+}
+
+DWORD GetFileSolutionMetaData( const wchar_t* wszFileFullPath, PVOID Buffer, ULONG* BufferSize )
+{
+    DWORD dwRet = ERROR_SUCCESS;
+    DWORD dwRetLen = 0;
+    HANDLE hDevice = INVALID_HANDLE_VALUE;
+
+    do
+    {
+        hDevice = CreateFileW( L"\\\\." DEVICE_NAME,
+                               GENERIC_READ | GENERIC_WRITE,
+                               FILE_SHARE_READ | FILE_SHARE_WRITE,
+                               NULL,
+                               OPEN_EXISTING,
+                               FILE_ATTRIBUTE_NORMAL,
+                               NULL );
+
+        if( hDevice == INVALID_HANDLE_VALUE )
+        {
+            dwRet = GetLastError();
+            break;
+        }
+
+        BOOL bSuccess = DeviceIoControl( hDevice, IOCTL_FILE_GET_SOLUTION_DATA,
+                                         ( LPVOID )wszFileFullPath, ( wcslen( wszFileFullPath ) + 1 ) * sizeof( WCHAR ),
+                                         Buffer, *BufferSize,
+                                         ( LPDWORD )&dwRetLen, NULL );
+
+
+        if( bSuccess != FALSE )
+            dwRet = ERROR_SUCCESS;
+        else
+            dwRet = GetLastError();
+
+        *BufferSize = dwRetLen;
+
+    } while( false );
+
+    return dwRet;
+}

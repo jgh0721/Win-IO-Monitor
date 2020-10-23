@@ -3,6 +3,8 @@
 #include "driverMgmt.hpp"
 #include "fltCmnLibs_string.hpp"
 #include "utilities/contextMgr_Defs.hpp"
+#include "utilities/volumeMgr.hpp"
+#include "utilities/contextMgr.hpp"
 
 #include "policies/GlobalFilter.hpp"
 
@@ -51,6 +53,17 @@ BOOLEAN FLTAPI FastIoDeviceControl( PFILE_OBJECT FileObject, BOOLEAN Wait, PVOID
         case IOCTL_RST_GLOBAL_POLICY: {
             DevIOCntlRstGlobalPolicy( FileObject, Wait, InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength, IoControlCode, IoStatus, DeviceObject );
         } break;
+
+        case IOCTL_FILE_GET_FILE_TYPE: {
+            DevIOCntlFileGetType( FileObject, Wait, InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength, IoControlCode, IoStatus, DeviceObject );
+        } break;
+        case IOCTL_FILE_SET_SOLUTION_DATA: {
+            DevIOCntlFileSetSolutionData( FileObject, Wait, InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength, IoControlCode, IoStatus, DeviceObject );
+        } break;
+        case IOCTL_FILE_GET_SOLUTION_DATA: {
+            DevIOCntlFileGetSolutionData( FileObject, Wait, InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength, IoControlCode, IoStatus, DeviceObject );
+        } break;
+
     }
 
     // NOTE: 이곳에서 FALSE 를 반환하면 IO 관리자는 IRP 를 생성하여 전달한다 
@@ -304,6 +317,62 @@ BOOLEAN DevIOCntlRstGlobalPolicy( PFILE_OBJECT FileObject, BOOLEAN Wait, PVOID I
             IoStatus->Status = STATUS_PRIVILEGE_NOT_HELD;
             break;
         }
+
+        // TODO:
+
+    } while( false );
+
+    return TRUE;
+}
+
+BOOLEAN DevIOCntlFileGetType( PFILE_OBJECT FileObject, BOOLEAN Wait, PVOID InputBuffer, ULONG InputBufferLength, PVOID OutputBuffer, ULONG OutputBufferLength, ULONG IoControlCode, PIO_STATUS_BLOCK IoStatus, PDEVICE_OBJECT DeviceObject )
+{
+    do
+    {
+        if( InputBuffer == NULLPTR || InputBufferLength == 0 )
+        {
+            IoStatus->Status = STATUS_INVALID_PARAMETER;
+            break;
+        }
+
+        if( OutputBuffer == NULLPTR || OutputBufferLength != sizeof(ULONG) )
+        {
+            IoStatus->Status = STATUS_BUFFER_TOO_SMALL;
+            IoStatus->Information = sizeof( ULONG );
+            break;
+        }
+
+        METADATA_DRIVER MetaDataInfo;
+        *(ULONG*)OutputBuffer = GetFileMetaDataInfo( ( WCHAR* )InputBuffer, &MetaDataInfo, NULLPTR, 0 );
+
+        IoStatus->Status = STATUS_SUCCESS;
+        IoStatus->Information = sizeof( ULONG );
+
+    } while( false );
+    
+    return TRUE;
+}
+
+BOOLEAN DevIOCntlFileSetSolutionData( PFILE_OBJECT FileObject, BOOLEAN Wait, PVOID InputBuffer, ULONG InputBufferLength, PVOID OutputBuffer, ULONG OutputBufferLength, ULONG IoControlCode, PIO_STATUS_BLOCK IoStatus, PDEVICE_OBJECT DeviceObject )
+{
+    do
+    {
+        if( FeatureContext.CntlProcessId != ( ULONG )PsGetCurrentProcessId() )
+        {
+            IoStatus->Status = STATUS_PRIVILEGE_NOT_HELD;
+            break;
+        }
+
+        // TODO:
+
+    } while( false );
+    return TRUE;
+}
+
+BOOLEAN DevIOCntlFileGetSolutionData( PFILE_OBJECT FileObject, BOOLEAN Wait, PVOID InputBuffer, ULONG InputBufferLength, PVOID OutputBuffer, ULONG OutputBufferLength, ULONG IoControlCode, PIO_STATUS_BLOCK IoStatus, PDEVICE_OBJECT DeviceObject )
+{
+    do
+    {
 
         // TODO:
 

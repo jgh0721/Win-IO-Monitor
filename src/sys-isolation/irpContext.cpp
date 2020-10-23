@@ -330,7 +330,8 @@ VOID CloseIrpContext( __in PIRP_CONTEXT IrpContext )
     if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_FREE_INST_RSRC ) )
         FltReleaseResource( &IrpContext->InstanceContext->VcbLock );
 
-    ExFreeToNPagedLookasideList( &GlobalContext.DebugLookasideList, IrpContext->DebugText );
+    if( IrpContext->DebugText != NULLPTR )
+        ExFreeToNPagedLookasideList( &GlobalContext.DebugLookasideList, IrpContext->DebugText );
 
     if( IrpContext->ProcessFilter != NULLPTR )
     {

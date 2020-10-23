@@ -146,6 +146,12 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
                     ObDereferenceObject( Args.LowerFileObject );
             }
 
+            if( Args.SolutionMetaDataSize > 0 && Args.SolutionMetaData != NULLPTR )
+            {
+                ExFreePool( Args.SolutionMetaData );
+                Args.SolutionMetaDataSize = 0;
+            }
+
             if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_RETURN_FLTSTATUS ) )
                 FltStatus = IrpContext->PreFltStatus;
         }
@@ -447,14 +453,70 @@ NTSTATUS CreateFileNonExistFCB( IRP_CONTEXT* IrpContext )
             __leave;
         }
 
-        // TODO: Notify To Client, and receive Client Response.
+        // TODO: Notify To Client, and receive Client Response. once report for process, for file
 
-        if( Args->MetaDataInfo.MetaData.Type == METADATA_STB_TYPE )
+        switch( Args->CreateDisposition )
+        {
+            case FILE_SUPERSEDE: {
+                Args->IsMetaDataOnCreate = TRUE;
+                Args->IsStubCodeOnCreate = TRUE;
+            } break;
+            case FILE_OPEN: {} break;
+            case FILE_CREATE: {
+                if( FlagOn( Args->FileStatus, FILE_ALREADY_EXISTS ) )
+                {
+                    Status = STATUS_OBJECT_NAME_COLLISION;
+                    AssignCmnResult( IrpContext, Status );
+                    AssignCmnFltResult( IrpContext, FLT_PREOP_COMPLETE );
+                    __leave;
+                }
+
+                Args->IsMetaDataOnCreate = TRUE;
+                Args->IsStubCodeOnCreate = TRUE;
+
+            } break;
+            case FILE_OPEN_IF: {
+                if( !FlagOn( Args->FileStatus, FILE_ALREADY_EXISTS ) )
+                {
+                    Args->IsMetaDataOnCreate = TRUE;
+                    Args->IsStubCodeOnCreate = TRUE;
+                }
+            } break;
+            case FILE_OVERWRITE: {
+                if( !FlagOn( Args->FileStatus, FILE_ALREADY_EXISTS ) )
+                {
+                    Status = STATUS_OBJECT_NAME_NOT_FOUND;
+                    AssignCmnResult( IrpContext, Status );
+                    AssignCmnFltResult( IrpContext, FLT_PREOP_COMPLETE );
+                    __leave;
+                }
+
+                Args->IsMetaDataOnCreate = TRUE;
+                Args->IsStubCodeOnCreate = TRUE;
+
+            } break;
+            case FILE_OVERWRITE_IF: {
+                if( FlagOn( Args->FileStatus, FILE_ALREADY_EXISTS ) )
+                {
+                    if( Args->MetaDataInfo.MetaData.Type != METADATA_STB_TYPE )
+                    {
+                        AssignCmnFltResult( IrpContext, FLT_PREOP_SUCCESS_NO_CALLBACK );
+                        __leave;
+                    }
+                }
+
+                Args->IsMetaDataOnCreate = TRUE;
+                Args->IsStubCodeOnCreate = TRUE;
+            } break;
+        }
+
+        if( ( FlagOn( Args->FileStatus, FILE_ALREADY_EXISTS ) && 
+            Args->MetaDataInfo.MetaData.Type == METADATA_STB_TYPE ) || Args->IsStubCodeOnCreate != FALSE )
         {
             RtlZeroMemory( Args->CreateFileName.Buffer, Args->CreateFileName.BufferSize );
             RtlStringCbCatW( Args->CreateFileName.Buffer, Args->CreateFileName.BufferSize, IrpContext->InstanceContext->DeviceNameBuffer );
             RtlStringCbCatW( Args->CreateFileName.Buffer, Args->CreateFileName.BufferSize, IrpContext->SrcFileFullPathWOVolume );
-            RtlStringCbCatW( Args->CreateFileName.Buffer, Args->CreateFileName.BufferSize, Args->MetaDataInfo.MetaData.ContainorSuffix );
+            RtlStringCbCatW( Args->CreateFileName.Buffer, Args->CreateFileName.BufferSize, L".EXE" );
             RtlInitUnicodeString( &Args->CreateFileNameUS, Args->CreateFileName.Buffer );
         }
 

@@ -180,17 +180,14 @@ NTSTATUS InitializeFcbAndCcb( IRP_CONTEXT* IrpContext )
                     Fcb->FileFullPathWOVolume = ExtractFileFullPathWOVolume( IrpContext->InstanceContext, &Fcb->FileFullPath );
                     Fcb->FileName = nsUtils::ReverseFindW( Fcb->FileFullPath.Buffer, L'\\' );
 
-                    if( Args->MetaDataInfo.MetaData.Type == METADATA_STB_TYPE )
-                    {
-                        Fcb->PretendFileFullPath = CloneBuffer( &Args->CreateFileName );
+                    Fcb->PretendFileFullPath = CloneBuffer( &Args->CreateFileName );
 
-                        auto Suffix = nsUtils::ReverseFindW( Fcb->PretendFileFullPath.Buffer, L'.' );
-                        while( Suffix != NULLPTR && *Suffix != L'\0' )
-                            *Suffix++ = L'\0';
+                    auto Suffix = nsUtils::ReverseFindW( Fcb->PretendFileFullPath.Buffer, L'.' );
+                    while( Suffix != NULLPTR && *Suffix != L'\0' )
+                        *Suffix++ = L'\0';
 
-                        Fcb->PretendFileFullPathWOVolume = ExtractFileFullPathWOVolume( IrpContext->InstanceContext, &Fcb->PretendFileFullPath );
-                        Fcb->FileName = nsUtils::ReverseFindW( Fcb->PretendFileFullPath.Buffer, L'\\' );
-                    }
+                    Fcb->PretendFileFullPathWOVolume = ExtractFileFullPathWOVolume( IrpContext->InstanceContext, &Fcb->PretendFileFullPath );
+                    Fcb->FileName = nsUtils::ReverseFindW( Fcb->PretendFileFullPath.Buffer, L'\\' );
                 }
             }  // if FILE_ALREADY_EXISTS
         }
@@ -235,19 +232,19 @@ NTSTATUS InitializeFcbAndCcb( IRP_CONTEXT* IrpContext )
                     Fcb->FileFullPathWOVolume = ExtractFileFullPathWOVolume( IrpContext->InstanceContext, &Fcb->FileFullPath );
                     Fcb->FileName = nsUtils::ReverseFindW( Fcb->FileFullPath.Buffer, L'\\' );
 
-                    if( Args->MetaDataInfo.MetaData.Type == METADATA_STB_TYPE )
-                    {
-                        Fcb->PretendFileFullPath = CloneBuffer( &Args->CreateFileName );
+                    Fcb->PretendFileFullPath = CloneBuffer( &Args->CreateFileName );
 
-                        auto Suffix = nsUtils::ReverseFindW( Fcb->PretendFileFullPath.Buffer, L'.' );
-                        while( Suffix != NULLPTR && *Suffix != L'\0' )
-                            *Suffix++ = L'\0';
+                    auto Suffix = nsUtils::ReverseFindW( Fcb->PretendFileFullPath.Buffer, L'.' );
+                    while( Suffix != NULLPTR && *Suffix != L'\0' )
+                        *Suffix++ = L'\0';
 
-                        Fcb->PretendFileFullPathWOVolume = ExtractFileFullPathWOVolume( IrpContext->InstanceContext, &Fcb->PretendFileFullPath );
-                        Fcb->FileName = nsUtils::ReverseFindW( Fcb->PretendFileFullPath.Buffer, L'\\' );
-                    }
+                    Fcb->PretendFileFullPathWOVolume = ExtractFileFullPathWOVolume( IrpContext->InstanceContext, &Fcb->PretendFileFullPath );
+                    Fcb->FileName = nsUtils::ReverseFindW( Fcb->PretendFileFullPath.Buffer, L'\\' );
                 }
             } // if FILE_ALREADY_EXISTS
+
+            if( ( Args->MetaDataInfo.MetaData.Type == METADATA_STB_TYPE || Args->IsStubCodeOnCreate != FALSE ) && Fcb->PretendFileFullPathWOVolume == NULLPTR )
+                ASSERT( false );
         }
 
         ///////////////////////////////////////////////////////////////////////
