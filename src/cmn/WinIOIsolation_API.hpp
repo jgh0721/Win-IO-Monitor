@@ -43,6 +43,7 @@ DWORD GetDriverStatus( __in BOOLEAN* IsRunning );
 
 DWORD AddGlobalFilterMask( __in const wchar_t* wszFilterMask, __in bool isInclude );
 DWORD DelGlobalFilterMask( __in const wchar_t* wszFilterMask, __in bool isInclude );
+DWORD GetGlobalFilterMaskCnt( __in bool isInclude, __out ULONG* Count );
 DWORD ResetGlobalFilter();
 
 

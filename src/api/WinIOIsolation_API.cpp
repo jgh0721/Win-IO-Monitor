@@ -4,6 +4,8 @@
 #include "WinIOIsolation_Names.hpp"
 
 #include <process.h>
+#include <stdlib.h>
+#include <stdio.h>
 
 #pragma comment( lib, "fltlib" )
 
@@ -140,6 +142,194 @@ DWORD GetDriverStatus( BOOLEAN* IsRunning )
 
     if( hDevice != INVALID_HANDLE_VALUE )
         CloseHandle( hDevice );
+
+    return dwRet;
+}
+
+DWORD AddGlobalFilterMask( const wchar_t* wszFilterMask, bool isInclude )
+{
+    DWORD dwRet = ERROR_SUCCESS;
+    DWORD dwRetLen = 0;
+    HANDLE hDevice = INVALID_HANDLE_VALUE;
+    WCHAR* wszBuffer = NULL;
+
+    do
+    {
+        hDevice = CreateFileW( L"\\\\." DEVICE_NAME,
+                               GENERIC_READ | GENERIC_WRITE,
+                               FILE_SHARE_READ | FILE_SHARE_WRITE,
+                               NULL,
+                               OPEN_EXISTING,
+                               FILE_ATTRIBUTE_NORMAL,
+                               NULL );
+
+        if( hDevice == INVALID_HANDLE_VALUE )
+        {
+            dwRet = GetLastError();
+            break;
+        }
+
+        size_t RequiredSize = 0;
+        RequiredSize += sizeof( WCHAR );        // 0 = Exclude, 1 = Include
+        RequiredSize += sizeof( WCHAR );        // separator '|'
+        RequiredSize += wcslen( wszFilterMask ) * sizeof( WCHAR );
+        RequiredSize += sizeof( WCHAR );        // NULL CHAR
+
+        wszBuffer = ( WCHAR* )malloc( RequiredSize );
+        memset( wszBuffer, '\0', RequiredSize );
+        swprintf( wszBuffer, L"%d|%s", isInclude == true ? TRUE : FALSE, wszFilterMask );
+
+        BOOL bSuccess = DeviceIoControl( hDevice, IOCTL_ADD_GLOBAL_POLICY,
+                                         wszBuffer, ( DWORD )RequiredSize,
+                                         NULL, 0,
+                                         ( LPDWORD )&dwRetLen, NULL );
+
+        if( bSuccess != FALSE )
+            dwRet = ERROR_SUCCESS;
+        else
+            dwRet = GetLastError();
+
+    } while( false );
+
+    if( wszBuffer != NULL )
+        free( wszBuffer );
+
+    return dwRet;
+}
+
+DWORD DelGlobalFilterMask( const wchar_t* wszFilterMask, bool isInclude )
+{
+    DWORD dwRet = ERROR_SUCCESS;
+    DWORD dwRetLen = 0;
+    HANDLE hDevice = INVALID_HANDLE_VALUE;
+    WCHAR* wszBuffer = NULL;
+
+    do
+    {
+        hDevice = CreateFileW( L"\\\\." DEVICE_NAME,
+                               GENERIC_READ | GENERIC_WRITE,
+                               FILE_SHARE_READ | FILE_SHARE_WRITE,
+                               NULL,
+                               OPEN_EXISTING,
+                               FILE_ATTRIBUTE_NORMAL,
+                               NULL );
+
+        if( hDevice == INVALID_HANDLE_VALUE )
+        {
+            dwRet = GetLastError();
+            break;
+        }
+
+        size_t RequiredSize = 0;
+        RequiredSize += sizeof( WCHAR );        // 0 = Exclude, 1 = Include
+        RequiredSize += sizeof( WCHAR );        // separator '|'
+        RequiredSize += wcslen( wszFilterMask ) * sizeof( WCHAR );
+        RequiredSize += sizeof( WCHAR );        // NULL CHAR
+
+        wszBuffer = ( WCHAR* )malloc( RequiredSize );
+        memset( wszBuffer, '\0', RequiredSize );
+        swprintf( wszBuffer, L"%d|%s", isInclude == true ? TRUE : FALSE, wszFilterMask );
+
+        BOOL bSuccess = DeviceIoControl( hDevice, IOCTL_DEL_GLOBAL_POLICY_BY_MASK,
+                                         wszBuffer, ( DWORD )RequiredSize,
+                                         NULL, 0,
+                                         ( LPDWORD )&dwRetLen, NULL );
+
+        if( bSuccess != FALSE )
+            dwRet = ERROR_SUCCESS;
+        else
+            dwRet = GetLastError();
+
+    } while( false );
+
+    if( wszBuffer != NULL )
+        free( wszBuffer );
+
+    return dwRet;
+}
+
+DWORD GetGlobalFilterMaskCnt( bool isInclude, ULONG* Count )
+{
+    DWORD dwRet = ERROR_SUCCESS;
+    DWORD dwRetLen = 0;
+    HANDLE hDevice = INVALID_HANDLE_VALUE;
+    WCHAR* wszBuffer = NULL;
+
+    do
+    {
+        hDevice = CreateFileW( L"\\\\." DEVICE_NAME,
+                               GENERIC_READ | GENERIC_WRITE,
+                               FILE_SHARE_READ | FILE_SHARE_WRITE,
+                               NULL,
+                               OPEN_EXISTING,
+                               FILE_ATTRIBUTE_NORMAL,
+                               NULL );
+
+        if( hDevice == INVALID_HANDLE_VALUE )
+        {
+            dwRet = GetLastError();
+            break;
+        }
+
+        size_t RequiredSize = 0;
+        RequiredSize += sizeof( WCHAR );        // 0 = Exclude, 1 = Include
+
+        wszBuffer = ( WCHAR* )malloc( RequiredSize );
+        memset( wszBuffer, '\0', RequiredSize );
+        swprintf( wszBuffer, L"%d", isInclude == true ? TRUE : FALSE );
+
+        BOOL bSuccess = DeviceIoControl( hDevice, IOCTL_DEL_GLOBAL_POLICY_BY_MASK,
+                                         wszBuffer, ( DWORD )RequiredSize,
+                                         Count, sizeof(ULONG),
+                                         ( LPDWORD )&dwRetLen, NULL );
+
+        if( bSuccess != FALSE )
+            dwRet = ERROR_SUCCESS;
+        else
+            dwRet = GetLastError();
+
+    } while( false );
+
+    if( wszBuffer != NULL )
+        free( wszBuffer );
+
+    return dwRet;
+}
+
+DWORD ResetGlobalFilter()
+{
+    DWORD dwRet = ERROR_SUCCESS;
+    DWORD dwRetLen = 0;
+    HANDLE hDevice = INVALID_HANDLE_VALUE;
+
+    do
+    {
+        hDevice = CreateFileW( L"\\\\." DEVICE_NAME,
+                               GENERIC_READ | GENERIC_WRITE,
+                               FILE_SHARE_READ | FILE_SHARE_WRITE,
+                               NULL,
+                               OPEN_EXISTING,
+                               FILE_ATTRIBUTE_NORMAL,
+                               NULL );
+
+        if( hDevice == INVALID_HANDLE_VALUE )
+        {
+            dwRet = GetLastError();
+            break;
+        }
+
+        BOOL bSuccess = DeviceIoControl( hDevice, IOCTL_RST_GLOBAL_POLICY,
+                                         NULL, 0,
+                                         NULL, 0,
+                                         ( LPDWORD )&dwRetLen, NULL );
+
+
+        if( bSuccess != FALSE )
+            dwRet = ERROR_SUCCESS;
+        else
+            dwRet = GetLastError();
+
+    } while( false );
 
     return dwRet;
 }

@@ -1,7 +1,10 @@
 ﻿#include "deviceCntl.hpp"
 
 #include "driverMgmt.hpp"
+#include "fltCmnLibs_string.hpp"
 #include "utilities/contextMgr_Defs.hpp"
+
+#include "policies/GlobalFilter.hpp"
 
 #include "WinIOIsolation_IOCTL.hpp"
 #include "metadata/Metadata.hpp"
@@ -34,6 +37,19 @@ BOOLEAN FLTAPI FastIoDeviceControl( PFILE_OBJECT FileObject, BOOLEAN Wait, PVOID
         } break;
         case IOCTL_GET_STUB_CODE: {
             DevIOCntlGetStubCode( FileObject, Wait, InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength, IoControlCode, IoStatus, DeviceObject );
+        } break;
+
+        case IOCTL_ADD_GLOBAL_POLICY: {
+            DevIOCntlAddGlobalPolicy( FileObject, Wait, InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength, IoControlCode, IoStatus, DeviceObject );
+        } break;
+        case IOCTL_DEL_GLOBAL_POLICY_BY_MASK: {
+            DevIOCntlDelGlobalPolicy( FileObject, Wait, InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength, IoControlCode, IoStatus, DeviceObject );
+        } break;
+        case IOCTL_GET_GLOBAL_POLICY_COUNT: {
+            DevIOCntlGetGlobalPolicyCnt( FileObject, Wait, InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength, IoControlCode, IoStatus, DeviceObject );
+        } break;
+        case IOCTL_RST_GLOBAL_POLICY: {
+            DevIOCntlRstGlobalPolicy( FileObject, Wait, InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength, IoControlCode, IoStatus, DeviceObject );
         } break;
     }
 
@@ -161,6 +177,135 @@ BOOLEAN DevIOCntlGetStubCode( PFILE_OBJECT FileObject, BOOLEAN Wait, PVOID Input
         {
             
         }
+
+    } while( false );
+
+    return TRUE;
+}
+
+BOOLEAN DevIOCntlAddGlobalPolicy( PFILE_OBJECT FileObject, BOOLEAN Wait, PVOID InputBuffer, ULONG InputBufferLength, PVOID OutputBuffer, ULONG OutputBufferLength, ULONG IoControlCode, PIO_STATUS_BLOCK IoStatus, PDEVICE_OBJECT DeviceObject )
+{
+    do
+    {
+        if( FeatureContext.CntlProcessId != ( ULONG )PsGetCurrentProcessId() )
+        {
+            IoStatus->Status = STATUS_PRIVILEGE_NOT_HELD;
+            break;
+        }
+
+        if( InputBufferLength == 0 || InputBuffer == NULL )
+        {
+            IoStatus->Status = STATUS_INVALID_PARAMETER;
+            IoStatus->Information = 0;
+            break;
+        }
+
+        WCHAR* wszFilterMask = NULLPTR;
+        WCHAR* wszBuffer = ( WCHAR* )InputBuffer;
+        bool isInclude = nsUtils::stoul( wszBuffer, &wszFilterMask, 10 ) > 0;
+
+        if( *wszFilterMask != L'|' )
+        {
+            IoStatus->Status = STATUS_INVALID_PARAMETER;
+            IoStatus->Information = 0;
+            break;
+        }
+
+        wszFilterMask++;
+        if( wcslen( wszFilterMask ) == 0 )
+        {
+            IoStatus->Status = STATUS_INVALID_PARAMETER;
+            IoStatus->Information = 0;
+            break;
+        }
+
+        IoStatus->Status = GlobalFilter_Add( wszFilterMask, isInclude );
+        IoStatus->Information = 0;
+
+    } while( false );
+
+    return TRUE;
+}
+
+BOOLEAN DevIOCntlDelGlobalPolicy( PFILE_OBJECT FileObject, BOOLEAN Wait, PVOID InputBuffer, ULONG InputBufferLength, PVOID OutputBuffer, ULONG OutputBufferLength, ULONG IoControlCode, PIO_STATUS_BLOCK IoStatus, PDEVICE_OBJECT DeviceObject )
+{
+    do
+    {
+        if( FeatureContext.CntlProcessId != ( ULONG )PsGetCurrentProcessId() )
+        {
+            IoStatus->Status = STATUS_PRIVILEGE_NOT_HELD;
+            break;
+        }
+
+        if( InputBufferLength == 0 || InputBuffer == NULL )
+        {
+            IoStatus->Status = STATUS_INVALID_PARAMETER;
+            IoStatus->Information = 0;
+            break;
+        }
+
+        WCHAR* wszFilterMask = NULLPTR;
+        WCHAR* wszBuffer = ( WCHAR* )InputBuffer;
+        bool isInclude = nsUtils::stoul( wszBuffer, &wszFilterMask, 10 ) > 0;
+
+        if( *wszFilterMask != L'|' )
+        {
+            IoStatus->Status = STATUS_INVALID_PARAMETER;
+            IoStatus->Information = 0;
+            break;
+        }
+
+        wszFilterMask++;
+        if( wcslen( wszFilterMask ) == 0 )
+        {
+            IoStatus->Status = STATUS_INVALID_PARAMETER;
+            IoStatus->Information = 0;
+            break;
+        }
+
+        IoStatus->Status = GlobalFilter_Remove( wszFilterMask );
+        IoStatus->Information = 0;
+
+    } while( false );
+
+    return TRUE;
+}
+
+BOOLEAN DevIOCntlGetGlobalPolicyCnt( PFILE_OBJECT FileObject, BOOLEAN Wait, PVOID InputBuffer, ULONG InputBufferLength, PVOID OutputBuffer, ULONG OutputBufferLength, ULONG IoControlCode, PIO_STATUS_BLOCK IoStatus, PDEVICE_OBJECT DeviceObject )
+{
+    do
+    {
+        if( FeatureContext.CntlProcessId != ( ULONG )PsGetCurrentProcessId() )
+        {
+            IoStatus->Status = STATUS_PRIVILEGE_NOT_HELD;
+            break;
+        }
+
+        if( InputBufferLength == 0 || InputBuffer == NULL )
+        {
+            IoStatus->Status = STATUS_INVALID_PARAMETER;
+            IoStatus->Information = 0;
+            break;
+        }
+
+        // TODO:
+
+    } while( false );
+
+    return TRUE;
+}
+
+BOOLEAN DevIOCntlRstGlobalPolicy( PFILE_OBJECT FileObject, BOOLEAN Wait, PVOID InputBuffer, ULONG InputBufferLength, PVOID OutputBuffer, ULONG OutputBufferLength, ULONG IoControlCode, PIO_STATUS_BLOCK IoStatus, PDEVICE_OBJECT DeviceObject )
+{
+    do
+    {
+        if( FeatureContext.CntlProcessId != ( ULONG )PsGetCurrentProcessId() )
+        {
+            IoStatus->Status = STATUS_PRIVILEGE_NOT_HELD;
+            break;
+        }
+
+        // TODO:
 
     } while( false );
 
