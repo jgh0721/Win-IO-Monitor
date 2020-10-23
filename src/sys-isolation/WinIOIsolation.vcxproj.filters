@@ -46,6 +46,9 @@
     <Filter Include="Features\Encryption">
       <UniqueIdentifier>{ac03d97f-1863-4099-8eaf-c79a08f97e66}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Features\Communication">
+      <UniqueIdentifier>{89277226-e41a-48b0-a684-b93a1a312a7e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="fltBase.hpp">
@@ -240,6 +243,12 @@
     <ClInclude Include="callbacks\fltEa.hpp">
       <Filter>callbacks</Filter>
     </ClInclude>
+    <ClInclude Include="communication\Communication.hpp">
+      <Filter>Features\Communication</Filter>
+    </ClInclude>
+    <ClInclude Include="communication\Communication_Defs.hpp">
+      <Filter>Features\Communication</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="WinIOIsolation.cpp">
@@ -379,6 +388,9 @@
     </ClCompile>
     <ClCompile Include="callbacks\fltEa.cpp">
       <Filter>callbacks</Filter>
+    </ClCompile>
+    <ClCompile Include="communication\Communication.cpp">
+      <Filter>Features\Communication</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

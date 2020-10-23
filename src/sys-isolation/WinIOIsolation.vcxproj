@@ -56,6 +56,8 @@
     <ClInclude Include="callbacks\fltSetSecurityInformation.hpp" />
     <ClInclude Include="callbacks\fltWrite.hpp" />
     <ClInclude Include="callbacks\generateFileName.hpp" />
+    <ClInclude Include="communication\Communication.hpp" />
+    <ClInclude Include="communication\Communication_Defs.hpp" />
     <ClInclude Include="deviceCntl.hpp" />
     <ClInclude Include="deviceMgmt.hpp" />
     <ClInclude Include="driverMgmt.hpp" />
@@ -114,6 +116,7 @@
     <ClCompile Include="callbacks\fltSetSecurityInformation.cpp" />
     <ClCompile Include="callbacks\fltWrite.cpp" />
     <ClCompile Include="callbacks\generateFileName.cpp" />
+    <ClCompile Include="communication\Communication.cpp" />
     <ClCompile Include="deviceCntl.cpp" />
     <ClCompile Include="deviceMgmt.cpp" />
     <ClCompile Include="driverMgmt.cpp" />

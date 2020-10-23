@@ -127,6 +127,8 @@ typedef union TyMsgParameters
 
 } MSG_PARAMETERS, *PMSG_PARAMETERS;
 
+const unsigned int MSG_PARAMETERS_SIZE = sizeof( MSG_PARAMETERS );
+
 typedef struct _MSG_SEND_PACKET
 {
     ULONG                                   MessageSize;
@@ -149,6 +151,8 @@ typedef struct _MSG_SEND_PACKET
 
 } MSG_SEND_PACKET, *PMSG_SEND_PACKET;
 
+const unsigned int MSG_SEND_PACKET_SIZE = sizeof( MSG_SEND_PACKET );
+
 typedef struct _MSG_REPLY_PACKET
 {
     // If received msg was MSG_CATE_FILESYSTEM_NOTIFY, this status was ignored
@@ -160,5 +164,7 @@ typedef struct _MSG_REPLY_PACKET
     BYTE                                    SolutionMetaData[ 1 ];    // BYTE ARRAY
 
 } MSG_REPLY_PACKET, *PMSG_REPLY_PACKET;
+
+const unsigned int MSG_REPLY_PACKET_SIZE = sizeof( MSG_REPLY_PACKET );
 
 #endif // HDR_WINIOISOLATION_EVENT

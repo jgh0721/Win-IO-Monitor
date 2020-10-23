@@ -10,6 +10,8 @@
 #   pragma execution_character_set( "utf-8" )
 #endif
 
+#define MAX_CLIENT_CONNECTION 16
+
 typedef struct _CTX_GLOBAL_DATA
 {
     PDRIVER_OBJECT                  DriverObject;
@@ -19,7 +21,9 @@ typedef struct _CTX_GLOBAL_DATA
     CACHE_MANAGER_CALLBACKS         CacheMgrCallbacks;
 
     PFLT_PORT                       ServerPort;
-    PFLT_PORT                       ClientPort;
+    PFLT_PORT                       ServerProcPort;
+    PFLT_PORT                       ClientPort[ MAX_CLIENT_CONNECTION ];
+    PFLT_PORT                       ClientProcPort;
 
     ULONG                           DebugLevel;
     NPAGED_LOOKASIDE_LIST           DebugLookasideList;

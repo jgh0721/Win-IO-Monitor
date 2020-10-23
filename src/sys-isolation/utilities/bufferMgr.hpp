@@ -6,14 +6,16 @@
 #include "contextMgr_Defs.hpp"
 #include "irpContext_Defs.hpp"
 
+#include "WinIOIsolation_Event.hpp"
+
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
 #endif
 
 #define POOL_FILENAME_SIZE      1024
 #define POOL_PROCNAME_SIZE      1024
-#define POOL_MSG_SEND_SIZE      2048
-#define POOL_MSG_REPLY_SIZE     1024
+#define POOL_MSG_SEND_SIZE      MSG_SEND_PACKET_SIZE
+#define POOL_MSG_REPLY_SIZE     MSG_REPLY_PACKET_SIZE
 
 NTSTATUS AllocateGenericBuffer( __inout TyGenericBuffer<VOID>* GenericBuffer, __in ULONG RequiredSize, __in PVOID LookasideList, __in ULONG PoolSize, __in ULONG PoolTag, _POOL_TYPE ePoolType = NonPagedPool );
 void DeallocateGenericBuffer( __inout TyGenericBuffer<VOID>* GenericBuffer, __in PVOID LookasideList, _POOL_TYPE ePoolType = NonPagedPool );
@@ -47,6 +49,16 @@ TyGenericBuffer<T> AllocateBuffer( TyEnBufferType eBufferType, ULONG uRequiredSi
                                    &GlobalContext.ProcNameLookasideList, 
                                    POOL_PROCNAME_SIZE, POOL_PROCNAME_TAG );
         } break;
+        case BUFFER_MSG_SEND: {
+            AllocateGenericBuffer( ( TyGenericBuffer<VOID>* ) & tyGenericBuffer, uRequiredSize, 
+                                   &GlobalContext.SendPacketLookasideList,
+                                   POOL_MSG_SEND_SIZE, POOL_MSG_SEND_TAG );
+        } break;
+        case BUFFER_MSG_REPLY: {
+            AllocateGenericBuffer( ( TyGenericBuffer<VOID>* ) & tyGenericBuffer, uRequiredSize, 
+                                   &GlobalContext.ReplyPacketLookasideList,
+                                   POOL_MSG_REPLY_SIZE, POOL_MSG_REPLY_TAG );
+        } break;
         default: ASSERT( false );
     }
 
@@ -70,6 +82,12 @@ void DeallocateBuffer( TyGenericBuffer<T>* tyGenericBuffer )
         } break;
         case BUFFER_PROCNAME: {
             DeallocateGenericBuffer( ( TyGenericBuffer<VOID>* )tyGenericBuffer, &GlobalContext.ProcNameLookasideList );
+        } break;
+        case BUFFER_MSG_SEND: {
+            DeallocateGenericBuffer( ( TyGenericBuffer<VOID>* )tyGenericBuffer, &GlobalContext.SendPacketLookasideList );
+        } break;
+        case BUFFER_MSG_REPLY: {
+            DeallocateGenericBuffer( ( TyGenericBuffer<VOID>* )tyGenericBuffer, &GlobalContext.ReplyPacketLookasideList );
         } break;
 
         case BUFFER_SWAP_READ: {

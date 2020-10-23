@@ -274,13 +274,30 @@ NTSTATUS InitializeMiniFilterPort( CTX_GLOBAL_DATA* GlobalContext )
 
         RtlInitUnicodeString( &PortName, PORT_NAME );
         InitializeObjectAttributes( &OA, &PortName, OBJ_KERNEL_HANDLE | OBJ_CASE_INSENSITIVE, NULL, SD );
-
+        
         Status = FltCreateCommunicationPort( GlobalContext->Filter, &GlobalContext->ServerPort, 
-                                             &OA, NULL,
+                                             &OA, GlobalContext->ServerPort,
                                              ClientConnectNotify,
                                              ClientDisconnectNotify,
                                              ClientMessageNotify,
-                                             64 );
+                                             MAX_CLIENT_CONNECTION );
+
+        if( !NT_SUCCESS( Status ) )
+        {
+            KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_ERROR_LEVEL, "[WinIOSol] %s %s Status=0x%08x PortName=%wZ\n",
+                         __FUNCTION__, "FltCreateCommunicationPort FAILED", Status, &PortName ) );
+            break;
+        }
+
+        RtlInitUnicodeString( &PortName, PORT_PROC_NAME );
+        InitializeObjectAttributes( &OA, &PortName, OBJ_KERNEL_HANDLE | OBJ_CASE_INSENSITIVE, NULL, SD );
+
+        Status = FltCreateCommunicationPort( GlobalContext->Filter, &GlobalContext->ServerProcPort,
+                                             &OA, GlobalContext->ServerProcPort,
+                                             ClientConnectNotify,
+                                             ClientDisconnectNotify,
+                                             ClientMessageNotify,
+                                             8 );
 
         if( !NT_SUCCESS( Status ) )
         {
@@ -305,6 +322,10 @@ NTSTATUS FLTAPI MiniFilterUnload( FLT_FILTER_UNLOAD_FLAGS Flags )
         FltCloseCommunicationPort( GlobalContext.ServerPort );
     GlobalContext.ServerPort = NULLPTR;
 
+    if( GlobalContext.ServerProcPort != NULLPTR )
+        FltCloseCommunicationPort( GlobalContext.ServerProcPort );
+    GlobalContext.ServerProcPort = NULLPTR;
+
     FltUnregisterFilter( GlobalContext.Filter );
     GlobalContext.Filter = NULLPTR;
 
@@ -314,9 +335,31 @@ NTSTATUS FLTAPI MiniFilterUnload( FLT_FILTER_UNLOAD_FLAGS Flags )
 NTSTATUS FLTAPI ClientConnectNotify( PFLT_PORT ClientPort, PVOID ServerPortCookie, PVOID ConnectionContext,
                               ULONG SizeOfContext, PVOID* ConnectionPortCookie )
 {
-    *ConnectionPortCookie = ClientPort;
-    GlobalContext.ClientPort = ClientPort;
-    FeatureContext.CntlProcessId = (ULONG)PsGetCurrentProcessId();
+    if( ServerPortCookie == GlobalContext.ServerPort )
+    {
+        // 최초에 접속한 클라이언트를 주 제어 프로세스로 인정한다
+        if( FeatureContext.CntlProcessId != 0 && FeatureContext.CntlProcessId != (ULONG)PsGetCurrentProcessId() )
+            return STATUS_PRIVILEGE_NOT_HELD;
+
+        int idx = 0;
+
+        while( idx < MAX_CLIENT_CONNECTION && GlobalContext.ClientPort[ idx ] != NULLPTR )
+            ++idx;
+
+        if( idx >= MAX_CLIENT_CONNECTION )
+            return STATUS_INSUFFICIENT_RESOURCES;
+
+        GlobalContext.ClientPort[ idx ] = ClientPort;
+        *ConnectionPortCookie = (PVOID)idx;
+
+        if( FeatureContext.CntlProcessId == 0 )
+            FeatureContext.CntlProcessId = ( ULONG )PsGetCurrentProcessId();
+    }
+
+    if( ServerPortCookie == GlobalContext.ServerProcPort )
+    {
+        *ConnectionPortCookie = ( PVOID )-1;
+    }
 
     return STATUS_SUCCESS;
 }
@@ -325,9 +368,33 @@ void FLTAPI ClientDisconnectNotify( PVOID ConnectionCookie )
 {
     KdPrintEx( ( DPFLTR_DEFAULT_ID, DPFLTR_TRACE_LEVEL, "[WinIOSol] %s ConnectionCookie=%d\n", __FUNCTION__, ConnectionCookie ) );
 
-    FltCloseClientPort( GlobalContext.Filter, &GlobalContext.ClientPort );
-    GlobalContext.ClientPort = NULLPTR;
-    FeatureContext.CntlProcessId = 0;
+    auto idx = ( int )ConnectionCookie;
+    if( idx >= 0 )
+    {
+        FltCloseClientPort( GlobalContext.Filter, &GlobalContext.ClientPort[ idx ] );
+        GlobalContext.ClientPort[ idx ] = NULLPTR;
+
+        bool isAllDisConnect = true;
+        int count = 0;
+        while( count < MAX_CLIENT_CONNECTION )
+        {
+            if( GlobalContext.ClientPort[ count ] != NULLPTR )
+            {
+                isAllDisConnect = false;
+                break;
+            }
+
+            count++;
+        }
+
+        if( isAllDisConnect == true )
+            FeatureContext.CntlProcessId = 0;
+    }
+    else
+    {
+        FltCloseClientPort( GlobalContext.Filter, &GlobalContext.ClientProcPort );
+        GlobalContext.ClientProcPort = NULLPTR;
+    }
 }
 
 NTSTATUS FLTAPI ClientMessageNotify( PVOID PortCookie, PVOID InputBuffer, ULONG InputBufferLength, PVOID OutputBuffer,

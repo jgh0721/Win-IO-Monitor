@@ -8,6 +8,8 @@
 #include "utilities/bufferMgr_Defs.hpp"
 #include "utilities/contextMgr_Defs.hpp"
 
+#include "WinIOIsolation_Event.hpp"
+
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
 #endif
@@ -57,7 +59,7 @@ typedef struct _IRP_CONTEXT
     bool                                IsConcerned;
 
     PVOID                               Params;                 // 각 IRP 마다 사용하는 고유의 입력 / 출력 변수 구조체에 대한 포인터
-    PVOID                               Result;
+    TyGenericBuffer<MSG_REPLY_PACKET>   Result;
 
     ///////////////////////////////////////////////////////////////////////////
     /// IRP 를 처리한 결과
