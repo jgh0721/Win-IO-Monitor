@@ -21,7 +21,13 @@ namespace nsUtils
 
     int stricmp( __in_z const wchar_t* lhs, __in_z const wchar_t* rhs );
     int stricmp( __in_z const wchar_t* lhs, __in ULONG cchCount, __in_z const wchar_t* rhs );
-    
+
+    // from Wine
+    int isctype( __in wint_t wc, wctype_t wctypeFlags );
+    // from Wine
+    unsigned long stoul( __in_z const wchar_t* str, wchar_t** endptr, int base );
+    unsigned long stoul( __in_z const char* str, char** endptr, int base );
+
     WCHAR* ReverseFindW( __in_z WCHAR* wszString, WCHAR ch, __in_opt int iCchLength = -1 );
     WCHAR* ForwardFindW( __in_z WCHAR* wszString, WCHAR ch );
     WCHAR* UpperWString( __inout_z WCHAR* wszString );
