@@ -1,6 +1,7 @@
 ﻿#include "driverMgmt.hpp"
 
 #include "metadata/Metadata.hpp"
+#include "communication/Communication.hpp"
 
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
@@ -17,6 +18,7 @@ NTSTATUS InitializeFeatureMgr()
         RtlZeroMemory( &FeatureContext, sizeof( FEATURE_CONTEXT ) );
 
         IF_FAILED_BREAK( Status, InitializeMetaDataMgr() );
+        IF_FAILED_BREAK( Status, InitializeNotifyEventWorker() );
         
     } while( false );
 
@@ -29,6 +31,7 @@ NTSTATUS UninitializeFeatureMgr()
 
     do
     {
+        IF_FAILED_BREAK( Status, UninitializeNotifyEventWorker() );
         IF_FAILED_BREAK( Status, UninitializeMetaDataMgr() );
         
     } while( false );

@@ -6,6 +6,8 @@
 #include <process.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <thread>
+#include <atomic>
 
 #pragma comment( lib, "fltlib" )
 
@@ -17,27 +19,55 @@
 
 struct
 {
-    HANDLE                          hPort = INVALID_HANDLE_VALUE;
+    HANDLE                          hPort[ MAX_CLIENT_CONNECTION ] = { INVALID_HANDLE_VALUE, };
     HANDLE                          hDevice = INVALID_HANDLE_VALUE;
+    HANDLE                          hWorker[ MAX_CLIENT_CONNECTION ] = { NULL, };
 
+    MessageCallbackRoutine          MessageCallback = NULL;
+    DisconnectCallbackRoutine       DiscoonectCallback = NULL;
+
+    std::atomic_bool                isExit{ false };
 } GlobalContext;
+
+unsigned int WINAPI FilterMessageWorker( PVOID Param );
 
 ///////////////////////////////////////////////////////////////////////////////
 
-HRESULT ConnectTo()
+HRESULT ConnectTo( __in unsigned int uThreadCount /* = 0 */ )
 {
     HRESULT hRet = S_OK;
+    auto ThreadCount = uThreadCount;
 
     do
     {
-        if( GlobalContext.hPort != INVALID_HANDLE_VALUE )
-        {
-            break;
-        }
+        if( ThreadCount == 0 )
+            ThreadCount = std::thread::hardware_concurrency();
 
-        hRet = FilterConnectCommunicationPort( PORT_NAME, 0,
-                                               NULL, 0, NULL,
-                                               &GlobalContext.hPort );
+        if( ThreadCount == 0 )
+            ThreadCount = 8;
+
+        if( ThreadCount > MAX_CLIENT_CONNECTION )
+            ThreadCount = MAX_CLIENT_CONNECTION;
+
+        for( auto idx = 0; idx < ThreadCount; ++idx )
+        {
+            hRet = FilterConnectCommunicationPort( PORT_NAME, 0,
+                                                   NULL, 0, NULL,
+                                                   &GlobalContext.hPort[ idx ] );
+
+            if( FAILED( hRet ) )
+                break;
+
+            GlobalContext.hWorker[ idx ] = ( HANDLE )_beginthreadex( NULL, 0,
+                                                                     &FilterMessageWorker, GlobalContext.hPort[ idx ],
+                                                                     0, 0 );
+
+            if( GlobalContext.hWorker[ idx ] == NULL )
+            {
+                CloseHandle( GlobalContext.hPort[ idx ] );
+                GlobalContext.hPort[ idx ] = INVALID_HANDLE_VALUE;
+            }
+        }
 
         if( FAILED( hRet ) )
             break;
@@ -49,9 +79,18 @@ HRESULT ConnectTo()
 
 HRESULT Disconnect()
 {
-    if( GlobalContext.hPort != INVALID_HANDLE_VALUE )
-        CloseHandle( GlobalContext.hPort );
-    GlobalContext.hPort = INVALID_HANDLE_VALUE;
+    GlobalContext.isExit = true;
+
+    for( auto idx = 0; idx < MAX_CLIENT_CONNECTION; ++idx )
+    {
+        if( GlobalContext.hPort[ idx ] != INVALID_HANDLE_VALUE )
+            CloseHandle( GlobalContext.hPort[ idx ] );
+        GlobalContext.hPort[ idx ] = INVALID_HANDLE_VALUE;
+
+        if( GlobalContext.hWorker[ idx ] != NULL )
+            CloseHandle( GlobalContext.hWorker[ idx ] );
+        GlobalContext.hWorker[ idx ] = NULL;
+    }
 
     return S_OK;
 }
@@ -806,4 +845,66 @@ DWORD GetFileSolutionMetaData( const wchar_t* wszFileFullPath, PVOID Buffer, ULO
         CloseHandle( hDevice );
 
     return dwRet;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/// Worker
+
+unsigned int WINAPI FilterMessageWorker( PVOID Param )
+{
+    if( Param == NULL )
+        return 0;
+
+    HRESULT hr = S_OK;
+    HANDLE hPort = ( HANDLE )Param;
+    OVERLAPPED ov;
+    memset( &ov, 0, sizeof( OVERLAPPED ) );
+    HANDLE hEvent = CreateEventW( NULL, FALSE, FALSE, NULL );
+    ov.hEvent = hEvent;
+
+    // TODO: Need Exit Event!
+    static const int MAX_PACKET_SIZE = 65535;
+    MSG_SEND_PACKETU* incoming = ( MSG_SEND_PACKETU* )new BYTE[ MAX_PACKET_SIZE ];
+    MSG_REPLY_PACKETU outgoing;
+
+    DWORD dwRet = 0;
+    while( GlobalContext.isExit == false )
+    {
+        memset( incoming, '\0', MAX_PACKET_SIZE );
+
+        hr = FilterGetMessage( hPort, &incoming->MessageHDR, MAX_PACKET_SIZE, &ov );
+        if( hr != HRESULT_FROM_WIN32( ERROR_IO_PENDING ) )
+            break;
+
+        if( GlobalContext.isExit == true )
+            break;
+
+        do
+        {
+            dwRet = WaitForSingleObject( ov.hEvent, 500 );
+            
+        } while( GlobalContext.isExit == false && dwRet == WAIT_TIMEOUT );
+
+        if( GlobalContext.isExit == true )
+            break;
+
+        memset( &outgoing, 0, sizeof( outgoing ) );
+
+        if( GlobalContext.MessageCallback != NULL && incoming->MessageHDR.MessageId > 0 )
+            GlobalContext.MessageCallback( &incoming->MessageBody, &outgoing.ReplyBody );
+
+        outgoing.ReplyHDR.Status = 0;
+        outgoing.ReplyHDR.MessageId = incoming->MessageHDR.MessageId;
+        if( incoming->MessageHDR.ReplyLength > 0 )
+        {
+            hr = FilterReplyMessage( hPort, ( PFILTER_REPLY_HEADER )&outgoing, sizeof( outgoing ) );
+        }
+    }
+
+    if( hEvent != NULL )
+        CloseHandle( hEvent );
+
+    if( incoming != NULL )
+        delete[] incoming;
+    return 0;
 }

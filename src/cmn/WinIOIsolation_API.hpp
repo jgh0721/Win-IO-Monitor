@@ -11,6 +11,8 @@
 
 #include <windows.h>
 #include <winternl.h>
+#include <thread>
+#include <memory>
 #include <fltUser.h>
 #include <fltUserStructures.h>
 #endif
@@ -23,6 +25,8 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
+#define MAX_CLIENT_CONNECTION (16)
+
 /*!
     1. ConnectTo
     2. SetDriverConfig
@@ -31,7 +35,7 @@
     Set ProcessId(All), Rename, all Encrypted File
 */
 
-HRESULT ConnectTo();
+HRESULT ConnectTo( __in unsigned int uThreadCount = 0 );
 HRESULT Disconnect();
 
 DWORD SetDriverConfig( __in DRIVER_CONFIG* DriverConfig );
@@ -40,6 +44,11 @@ DWORD GetDriverConfig( __in DRIVER_CONFIG* DriverConfig );
 // 
 DWORD SetDriverStatus( __in BOOLEAN IsRunning );
 DWORD GetDriverStatus( __in BOOLEAN* IsRunning );
+
+typedef BOOL( *MessageCallbackRoutine )( IN MSG_SEND_PACKET* Incoming, IN OUT MSG_REPLY_PACKET* Outgoing );
+typedef VOID( *DisconnectCallbackRoutine )( );
+
+bool  RegisterMessageCallback( MessageCallbackRoutine MessageCallback, DisconnectCallbackRoutine DisconnectCallback );
 
 DWORD AddGlobalFilterMask( __in const wchar_t* wszFilterMask, __in bool isInclude );
 DWORD DelGlobalFilterMask( __in const wchar_t* wszFilterMask, __in bool isInclude );

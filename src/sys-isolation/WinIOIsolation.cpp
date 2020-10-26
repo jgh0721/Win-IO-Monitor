@@ -269,6 +269,8 @@ NTSTATUS InitializeGlobalContext( PDRIVER_OBJECT DriverObject )
         ExInitializePagedLookasideList( &GlobalContext.SwapWriteLookasideList_65536, NULL, NULL, 0,
                                         BUFFER_SWAP_WRITE_65536_SIZE, POOL_WRITE_TAG, 0 );
 
+        GlobalContext.TimeOutMs.QuadPart = RELATIVE( SECONDS( 5 ) );
+
         Status = STATUS_SUCCESS;
 
     } while( false );

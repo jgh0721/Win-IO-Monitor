@@ -212,6 +212,15 @@ typedef struct _MSG_SEND_PACKET
 
 } MSG_SEND_PACKET, *PMSG_SEND_PACKET;
 
+#ifndef USE_ON_KERNEL
+typedef struct _MSG_SEND_PACKETU
+{
+    FILTER_MESSAGE_HEADER                   MessageHDR;
+    MSG_SEND_PACKET                         MessageBody;
+
+} MSG_SEND_PACKETU, *PMSG_SEND_PACKETU;
+#endif
+
 const unsigned int MSG_SEND_PACKET_SIZE = sizeof( MSG_SEND_PACKET );
 
 typedef struct _MSG_REPLY_PACKET
@@ -223,6 +232,15 @@ typedef struct _MSG_REPLY_PACKET
     MSG_PARAMETERS                          Parameters;
 
 } MSG_REPLY_PACKET, *PMSG_REPLY_PACKET;
+
+#ifndef USE_ON_KERNEL
+typedef struct _MSG_REPLY_PACKETU
+{
+    FILTER_REPLY_HEADER                     ReplyHDR;
+    MSG_REPLY_PACKET                        ReplyBody;
+
+} MSG_REPLY_PACKETU, *PMSG_REPLY_PACKETU;
+#endif
 
 const unsigned int MSG_REPLY_PACKET_SIZE = sizeof( MSG_REPLY_PACKET );
 

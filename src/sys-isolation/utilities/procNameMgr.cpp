@@ -5,6 +5,8 @@
 #include "utilities/osInfoMgr.hpp"
 #include "utilities/volumeMgr.hpp"
 
+#include "communication/Communication.hpp"
+
 #if defined(_MSC_VER)
 #	pragma warning( disable: 4311 )
 #	pragma warning( disable: 4312 )
@@ -378,16 +380,46 @@ NTSTATUS StopProcessNotify()
 
 void CreateProcessNotifyRoutine( HANDLE ParentId, HANDLE ProcessId, BOOLEAN Create )
 {
-    if( Create == TRUE )
+    PWCH ProcessName = NULLPTR;
+    TyGenericBuffer<WCHAR> ProcessFileFullPath;
+
+    HANDLE ProcessFilter = NULLPTR;
+    PROCESS_FILTER_ENTRY* ProcessFilterItem = NULLPTR;
+
+    do
     {
-        /// Process Creation
-        InsertProcessInfo( ( ULONG )ParentId, ( ULONG )ProcessId );
-    }
-    else
-    {
-        /// Process Termination
-        DeleteProcessInfo( ( ULONG )ProcessId );
-    }
+        if( Create == TRUE )
+        {
+            /// Process Creation
+            InsertProcessInfo( ( ULONG )ParentId, ( ULONG )ProcessId );
+
+            SearchProcessInfo( ( ULONG )ProcessId, &ProcessFileFullPath, &ProcessName );
+            if( ProcessFilter_Match( ( ULONG )ProcessId, &ProcessFileFullPath, &ProcessFilter, &ProcessFilterItem ) != STATUS_SUCCESS )
+                break;
+
+            if( !FlagOn( ProcessFilterItem->ProcessFilter, PROCESS_NOTIFY_CREATION_TERMINATION ) )
+                break;
+            
+            CheckEventProcCreateTo( ( ULONG )ProcessId, &ProcessFileFullPath, ProcessName );
+        }
+        else
+        {
+            SearchProcessInfo( ( ULONG )ProcessId, &ProcessFileFullPath, &ProcessName );
+            if( ProcessFilter_Match( ( ULONG )ProcessId, &ProcessFileFullPath, &ProcessFilter, &ProcessFilterItem ) == STATUS_SUCCESS )
+            {
+                if( FlagOn( ProcessFilterItem->ProcessFilter, PROCESS_NOTIFY_CREATION_TERMINATION ) )
+                {
+                    CheckEventProcTerminateTo( ( ULONG )ProcessId, &ProcessFileFullPath, ProcessName );
+                }
+            }
+
+            /// Process Termination
+            DeleteProcessInfo( ( ULONG )ProcessId );
+        }
+
+    } while( false );
+
+    ProcessFilter_Close( ProcessFilter );
 }
 
 void CreateProcInfoSet()

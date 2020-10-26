@@ -17,7 +17,7 @@ NTSTATUS    InitializeNotifyEventWorker();
 NTSTATUS    QueueNotifyEvent( __in FS_NOTIFY_ITEM* NotifyEventItem );
 VOID        NotifyEventWorker( __in PVOID Context );
 NTSTATUS    NotifyFSEventToClient( __in FS_NOTIFY_ITEM* NotifyEventItem );
-VOID        UninitializeNotifyEventWorker();
+NTSTATUS    UninitializeNotifyEventWorker();
 
 ///////////////////////////////////////////////////////////////////////////////
 /// MSG_FS_TYPE
@@ -37,8 +37,15 @@ NTSTATUS    CheckEventFileCreateTo( __in IRP_CONTEXT* IrpContext );
 NTSTATUS    CheckEventFileOpenTo( __in IRP_CONTEXT* IrpContext );
 
 ///////////////////////////////////////////////////////////////////////////////
+/// MSG_PROC_TYPE
+
+NTSTATUS    CheckEventProcCreateTo( __in ULONG ProcessId, __in TyGenericBuffer<WCHAR>* ProcessFileFullPath, __in_z const wchar_t* ProcessFileName );
+NTSTATUS    CheckEventProcTerminateTo( __in ULONG ProcessId, __in TyGenericBuffer<WCHAR>* ProcessFileFullPath, __in_z const wchar_t* ProcessFileName );
+
+///////////////////////////////////////////////////////////////////////////////
 /// Utilities
 
 PFLT_PORT   GetClientPort( __in IRP_CONTEXT* IrpContext );
+PFLT_PORT   GetClientPort( __in LONG Seed );
 
 #endif // HDR_ISOLATION_COMMUNICATION
