@@ -126,24 +126,27 @@ NTSTATUS FLTAPI DriverEntry( PDRIVER_OBJECT DriverObject, PUNICODE_STRING Regist
 
         {
             auto PFilterEntry = (PROCESS_FILTER_ENTRY*)ExAllocatePool( NonPagedPool, sizeof( PROCESS_FILTER_ENTRY ) );
-            auto PFilterMaskEntry = (PROCESS_FILTER_MASK_ENTRY*)ExAllocatePool( NonPagedPool, sizeof( PROCESS_FILTER_MASK_ENTRY ) );
 
             RtlZeroMemory( PFilterEntry, sizeof( PROCESS_FILTER_ENTRY ) );
-            RtlZeroMemory( PFilterMaskEntry, sizeof( PROCESS_FILTER_MASK_ENTRY ) );
 
+            ExUuidCreate( &PFilterEntry->Id );
             RtlStringCchCatW( PFilterEntry->ProcessFilterMask, MAX_PATH, L"*syn.exe" );
             PFilterEntry->ProcessFilter = PROCESS_NOTIFY_CREATION_TERMINATION;
 
             InitializeListHead( &PFilterEntry->IncludeListHead );
             InitializeListHead( &PFilterEntry->ExcludeListHead );
 
+            ProcessFilter_Add( PFilterEntry );
+
+            auto PFilterMaskEntry = ( PROCESS_FILTER_MASK_ENTRY* )ExAllocatePool( NonPagedPool, sizeof( PROCESS_FILTER_MASK_ENTRY ) );
+            RtlZeroMemory( PFilterMaskEntry, sizeof( PROCESS_FILTER_MASK_ENTRY ) );
+
+            ExUuidCreate( &PFilterMaskEntry->Id );
             PFilterMaskEntry->FilterCategory = MSG_CATE_FILESYSTEM;
             PFilterMaskEntry->FilterType = FS_PRE_CREATE;
             RtlStringCchCatW( PFilterMaskEntry->FilterMask, MAX_PATH, L"*.txt" );
 
-            InsertTailList( &PFilterEntry->IncludeListHead, &PFilterMaskEntry->ListEntry );
-
-            ProcessFilter_Add( PFilterEntry );
+            ProcessFilter_AddEntry( &PFilterEntry->Id, PFilterMaskEntry, TRUE );
         }
 
         Status = STATUS_SUCCESS;

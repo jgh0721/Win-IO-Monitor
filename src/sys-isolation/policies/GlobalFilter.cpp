@@ -282,3 +282,21 @@ NTSTATUS GlobalFilter_Match( const WCHAR* FileName, bool IsInclude )
     GlobalFilter_Release( GFilter );
     return Status;
 }
+
+NTSTATUS GlobalFilter_Reset()
+{
+    auto NewFilter = ( GLOBAL_FILTER* )ExAllocatePoolWithTag( NonPagedPool, sizeof( GLOBAL_FILTER ), POOL_MAIN_TAG );
+    if( NewFilter == NULLPTR )
+        return STATUS_INSUFFICIENT_RESOURCES;
+
+    RtlZeroMemory( NewFilter, sizeof( GLOBAL_FILTER ) );
+    NewFilter->RefCount = 0;
+    InitializeListHead( &NewFilter->IncludeListHead );
+    InitializeListHead( &NewFilter->ExcludeListHead );
+
+    GLOBAL_FILTER* Filter = GlobalFilter_Ref();
+    InterlockedExchangePointer( &GlobalContext.GlobalFilter, NewFilter );
+    GlobalFilter_Release( Filter );
+
+    return STATUS_SUCCESS;
+}

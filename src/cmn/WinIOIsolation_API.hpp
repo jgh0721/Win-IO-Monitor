@@ -47,7 +47,7 @@ DWORD GetGlobalFilterMaskCnt( __in bool isInclude, __out ULONG* Count );
 DWORD ResetGlobalFilter();
 
 DWORD AddProcessFilter( __in const USER_PROCESS_FILTER& ProcessFilter );
-DWORD DelProcessFilter( __in const USER_PROCESS_FILTER& ProcessFilter );
+DWORD DelProcessFilterByID( __in const USER_PROCESS_FILTER& ProcessFilter );
 DWORD DelProcessFilterByPID( __in ULONG ProcessId );
 DWORD DelProcessFilterByFilterMask( __in const wchar_t* wszFilterMask );
 DWORD AddProcessFilterItem( __in const GUID& Id, __in const USER_PROCESS_FILTER_ENTRY& ProcessFilterItem );
@@ -71,6 +71,9 @@ enum TyEnFileType
 DWORD GetFileType( __in const wchar_t* wszFileFullPath, __out ULONG* FileType );
 DWORD SetFileSolutionMetaData( __in const wchar_t* wszFileFullPath, __inout PVOID Buffer, __inout ULONG* BufferSize );
 DWORD GetFileSolutionMetaData( __in const wchar_t* wszFileFullPath, __inout PVOID Buffer, __inout ULONG* BufferSize );
+
+DWORD EncryptFileByDriver( __in const wchar_t* wszSrcFileFullPath, __in const wchar_t* wszDstFileFullPath );
+DWORD DecryptFileByDriver( __in const wchar_t* wszSrcFileFullPath, __in const wchar_t* wszDstFileFullPath );
 
 DWORD CollectNotifyEventItmes( __inout PVOID Buffer, __in ULONG BufferSize, __out ULONG* WrittenItemCount );
 

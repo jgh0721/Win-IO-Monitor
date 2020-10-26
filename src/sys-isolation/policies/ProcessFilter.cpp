@@ -185,7 +185,7 @@ NTSTATUS InitializeProcessFilter()
 NTSTATUS UninitializeProcessFilter()
 {
     PROCESS_FILTER* Filter = ProcessFilter_Ref();
-    // if want to reset GlobalFilter, create emptry globalfilter then exchange 
+    // if want to reset ProcessFilter, create emptry ProcessFilter then exchange 
     InterlockedExchangePointer( &GlobalContext.ProcessFilter, NULLPTR );
     ProcessFilter_Release( Filter );
 
@@ -205,24 +205,122 @@ NTSTATUS ProcessFilter_Add( PROCESS_FILTER_ENTRY* PFilterItem )
             break;
         }
 
+        auto Head = &PFilter->ListHead;
+        for( auto Current = Head->Flink; Current != Head; Current = Current->Flink )
+        {
+            auto Item = CONTAINING_RECORD( Current, PROCESS_FILTER_ENTRY, ListEntry );
+
+            if( nsUtils::IsEqualUUID( PFilterItem->Id, Item->Id ) == false )
+                continue;
+
+            Status = STATUS_OBJECTID_EXISTS;
+            break;
+        }
+
+        if( Status != STATUS_NOT_FOUND )
+            break;
+
+        InsertTailList( Head, &PFilterItem->ListEntry );
+        InterlockedExchangePointer( &GlobalContext.ProcessFilter, PFilter );
+
+        Status = STATUS_SUCCESS;
+    } while( false );
+
+    ProcessFilter_Release( PFilter );
+    return Status;
+}
+
+NTSTATUS ProcessFilter_AddEntry( UUID* Id, PROCESS_FILTER_MASK_ENTRY* Entry, __in BOOLEAN IsInclude )
+{
+    NTSTATUS Status = STATUS_NOT_FOUND;
+    auto PFilter = ProcessFilter_Clone();
+
+    do
+    {
+        if( Id == NULLPTR || Entry == NULLPTR )
+        {
+            Status = STATUS_INVALID_PARAMETER;
+            break;
+        }
+
+        PROCESS_FILTER_ENTRY* Item = NULLPTR;
+        auto Head = &PFilter->ListHead;
+        for( auto Current = Head->Flink; Current != Head; Current = Current->Flink )
+        {
+            Item = CONTAINING_RECORD( Current, PROCESS_FILTER_ENTRY, ListEntry );
+
+            if( nsUtils::IsEqualUUID( *Id, Item->Id ) == false )
+            {
+                Item = NULLPTR;
+                continue;
+            }
+
+            Status = STATUS_SUCCESS;
+            break;
+        }
+
+        if( Status != STATUS_SUCCESS )
+            break;
+
+        if( IsInclude != FALSE )
+            Head = &Item->IncludeListHead;
+        else
+            Head = &Item->ExcludeListHead;
+
+        for( auto Current = Head->Flink; Current != Head; Current = Current->Flink )
+        {
+            auto Child = CONTAINING_RECORD( Current, PROCESS_FILTER_MASK_ENTRY, ListEntry );
+
+            if( nsUtils::IsEqualUUID( Child->Id, Entry->Id ) == true )
+            {
+                Status = STATUS_OBJECTID_EXISTS;
+                break;
+            }
+        }
+
+        if( Status == STATUS_OBJECTID_EXISTS )
+            break;
+
+        InsertTailList( Head, &Entry->ListEntry );
+        InterlockedExchangePointer( &GlobalContext.ProcessFilter, PFilter );
+        Status = STATUS_SUCCESS;
+
+    } while( false );
+
+    ProcessFilter_Release( PFilter );
+    return Status;
+}
+
+NTSTATUS ProcessFilter_Remove( UUID* Id )
+{
+    NTSTATUS Status = STATUS_NOT_FOUND;
+    auto PFilter = ProcessFilter_Clone();
+
+    do
+    {
+        if( Id == NULLPTR )
+        {
+            Status = STATUS_INVALID_PARAMETER;
+            break;
+        }
+
         // first, delete same item if it is exists
         auto Head = &PFilter->ListHead;
         for( auto Current = Head->Flink; Current != Head; Current = Current->Flink )
         {
             auto Item = CONTAINING_RECORD( Current, PROCESS_FILTER_ENTRY, ListEntry );
 
-            if( ( (PFilterItem->ProcessId != 0) && (PFilterItem->ProcessId == Item->ProcessId) ) ||
-                ( _wcsicmp( PFilterItem->ProcessFilterMask, Item->ProcessFilterMask ) == 0 ) )
-            {
-                RemoveEntryList( &Item->ListEntry );
-                ProcessFilterEntry_Release( Item );
-            }
+            if( nsUtils::IsEqualUUID( *Id, Item->Id ) == false )
+                continue;
+
+            RemoveEntryList( &Item->ListEntry );
+            ProcessFilterEntry_Release( Item );
+            Status = STATUS_SUCCESS;
         }
 
-        InsertTailList( Head, &PFilterItem->ListEntry );
-        InterlockedExchangePointer( &GlobalContext.ProcessFilter, PFilter );
+        if( Status == STATUS_SUCCESS )
+            InterlockedExchangePointer( &GlobalContext.ProcessFilter, PFilter );
 
-        Status = STATUS_SUCCESS;
     } while( false );
 
     ProcessFilter_Release( PFilter );
@@ -255,6 +353,67 @@ NTSTATUS ProcessFilter_Remove( ULONG ProcessId, const WCHAR* ProcessNameMask )
                 ProcessFilterEntry_Release( Item );
                 Status = STATUS_SUCCESS;
             }
+        }
+
+        if( Status == STATUS_SUCCESS )
+            InterlockedExchangePointer( &GlobalContext.ProcessFilter, PFilter );
+
+    } while( false );
+
+    ProcessFilter_Release( PFilter );
+    return Status;
+}
+
+NTSTATUS ProcessFilter_RemoveEntry( UUID* ParentId, UUID* EntryId, __in BOOLEAN IsInclude )
+{
+    NTSTATUS Status = STATUS_NOT_FOUND;
+    auto PFilter = ProcessFilter_Clone();
+
+    do
+    {
+        if( ParentId == NULLPTR || EntryId == NULLPTR )
+        {
+            Status = STATUS_INVALID_PARAMETER;
+            break;
+        }
+
+        PROCESS_FILTER_ENTRY* Item = NULLPTR;
+        auto Head = &PFilter->ListHead;
+        for( auto Current = Head->Flink; Current != Head; Current = Current->Flink )
+        {
+            Item = CONTAINING_RECORD( Current, PROCESS_FILTER_ENTRY, ListEntry );
+
+            if( nsUtils::IsEqualUUID( *ParentId, Item->Id ) == false )
+            {
+                Item = NULLPTR;
+                continue;
+            }
+
+            Status = STATUS_SUCCESS;
+            break;
+        }
+
+        if( Status != STATUS_SUCCESS )
+            break;
+
+        if( IsInclude != FALSE )
+            Head = &Item->IncludeListHead;
+        else
+            Head = &Item->ExcludeListHead;
+
+        Status = STATUS_NOT_FOUND;
+
+        for( auto Current = Head->Flink; Current != Head; Current = Current->Flink )
+        {
+            auto ChildItem = CONTAINING_RECORD( Current, PROCESS_FILTER_MASK_ENTRY, ListEntry );
+
+            if( nsUtils::IsEqualUUID( *EntryId, ChildItem->Id ) == false )
+                continue;
+
+            RemoveEntryList( &ChildItem->ListEntry );
+            ProcessFilterMaskEntry_Release( ChildItem );
+            Status = STATUS_SUCCESS;
+            break;
         }
 
         if( Status == STATUS_SUCCESS )
@@ -388,4 +547,21 @@ void ProcessFilter_Close( HANDLE ProcessFilterHandle )
 
     PROCESS_FILTER* PFilter = ( PROCESS_FILTER* )ProcessFilterHandle;
     ProcessFilter_Release( PFilter );
+}
+
+NTSTATUS ProcessFilter_Reset()
+{
+    auto NewFilter = ( PROCESS_FILTER* )ExAllocatePoolWithTag( NonPagedPool, sizeof( PROCESS_FILTER ), POOL_MAIN_TAG );
+    if( NewFilter == NULLPTR )
+        return STATUS_INSUFFICIENT_RESOURCES;
+
+    RtlZeroMemory( NewFilter, sizeof( PROCESS_FILTER ) );
+    NewFilter->RefCount = 0;
+    InitializeListHead( &NewFilter->ListHead );
+
+    PROCESS_FILTER* Filter = ProcessFilter_Ref();
+    InterlockedExchangePointer( &GlobalContext.ProcessFilter, NewFilter );
+    ProcessFilter_Release( Filter );
+
+    return STATUS_SUCCESS;
 }

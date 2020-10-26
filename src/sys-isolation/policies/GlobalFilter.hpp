@@ -44,5 +44,6 @@ NTSTATUS UninitializeGlobalFilter();
 NTSTATUS GlobalFilter_Add( __in const WCHAR* FilterMask, bool isInclude );
 NTSTATUS GlobalFilter_Remove( __in const WCHAR* FilterMask );
 NTSTATUS GlobalFilter_Match( __in const WCHAR* FileName, bool IsInclude );
+NTSTATUS GlobalFilter_Reset();
 
 #endif // HDR_WINIOISOLATION_GLOBAL_FILTER

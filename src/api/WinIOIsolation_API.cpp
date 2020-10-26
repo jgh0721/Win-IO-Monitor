@@ -194,6 +194,9 @@ DWORD AddGlobalFilterMask( const wchar_t* wszFilterMask, bool isInclude )
     if( wszBuffer != NULL )
         free( wszBuffer );
 
+    if( hDevice != INVALID_HANDLE_VALUE )
+        CloseHandle( hDevice );
+
     return dwRet;
 }
 
@@ -245,6 +248,9 @@ DWORD DelGlobalFilterMask( const wchar_t* wszFilterMask, bool isInclude )
     if( wszBuffer != NULL )
         free( wszBuffer );
 
+    if( hDevice != INVALID_HANDLE_VALUE )
+        CloseHandle( hDevice );
+
     return dwRet;
 }
 
@@ -293,6 +299,9 @@ DWORD GetGlobalFilterMaskCnt( bool isInclude, ULONG* Count )
     if( wszBuffer != NULL )
         free( wszBuffer );
 
+    if( hDevice != INVALID_HANDLE_VALUE )
+        CloseHandle( hDevice );
+
     return dwRet;
 }
 
@@ -330,6 +339,313 @@ DWORD ResetGlobalFilter()
             dwRet = GetLastError();
 
     } while( false );
+
+    if( hDevice != INVALID_HANDLE_VALUE )
+        CloseHandle( hDevice );
+
+    return dwRet;
+}
+
+DWORD AddProcessFilter( const USER_PROCESS_FILTER& ProcessFilter )
+{
+    DWORD dwRet = ERROR_SUCCESS;
+    DWORD dwRetLen = 0;
+    HANDLE hDevice = INVALID_HANDLE_VALUE;
+
+    do
+    {
+        hDevice = CreateFileW( L"\\\\." DEVICE_NAME,
+                               GENERIC_READ | GENERIC_WRITE,
+                               FILE_SHARE_READ | FILE_SHARE_WRITE,
+                               NULL,
+                               OPEN_EXISTING,
+                               FILE_ATTRIBUTE_NORMAL,
+                               NULL );
+
+        if( hDevice == INVALID_HANDLE_VALUE )
+        {
+            dwRet = GetLastError();
+            break;
+        }
+
+        BOOL bSuccess = DeviceIoControl( hDevice, IOCTL_ADD_PROCESS_POLICY,
+                                         ( LPVOID )&ProcessFilter, sizeof( USER_PROCESS_FILTER ),
+                                         NULL, 0,
+                                         ( LPDWORD )&dwRetLen, NULL );
+
+        if( bSuccess != FALSE )
+            dwRet = ERROR_SUCCESS;
+        else
+            dwRet = GetLastError();
+
+    } while( false );
+
+    if( hDevice != INVALID_HANDLE_VALUE )
+        CloseHandle( hDevice );
+
+    return dwRet;
+}
+
+DWORD DelProcessFilterByID( const USER_PROCESS_FILTER& ProcessFilter )
+{
+    DWORD dwRet = ERROR_SUCCESS;
+    DWORD dwRetLen = 0;
+    HANDLE hDevice = INVALID_HANDLE_VALUE;
+
+    do
+    {
+        hDevice = CreateFileW( L"\\\\." DEVICE_NAME,
+                               GENERIC_READ | GENERIC_WRITE,
+                               FILE_SHARE_READ | FILE_SHARE_WRITE,
+                               NULL,
+                               OPEN_EXISTING,
+                               FILE_ATTRIBUTE_NORMAL,
+                               NULL );
+
+        if( hDevice == INVALID_HANDLE_VALUE )
+        {
+            dwRet = GetLastError();
+            break;
+        }
+
+        BOOL bSuccess = DeviceIoControl( hDevice, IOCTL_DEL_PROCESS_POLICY_BY_ID,
+                                         ( LPVOID )&ProcessFilter, sizeof( USER_PROCESS_FILTER ),
+                                         NULL, 0,
+                                         ( LPDWORD )&dwRetLen, NULL );
+
+        if( bSuccess != FALSE )
+            dwRet = ERROR_SUCCESS;
+        else
+            dwRet = GetLastError();
+
+    } while( false );
+
+    if( hDevice != INVALID_HANDLE_VALUE )
+        CloseHandle( hDevice );
+
+    return dwRet;
+}
+
+DWORD DelProcessFilterByPID( ULONG ProcessId )
+{
+    DWORD dwRet = ERROR_SUCCESS;
+    DWORD dwRetLen = 0;
+    HANDLE hDevice = INVALID_HANDLE_VALUE;
+
+    do
+    {
+        hDevice = CreateFileW( L"\\\\." DEVICE_NAME,
+                               GENERIC_READ | GENERIC_WRITE,
+                               FILE_SHARE_READ | FILE_SHARE_WRITE,
+                               NULL,
+                               OPEN_EXISTING,
+                               FILE_ATTRIBUTE_NORMAL,
+                               NULL );
+
+        if( hDevice == INVALID_HANDLE_VALUE )
+        {
+            dwRet = GetLastError();
+            break;
+        }
+
+        BOOL bSuccess = DeviceIoControl( hDevice, IOCTL_DEL_PROCESS_POLICY_BY_PID,
+                                         ( LPVOID )&ProcessId, sizeof( ULONG ),
+                                         NULL, 0,
+                                         ( LPDWORD )&dwRetLen, NULL );
+
+        if( bSuccess != FALSE )
+            dwRet = ERROR_SUCCESS;
+        else
+            dwRet = GetLastError();
+
+    } while( false );
+
+    if( hDevice != INVALID_HANDLE_VALUE )
+        CloseHandle( hDevice );
+
+    return dwRet;
+}
+
+DWORD DelProcessFilterByFilterMask( const wchar_t* wszFilterMask )
+{
+    DWORD dwRet = ERROR_SUCCESS;
+    DWORD dwRetLen = 0;
+    HANDLE hDevice = INVALID_HANDLE_VALUE;
+
+    do
+    {
+        hDevice = CreateFileW( L"\\\\." DEVICE_NAME,
+                               GENERIC_READ | GENERIC_WRITE,
+                               FILE_SHARE_READ | FILE_SHARE_WRITE,
+                               NULL,
+                               OPEN_EXISTING,
+                               FILE_ATTRIBUTE_NORMAL,
+                               NULL );
+
+        if( hDevice == INVALID_HANDLE_VALUE )
+        {
+            dwRet = GetLastError();
+            break;
+        }
+
+        BOOL bSuccess = DeviceIoControl( hDevice, IOCTL_DEL_PROCESS_POLICY_BY_MASK,
+                                         ( LPVOID )&wszFilterMask, ( wcslen( wszFilterMask ) + 1 ) * sizeof(WCHAR),
+                                         NULL, 0,
+                                         ( LPDWORD )&dwRetLen, NULL );
+
+        if( bSuccess != FALSE )
+            dwRet = ERROR_SUCCESS;
+        else
+            dwRet = GetLastError();
+
+    } while( false );
+
+    if( hDevice != INVALID_HANDLE_VALUE )
+        CloseHandle( hDevice );
+
+    return dwRet;
+}
+
+DWORD AddProcessFilterItem( const GUID& Id, const USER_PROCESS_FILTER_ENTRY& ProcessFilterItem )
+{
+    DWORD dwRet = ERROR_SUCCESS;
+    DWORD dwRetLen = 0;
+    HANDLE hDevice = INVALID_HANDLE_VALUE;
+
+    PBYTE Buffer = NULL;
+    ULONG BufferSize = sizeof( GUID ) + sizeof( USER_PROCESS_FILTER_ENTRY );
+
+    do
+    {
+        hDevice = CreateFileW( L"\\\\." DEVICE_NAME,
+                               GENERIC_READ | GENERIC_WRITE,
+                               FILE_SHARE_READ | FILE_SHARE_WRITE,
+                               NULL,
+                               OPEN_EXISTING,
+                               FILE_ATTRIBUTE_NORMAL,
+                               NULL );
+
+        if( hDevice == INVALID_HANDLE_VALUE )
+        {
+            dwRet = GetLastError();
+            break;
+        }
+
+        Buffer = ( PBYTE )malloc( BufferSize );
+        RtlZeroMemory( Buffer, BufferSize );
+
+        RtlCopyMemory( Buffer, &Id, sizeof( GUID ) );
+        RtlCopyMemory( Buffer + sizeof( GUID ), &ProcessFilterItem, sizeof( USER_PROCESS_FILTER_ENTRY ) );
+
+        BOOL bSuccess = DeviceIoControl( hDevice, IOCTL_ADD_PROCESS_POLICY_ITEM,
+                                         Buffer, BufferSize,
+                                         NULL, 0,
+                                         ( LPDWORD )&dwRetLen, NULL );
+
+        if( bSuccess != FALSE )
+            dwRet = ERROR_SUCCESS;
+        else
+            dwRet = GetLastError();
+
+    } while( false );
+
+    if( Buffer != NULL )
+        free( Buffer );
+
+    if( hDevice != INVALID_HANDLE_VALUE )
+        CloseHandle( hDevice );
+
+    return dwRet;
+}
+
+DWORD DelProcessFilterItem( const GUID& Id, const USER_PROCESS_FILTER_ENTRY& ProcessFilterItem )
+{
+    DWORD dwRet = ERROR_SUCCESS;
+    DWORD dwRetLen = 0;
+    HANDLE hDevice = INVALID_HANDLE_VALUE;
+
+    PBYTE Buffer = NULL;
+    ULONG BufferSize = sizeof( GUID ) + sizeof( USER_PROCESS_FILTER_ENTRY );
+
+    do
+    {
+        hDevice = CreateFileW( L"\\\\." DEVICE_NAME,
+                               GENERIC_READ | GENERIC_WRITE,
+                               FILE_SHARE_READ | FILE_SHARE_WRITE,
+                               NULL,
+                               OPEN_EXISTING,
+                               FILE_ATTRIBUTE_NORMAL,
+                               NULL );
+
+        if( hDevice == INVALID_HANDLE_VALUE )
+        {
+            dwRet = GetLastError();
+            break;
+        }
+
+        Buffer = ( PBYTE )malloc( BufferSize );
+        RtlZeroMemory( Buffer, BufferSize );
+
+        RtlCopyMemory( Buffer, &Id, sizeof( GUID ) );
+        RtlCopyMemory( Buffer + sizeof( GUID ), &ProcessFilterItem, sizeof( USER_PROCESS_FILTER_ENTRY ) );
+
+        BOOL bSuccess = DeviceIoControl( hDevice, IOCTL_DEL_PROCESS_POLICY_ITEM,
+                                         Buffer, BufferSize,
+                                         NULL, 0,
+                                         ( LPDWORD )&dwRetLen, NULL );
+
+        if( bSuccess != FALSE )
+            dwRet = ERROR_SUCCESS;
+        else
+            dwRet = GetLastError();
+
+    } while( false );
+
+    if( Buffer != NULL )
+        free( Buffer );
+
+    if( hDevice != INVALID_HANDLE_VALUE )
+        CloseHandle( hDevice );
+
+    return dwRet;
+}
+
+DWORD ResetProcessFilter()
+{
+    DWORD dwRet = ERROR_SUCCESS;
+    DWORD dwRetLen = 0;
+    HANDLE hDevice = INVALID_HANDLE_VALUE;
+
+    do
+    {
+        hDevice = CreateFileW( L"\\\\." DEVICE_NAME,
+                               GENERIC_READ | GENERIC_WRITE,
+                               FILE_SHARE_READ | FILE_SHARE_WRITE,
+                               NULL,
+                               OPEN_EXISTING,
+                               FILE_ATTRIBUTE_NORMAL,
+                               NULL );
+
+        if( hDevice == INVALID_HANDLE_VALUE )
+        {
+            dwRet = GetLastError();
+            break;
+        }
+
+        BOOL bSuccess = DeviceIoControl( hDevice, IOCTL_RST_PROCESS_POLICY,
+                                         NULL, 0,
+                                         NULL, 0,
+                                         ( LPDWORD )&dwRetLen, NULL );
+
+        if( bSuccess != FALSE )
+            dwRet = ERROR_SUCCESS;
+        else
+            dwRet = GetLastError();
+
+    } while( false );
+
+    if( hDevice != INVALID_HANDLE_VALUE )
+        CloseHandle( hDevice );
 
     return dwRet;
 }
@@ -371,6 +687,9 @@ DWORD GetFileType( const wchar_t* wszFileFullPath, ULONG* FileType )
             dwRet = GetLastError();
 
     } while( false );
+
+    if( hDevice != INVALID_HANDLE_VALUE )
+        CloseHandle( hDevice );
 
     return dwRet;
 }
@@ -440,6 +759,9 @@ DWORD SetFileSolutionMetaData( const wchar_t* wszFileFullPath, PVOID Buffer, ULO
     if( UserFileSolutionData != NULL )
         free( UserFileSolutionData );
 
+    if( hDevice != INVALID_HANDLE_VALUE )
+        CloseHandle( hDevice );
+
     return dwRet;
 }
 
@@ -479,6 +801,9 @@ DWORD GetFileSolutionMetaData( const wchar_t* wszFileFullPath, PVOID Buffer, ULO
         *BufferSize = dwRetLen;
 
     } while( false );
+
+    if( hDevice != INVALID_HANDLE_VALUE )
+        CloseHandle( hDevice );
 
     return dwRet;
 }

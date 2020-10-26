@@ -56,9 +56,12 @@ NTSTATUS UninitializeProcessFilter();
     Must allocate from NonPagedPool
 */
 NTSTATUS ProcessFilter_Add( __in PROCESS_FILTER_ENTRY* PFilterItem );
+NTSTATUS ProcessFilter_AddEntry( __in UUID* Id, __in PROCESS_FILTER_MASK_ENTRY* Entry, __in BOOLEAN IsInclude );
+NTSTATUS ProcessFilter_Remove( __in UUID* Id );
 NTSTATUS ProcessFilter_Remove( __in_opt ULONG ProcessId, __in_z_opt const WCHAR* ProcessNameMask );
-/*!
+NTSTATUS ProcessFilter_RemoveEntry( __in UUID* ParentId, __in UUID* EntryId, __in BOOLEAN IsInclude );
 
+/*!
     Must call ProcessFilter_Close after use 
 */
 NTSTATUS ProcessFilter_Match( __in_opt ULONG ProcessId, __in_opt TyGenericBuffer<WCHAR>* ProcessFilePath, __out_opt HANDLE* ProcessFilter, __out_opt PROCESS_FILTER_ENTRY** MatchItem );
@@ -69,5 +72,6 @@ NTSTATUS ProcessFilter_Match( __in_opt ULONG ProcessId, __in_opt TyGenericBuffer
 NTSTATUS ProcessFilter_SubMatch( __in PROCESS_FILTER_ENTRY* PFilterItem, __in TyGenericBuffer<WCHAR>* FilePath, __out bool* IsIncludeMatch );
 
 void ProcessFilter_Close( __in HANDLE ProcessFilterHandle );
+NTSTATUS ProcessFilter_Reset();
 
 #endif // HDR_WINIOISOLATION_PROCESS_FILTER
