@@ -288,6 +288,68 @@ NTSTATUS CheckEventFileCreateTo( IRP_CONTEXT* IrpContext )
     return Status;
 }
 
+NTSTATUS NotifyEventFileRenameTo( IRP_CONTEXT* IrpContext )
+{
+    NTSTATUS Status = STATUS_INVALID_PARAMETER;
+    TyGenericBuffer<MSG_SEND_PACKET> Packet;
+    ASSERT( IrpContext != NULLPTR );
+
+    __try
+    {
+        if( IrpContext == NULLPTR )
+            __leave;
+
+        unsigned int SendPacketSize = MSG_SEND_PACKET_SIZE;
+        unsigned int CchProcessFullPath = nsUtils::strlength( IrpContext->ProcessFullPath.Buffer ) + 1;
+        unsigned int CchSrcFileFullpath = nsUtils::strlength( IrpContext->SrcFileFullPath.Buffer ) + 1;
+        unsigned int CchDstFileFullpath = nsUtils::strlength( IrpContext->DstFileFullPath.Buffer ) + 1;
+
+        if( Packet.Buffer == NULLPTR )
+        {
+            Status = STATUS_INSUFFICIENT_RESOURCES;
+            __leave;
+        }
+
+        Packet.Buffer->MessageSize = SendPacketSize;
+        Packet.Buffer->MessageCate = MSG_CATE_FILESYSTEM_NOTIFY;
+        Packet.Buffer->MessageType = FILE_WAS_RENAMED;
+        KeQuerySystemTime( &Packet.Buffer->EventTime );
+
+        Packet.Buffer->ProcessId = IrpContext->ProcessId;
+
+        Packet.Buffer->Parameters.SetFileInformation.FileInformationClass = IrpContext->Data->Iopb->Parameters.SetFileInformation.FileInformationClass;
+
+        Packet.Buffer->LengthOfProcessFullPath = CchProcessFullPath * sizeof( WCHAR );
+        Packet.Buffer->OffsetOfProcessFullPath = sizeof( MSG_SEND_PACKET );
+        RtlStringCbPrintfW( ( PWCH )( Add2Ptr( Packet.Buffer, Packet.Buffer->OffsetOfProcessFullPath ) ),
+                            Packet.Buffer->LengthOfProcessFullPath,
+                            L"%s", IrpContext->ProcessFullPath.Buffer );
+
+        Packet.Buffer->LengthOfSrcFileFullPath = CchSrcFileFullpath * sizeof( WCHAR );
+        Packet.Buffer->OffsetOfSrcFileFullPath = Packet.Buffer->OffsetOfProcessFullPath = Packet.Buffer->LengthOfProcessFullPath;
+        RtlStringCbPrintfW( ( PWCH )( Add2Ptr( Packet.Buffer, Packet.Buffer->OffsetOfSrcFileFullPath ) ),
+                            Packet.Buffer->LengthOfSrcFileFullPath,
+                            L"%s", IrpContext->SrcFileFullPath.Buffer );
+
+        Packet.Buffer->LengthOfDstFileFullPath = CchDstFileFullpath * sizeof( WCHAR );
+        Packet.Buffer->OffsetOfDstFileFullPath = Packet.Buffer->OffsetOfSrcFileFullPath = Packet.Buffer->LengthOfSrcFileFullPath;
+        RtlStringCbPrintfW( ( PWCH )( Add2Ptr( Packet.Buffer, Packet.Buffer->OffsetOfDstFileFullPath ) ),
+                            Packet.Buffer->LengthOfDstFileFullPath,
+                            L"%s", IrpContext->DstFileFullPath.Buffer );
+
+        auto NotifyItem = ( FS_NOTIFY_ITEM* )ExAllocatePool( NonPagedPool, sizeof( FS_NOTIFY_ITEM ) );
+        NotifyItem->SendPacket = Packet;
+        
+        QueueNotifyEvent( NotifyItem );
+    }
+    __finally
+    {
+        // NOTE: 통지 이벤트는 추후 클라이언트에 이벤트를 전송한 후 해당 스레드에서 삭제한다
+    }
+
+    return Status;
+}
+
 NTSTATUS CheckEventProcCreateTo( ULONG ProcessId, TyGenericBuffer<WCHAR>* ProcessFileFullPath, __in_z const wchar_t* ProcessFileName )
 {
     NTSTATUS Status = STATUS_INVALID_PARAMETER;

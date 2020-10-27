@@ -1,6 +1,7 @@
 ﻿#include "ProcessFilter.hpp"
 
 #include "utilities/contextMgr_Defs.hpp"
+#include "WinIOIsolation_Event.hpp"
 
 #include "fltCmnLibs.hpp"
 
@@ -481,7 +482,7 @@ NTSTATUS ProcessFilter_Match( ULONG ProcessId, TyGenericBuffer<WCHAR>* ProcessFi
     return Status;
 }
 
-NTSTATUS ProcessFilter_SubMatch( PROCESS_FILTER_ENTRY* PFilterItem, TyGenericBuffer<WCHAR>* FilePath, bool* IsIncludeMatch, __out_opt PPROCESS_FILTER_MASK_ENTRY* MatchItem )
+NTSTATUS ProcessFilter_SubMatch( __in PFLT_CALLBACK_DATA Data, PROCESS_FILTER_ENTRY* PFilterItem, TyGenericBuffer<WCHAR>* FilePath, bool* IsIncludeMatch, __out_opt PPROCESS_FILTER_MASK_ENTRY* MatchItem )
 {
     NTSTATUS Status = STATUS_NOT_FOUND;
 
@@ -508,6 +509,10 @@ NTSTATUS ProcessFilter_SubMatch( PROCESS_FILTER_ENTRY* PFilterItem, TyGenericBuf
         for( auto Current = Head->Flink; Current != Head; Current = Current->Flink )
         {
             auto Item = CONTAINING_RECORD( Current, PROCESS_FILTER_MASK_ENTRY, ListEntry );
+
+            if( IsMatchEventType( Item, Data ) == false )
+                continue;
+
             if( nsUtils::WildcardMatch_straight( FilePath->Buffer, Item->FilterMask ) == false )
                 continue;
 
@@ -528,6 +533,10 @@ NTSTATUS ProcessFilter_SubMatch( PROCESS_FILTER_ENTRY* PFilterItem, TyGenericBuf
         for( auto Current = Head->Flink; Current != Head; Current = Current->Flink )
         {
             auto Item = CONTAINING_RECORD( Current, PROCESS_FILTER_MASK_ENTRY, ListEntry );
+
+            if( IsMatchEventType( Item, Data ) == false )
+                continue;
+
             if( nsUtils::WildcardMatch_straight( FilePath->Buffer, Item->FilterMask ) == false )
                 continue;
 
@@ -570,4 +579,89 @@ NTSTATUS ProcessFilter_Reset()
     ProcessFilter_Release( Filter );
 
     return STATUS_SUCCESS;
+}
+
+bool IsMatchEventType( PROCESS_FILTER_MASK_ENTRY* Item, PFLT_CALLBACK_DATA Data )
+{
+    ASSERT( Item != NULLPTR );
+    ASSERT( Data != NULLPTR );
+
+    if( Item == NULLPTR || Data == NULLPTR )
+        return false;
+
+    if( Item->FilterCategory == MSG_CATE_PROCESS )
+        return false;
+
+    const auto Major = Data->Iopb->MajorFunction;
+
+    switch( (MSG_CATEGORY)Item->FilterCategory )
+    {
+        case MSG_CATE_FILESYSTEM: {
+            switch( Major )
+            {
+                case IRP_MJ_CREATE: {
+                    if( FlagOn( Item->FilterType, FS_PRE_CREATE ) ||
+                        FlagOn( Item->FilterType, FS_POST_CREATE ) )
+                        return true;
+                } break;
+                case IRP_MJ_SET_INFORMATION: {
+                    if( FlagOn( Item->FilterType, FS_PRE_SET_INFORMATION ) ||
+                        FlagOn( Item->FilterType, FS_POST_SET_INFORMATION ) )
+                        return true;
+                } break;
+                case IRP_MJ_QUERY_INFORMATION: {
+                    if( FlagOn( Item->FilterType, FS_PRE_QUERY_INFORMATION ) ||
+                        FlagOn( Item->FilterType, FS_POST_QUERY_INFORMATION ) )
+                        return true;
+                } break;
+                case IRP_MJ_DIRECTORY_CONTROL: {
+                    if( FlagOn( Item->FilterType, FS_PRE_DIRECTORY_CONTROL ) ||
+                        FlagOn( Item->FilterType, FS_POST_DIRECTORY_CONTROL ) )
+                        return true;
+                } break;
+                case IRP_MJ_CLEANUP: {
+                    if( FlagOn( Item->FilterType, FS_PRE_CLEANUP ) ||
+                        FlagOn( Item->FilterType, FS_POST_CLEANUP ) )
+                        return true;
+                } break;
+                case IRP_MJ_CLOSE: {
+                    if( FlagOn( Item->FilterType, FS_PRE_CLOSE ) ||
+                        FlagOn( Item->FilterType, FS_POST_CLOSE ) )
+                        return true;
+                } break;
+            }
+        } break;
+        case MSG_CATE_FILESYSTEM_NOTIFY: {
+            switch( Major )
+            {
+                case IRP_MJ_CREATE: {
+                    if( FlagOn( Item->FilterType, FILE_WAS_CREATED ) )
+                        return true;
+                } break;
+                case IRP_MJ_WRITE: {
+                    if( FlagOn( Item->FilterType, FILE_WAS_WRITTEN ) )
+                        return true;
+                } break;
+                case IRP_MJ_SET_INFORMATION: {
+                    if( FlagOn( Item->FilterType, FILE_INFO_CHANGED ) )
+                        return true;
+
+                    auto Class = Data->Iopb->Parameters.SetFileInformation.FileInformationClass;
+                    if( Class == FileRenameInformation || Class == nsW32API::FileRenameInformationEx || 
+                        Class == FileLinkInformation || Class == nsW32API::FileLinkInformationEx )
+                    {
+                        if( FlagOn( Item->FilterType, FILE_WAS_RENAMED ) )
+                            return true;
+                    }
+                } break;
+                // TODO: Implements FILE_WAS_DELETED
+                case IRP_MJ_READ: {
+                    if( FlagOn( Item->FilterType, FILE_WAS_READ ) )
+                        return true;
+                } break;
+            }
+        } break;
+    }
+
+    return false;
 }

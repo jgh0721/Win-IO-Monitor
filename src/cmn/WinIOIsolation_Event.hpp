@@ -181,6 +181,11 @@ typedef union TyMsgParameters
         BYTE                                SolutionMetaData[ MAX_SOLUTION_METADATA_SIZE ];
     } CreateResult;
 
+    struct
+    {
+        ULONG                               FileInformationClass;
+    } SetFileInformation;
+
 } MSG_PARAMETERS, *PMSG_PARAMETERS;
 
 const unsigned int MSG_PARAMETERS_SIZE = sizeof( MSG_PARAMETERS );

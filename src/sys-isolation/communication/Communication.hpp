@@ -44,6 +44,12 @@ NTSTATUS    CheckEventFileCreateTo( __in IRP_CONTEXT* IrpContext );
 NTSTATUS    CheckEventFileOpenTo( __in IRP_CONTEXT* IrpContext );
 
 ///////////////////////////////////////////////////////////////////////////////
+/// MSG_FS_NOTIFY_TYPE
+
+NTSTATUS    NotifyEventFileRenameTo( __in IRP_CONTEXT* IrpContext );
+NTSTATUS    NotifyEventFileDeleteTo( __in IRP_CONTEXT* IrpContext );
+
+///////////////////////////////////////////////////////////////////////////////
 /// MSG_PROC_TYPE
 
 NTSTATUS    CheckEventProcCreateTo( __in ULONG ProcessId, __in TyGenericBuffer<WCHAR>* ProcessFileFullPath, __in_z const wchar_t* ProcessFileName );

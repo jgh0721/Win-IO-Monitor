@@ -49,6 +49,7 @@ typedef struct _IRP_CONTEXT
     WCHAR*                              ProcessFileName;        // This just point to ProcessFullPath, dont free this buffer!
     HANDLE                              ProcessFilter;
     PROCESS_FILTER_ENTRY*               ProcessFilterEntry;
+    PROCESS_FILTER_MASK_ENTRY*          ProcessFilterMaskItem;
 
     TyGenericBuffer< WCHAR >            SrcFileFullPath;
     WCHAR*                              SrcFileFullPathWOVolume;    // SrcFileFullPath 에서 드라이브 문자 또는 디바이스 이름등을 제외한 순수한 경로 및 이름( \ 로 시작한다 )

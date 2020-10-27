@@ -1363,7 +1363,7 @@ NTSTATUS CheckEventTo( IRP_CONTEXT* IrpContext )
                 Status = CheckEventToWithQUERY_INFORMATION( IrpContext, CHECK_EVENT_PROCESS_ONLY );
             } break;
             case IRP_MJ_SET_INFORMATION: {
-                Status = CheckEventToWithQUERY_INFORMATION( IrpContext, CHECK_EVENT_PROCESS_ONLY );
+                Status = CheckEventToWithQUERY_INFORMATION( IrpContext, CHECK_EVENT_PROCESS_DIR_FILTER | CHECK_EVENT_IS_ENCRYPTED );
             } break;
             case IRP_MJ_CLEANUP: {} break;
             case IRP_MJ_CLOSE: {} break;
@@ -1415,7 +1415,7 @@ NTSTATUS CheckEventToWithCREATE( IRP_CONTEXT* IrpContext, ULONG CheckFlags )
             if( FlagOn( CheckFlags, CHECK_EVENT_PROCESS_DIR_FILTER ) )
             {
                 bool isInclude = false;
-                Status = ProcessFilter_SubMatch( IrpContext->ProcessFilterEntry, &IrpContext->SrcFileFullPath, &isInclude );
+                Status = ProcessFilter_SubMatch( IrpContext->Data, IrpContext->ProcessFilterEntry, &IrpContext->SrcFileFullPath, &isInclude, &IrpContext->ProcessFilterMaskItem );
                 if( Status == STATUS_NO_DATA_DETECTED )
                     break;
 
@@ -1472,7 +1472,7 @@ NTSTATUS CheckEventToWithDIRECTORY_CONTROL( IRP_CONTEXT* IrpContext, ULONG Check
             if( FlagOn( CheckFlags, CHECK_EVENT_PROCESS_DIR_FILTER ) )
             {
                 bool isInclude = false;
-                Status = ProcessFilter_SubMatch( IrpContext->ProcessFilterEntry, &IrpContext->SrcFileFullPath, &isInclude );
+                Status = ProcessFilter_SubMatch( IrpContext->Data, IrpContext->ProcessFilterEntry, &IrpContext->SrcFileFullPath, &isInclude, &IrpContext->ProcessFilterMaskItem );
                 if( Status == STATUS_NO_DATA_DETECTED )
                     break;
 
@@ -1529,7 +1529,7 @@ NTSTATUS CheckEventToWithQUERY_INFORMATION( IRP_CONTEXT* IrpContext, ULONG Check
             if( FlagOn( CheckFlags, CHECK_EVENT_PROCESS_DIR_FILTER ) )
             {
                 bool isInclude = false;
-                Status = ProcessFilter_SubMatch( IrpContext->ProcessFilterEntry, &IrpContext->SrcFileFullPath, &isInclude );
+                Status = ProcessFilter_SubMatch( IrpContext->Data, IrpContext->ProcessFilterEntry, &IrpContext->SrcFileFullPath, &isInclude, &IrpContext->ProcessFilterMaskItem );
                 if( Status == STATUS_NO_DATA_DETECTED )
                     break;
 
@@ -1551,6 +1551,15 @@ NTSTATUS CheckEventToWithSET_INFORMATION( IRP_CONTEXT* IrpContext, ULONG CheckFl
 
     do
     {
+        bool isRenameOrLink = false;
+        const auto& FileInformationClass = IrpContext->Data->Iopb->Parameters.SetFileInformation.FileInformationClass;
+
+        if( FileInformationClass == FileRenameInformation || 
+            FileInformationClass == FileLinkInformation ||
+            FileInformationClass == ( nsW32API::FileRenameInformationEx ) ||
+            FileInformationClass == nsW32API::FileLinkInformationEx )
+            isRenameOrLink = true;
+
         IrpContext->IsConcerned = false;
 
         if( FlagOn( CheckFlags, CHECK_EVENT_GLOBAL_DIR_FILTER ) )
@@ -1561,11 +1570,20 @@ NTSTATUS CheckEventToWithSET_INFORMATION( IRP_CONTEXT* IrpContext, ULONG CheckFl
                 IrpContext->IsConcerned = false;
                 break;
             }
-
+            
             Status = GlobalFilter_Match( IrpContext->SrcFileFullPath.Buffer, true );
             if( Status == STATUS_SUCCESS )
             {
                 IrpContext->IsConcerned = true;
+            }
+
+            if( isRenameOrLink == true )
+            {
+                Status = GlobalFilter_Match( IrpContext->DstFileFullPath.Buffer, true );
+                if( Status == STATUS_SUCCESS )
+                {
+                    IrpContext->IsConcerned = true;
+                }
             }
         }
 
@@ -1586,7 +1604,7 @@ NTSTATUS CheckEventToWithSET_INFORMATION( IRP_CONTEXT* IrpContext, ULONG CheckFl
             if( FlagOn( CheckFlags, CHECK_EVENT_PROCESS_DIR_FILTER ) )
             {
                 bool isInclude = false;
-                Status = ProcessFilter_SubMatch( IrpContext->ProcessFilterEntry, &IrpContext->SrcFileFullPath, &isInclude );
+                Status = ProcessFilter_SubMatch( IrpContext->Data, IrpContext->ProcessFilterEntry, &IrpContext->SrcFileFullPath, &isInclude, &IrpContext->ProcessFilterMaskItem );
                 if( Status == STATUS_NO_DATA_DETECTED )
                     break;
 
@@ -1594,6 +1612,16 @@ NTSTATUS CheckEventToWithSET_INFORMATION( IRP_CONTEXT* IrpContext, ULONG CheckFl
                     IrpContext->IsConcerned = isInclude;
                 else
                     IrpContext->IsConcerned = false;
+
+                if( isRenameOrLink == true && FlagOn( CheckFlags, CHECK_EVENT_IS_RENAME ) && Status == STATUS_NOT_FOUND )
+                {
+                    Status = ProcessFilter_SubMatch( IrpContext->Data, IrpContext->ProcessFilterEntry, &IrpContext->DstFileFullPath, &isInclude, &IrpContext->ProcessFilterMaskItem );
+
+                    if( Status == STATUS_SUCCESS )
+                        IrpContext->IsConcerned = isInclude;
+                    else
+                        IrpContext->IsConcerned = false;
+                }
             }
         }
 

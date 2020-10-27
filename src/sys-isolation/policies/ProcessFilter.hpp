@@ -69,9 +69,17 @@ NTSTATUS ProcessFilter_Match( __in_opt ULONG ProcessId, __in_opt TyGenericBuffer
 
     @param IsIncludeMatch if criteria was matched, this variable set match type value
 */
-NTSTATUS ProcessFilter_SubMatch( __in PROCESS_FILTER_ENTRY* PFilterItem, __in TyGenericBuffer<WCHAR>* FilePath, __out bool* IsIncludeMatch, __out_opt PPROCESS_FILTER_MASK_ENTRY* MatchItem );
+NTSTATUS ProcessFilter_SubMatch( __in PFLT_CALLBACK_DATA Data, __in PROCESS_FILTER_ENTRY* PFilterItem, __in TyGenericBuffer<WCHAR>* FilePath, __out bool* IsIncludeMatch, __out_opt PPROCESS_FILTER_MASK_ENTRY* MatchItem = NULLPTR );
 
 void ProcessFilter_Close( __in HANDLE ProcessFilterHandle );
 NTSTATUS ProcessFilter_Reset();
+
+/*!
+    주어진 Item 의 조건에 부합하는지 확인
+
+    1. MSG_CATEGORY
+    2. MSG_FS_TYPE, MSG_FS_NOTIFY_TYPE
+*/
+bool IsMatchEventType( __in PROCESS_FILTER_MASK_ENTRY* Item, __in PFLT_CALLBACK_DATA Data );
 
 #endif // HDR_WINIOISOLATION_PROCESS_FILTER

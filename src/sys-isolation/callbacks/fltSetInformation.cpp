@@ -4,6 +4,7 @@
 #include "privateFCBMgr.hpp"
 #include "irpContext.hpp"
 #include "metadata/Metadata.hpp"
+#include "communication/Communication.hpp"
 
 #include "fltCmnLibs.hpp"
 
@@ -618,8 +619,12 @@ NTSTATUS ProcessSetFileRenameInformation( IRP_CONTEXT* IrpContext )
 
             FltPerformSynchronousIo( NewCallbackData );
 
+            Status = NewCallbackData->IoStatus.Status;
             AssignCmnResult( IrpContext, NewCallbackData->IoStatus.Status );
             AssignCmnResultInfo( IrpContext, NewCallbackData->IoStatus.Information );
+
+            if( IrpContext->IsConcerned == true && NT_SUCCESS( Status ) )
+                NotifyEventFileRenameTo( IrpContext );
         }
         else
         {
@@ -641,6 +646,10 @@ NTSTATUS ProcessSetFileRenameInformation( IRP_CONTEXT* IrpContext )
             }
 
             Status = ProcessSetFileInformation( IrpContext );
+
+            if( IrpContext->IsConcerned == true && NT_SUCCESS( Status ) )
+                NotifyEventFileRenameTo( IrpContext );
+
             __leave;
         }
 
@@ -739,8 +748,12 @@ NTSTATUS ProcessSetFileRenameInformationEx( IRP_CONTEXT* IrpContext )
 
             FltPerformSynchronousIo( NewCallbackData );
 
+            Status = NewCallbackData->IoStatus.Status;
             AssignCmnResult( IrpContext, NewCallbackData->IoStatus.Status );
             AssignCmnResultInfo( IrpContext, NewCallbackData->IoStatus.Information );
+
+            if( IrpContext->IsConcerned == true && NT_SUCCESS( Status ) )
+                NotifyEventFileRenameTo( IrpContext );
         }
         else
         {
@@ -762,6 +775,10 @@ NTSTATUS ProcessSetFileRenameInformationEx( IRP_CONTEXT* IrpContext )
             }
 
             Status = ProcessSetFileInformation( IrpContext );
+
+            if( IrpContext->IsConcerned == true && NT_SUCCESS( Status ) )
+                NotifyEventFileRenameTo( IrpContext );
+
             __leave;
         }
     }
