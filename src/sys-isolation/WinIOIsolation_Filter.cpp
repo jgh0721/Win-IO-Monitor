@@ -7,10 +7,13 @@
 #include "utilities/contextMgr.hpp"
 
 #include "W32API.hpp"
-#include "WinIOMonitor_Names.hpp"
+#include "WinIOIsolation_Names.hpp"
 
 #include "pool.hpp"
-#include "../sys/callbacks/fltInstance.hpp"
+
+#pragma warning(disable: 4311)
+#pragma warning(disable: 4312)
+#pragma warning(disable: 4302)
 
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )

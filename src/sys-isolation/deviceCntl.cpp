@@ -11,6 +11,9 @@
 #include "WinIOIsolation_IOCTL.hpp"
 #include "metadata/Metadata.hpp"
 
+#pragma warning(disable: 4311)
+#pragma warning(disable: 4302)
+
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
 #endif
