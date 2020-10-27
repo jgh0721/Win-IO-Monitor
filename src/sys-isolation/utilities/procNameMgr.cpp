@@ -675,7 +675,7 @@ NTSTATUS SearchProcessInfo( ULONG ProcessId, TyGenericBuffer<WCHAR>* ProcessFile
         {
             Status = STATUS_SUCCESS;
             *ProcessFileFullPath = AllocateBuffer<WCHAR>( BUFFER_PROCNAME );
-            wcscpy( ProcessFileFullPath->Buffer, L"\\SYSTEM" );
+            RtlStringCbCatW( ProcessFileFullPath->Buffer, ProcessFileFullPath->BufferSize, L"\\SYSTEM" );
             if( wszProcessName != NULLPTR )
                 *wszProcessName = ProcessFileFullPath->Buffer + 1;
             break;

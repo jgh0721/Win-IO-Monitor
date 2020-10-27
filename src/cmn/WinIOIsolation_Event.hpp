@@ -163,28 +163,23 @@ typedef union TyMsgParameters
 
     struct
     {
-        BOOLEAN                             IsUseIsolation;         // managed by this driver
+        // managed by this driver
+        BOOLEAN                             IsUseIsolation;         
 
         BOOLEAN                             IsUseContainor;
         WCHAR                               NameChangeSuffix[ CONTAINOR_SUFFIX_MAX ];
 
+        // only apply if this file is not exists
         BOOLEAN                             IsUseEncryption;
+        // only apply if this file is already exists
+        // caller process has rights for read/write decrypted data on encrypted file
+        BOOLEAN                             IsAccessEncryption;
         ENCRYPTION_METHOD                   EncryptionMethod;
 
         BOOLEAN                             IsUseSolutionMetaData;
         ULONG                               SolutionMetaDataSize;
         BYTE                                SolutionMetaData[ MAX_SOLUTION_METADATA_SIZE ];
     } CreateResult;
-
-    struct
-    {
-        // caller process has rights for read/write decrypted data on encrypted file
-        BOOLEAN                             IsAccessEncryption;
-        BOOLEAN                             IsApplyWithSolutionMetaData;
-
-        ULONG                               SolutionMetaDataSize;
-        BYTE                                SolutionMetaData[ MAX_SOLUTION_METADATA_SIZE ];
-    } OpenResult;
 
 } MSG_PARAMETERS, *PMSG_PARAMETERS;
 

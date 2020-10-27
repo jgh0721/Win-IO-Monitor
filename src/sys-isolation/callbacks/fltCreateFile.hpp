@@ -107,5 +107,6 @@ NTSTATUS ProcessPreCreate_OVERWRITE_IF_EXIST( __in IRP_CONTEXT* Args );
 
 
 NTSTATUS GetFileStatus( __in IRP_CONTEXT* IrpContext );
+NTSTATUS CreateMetaDataInfoTo( __in IRP_CONTEXT* IrpContext );
 
 #endif // HDR_ISOLATION_CREATE

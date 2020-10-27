@@ -119,6 +119,8 @@ typedef struct _FCB
     ///////////////////////////////////////////////////////////////////////////
 
     METADATA_DRIVER*                            MetaDataInfo;
+    PVOID                                       SolutionMetaData;
+    ULONG                                       SolutionMetaDataSize;
 
     // for Type3
     TyGenericBuffer<WCHAR>                      PretendFileFullPath;

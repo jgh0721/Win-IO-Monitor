@@ -5,9 +5,11 @@
 #include "metadata/Metadata.hpp"
 
 #include "fltCmnLibs.hpp"
+
 #include "utilities/osInfoMgr.hpp"
 #include "utilities/bufferMgr.hpp"
 #include "utilities/fltUtilities.hpp"
+#include "communication/Communication.hpp"
 
 #include "W32API.hpp"
 
@@ -453,15 +455,19 @@ NTSTATUS CreateFileNonExistFCB( IRP_CONTEXT* IrpContext )
             __leave;
         }
 
-        // TODO: Notify To Client, and receive Client Response. once report for process, for file
-
+        // 기본적인 오류 처리 수행
         switch( Args->CreateDisposition )
         {
-            case FILE_SUPERSEDE: {
-                Args->IsMetaDataOnCreate = TRUE;
-                Args->IsStubCodeOnCreate = TRUE;
+            case FILE_OPEN: {
+                if( !FlagOn( Args->FileStatus, FILE_ALREADY_EXISTS ) )
+                {
+                    Status = STATUS_OBJECT_NAME_NOT_FOUND;
+                    AssignCmnResult( IrpContext, Status );
+                    AssignCmnFltResult( IrpContext, FLT_PREOP_COMPLETE );
+                    __leave;
+                }
             } break;
-            case FILE_OPEN: {} break;
+
             case FILE_CREATE: {
                 if( FlagOn( Args->FileStatus, FILE_ALREADY_EXISTS ) )
                 {
@@ -470,18 +476,8 @@ NTSTATUS CreateFileNonExistFCB( IRP_CONTEXT* IrpContext )
                     AssignCmnFltResult( IrpContext, FLT_PREOP_COMPLETE );
                     __leave;
                 }
-
-                Args->IsMetaDataOnCreate = TRUE;
-                Args->IsStubCodeOnCreate = TRUE;
-
             } break;
-            case FILE_OPEN_IF: {
-                if( !FlagOn( Args->FileStatus, FILE_ALREADY_EXISTS ) )
-                {
-                    Args->IsMetaDataOnCreate = TRUE;
-                    Args->IsStubCodeOnCreate = TRUE;
-                }
-            } break;
+
             case FILE_OVERWRITE: {
                 if( !FlagOn( Args->FileStatus, FILE_ALREADY_EXISTS ) )
                 {
@@ -490,28 +486,40 @@ NTSTATUS CreateFileNonExistFCB( IRP_CONTEXT* IrpContext )
                     AssignCmnFltResult( IrpContext, FLT_PREOP_COMPLETE );
                     __leave;
                 }
-
-                Args->IsMetaDataOnCreate = TRUE;
-                Args->IsStubCodeOnCreate = TRUE;
-
-            } break;
-            case FILE_OVERWRITE_IF: {
-                if( FlagOn( Args->FileStatus, FILE_ALREADY_EXISTS ) )
-                {
-                    if( Args->MetaDataInfo.MetaData.Type != METADATA_STB_TYPE )
-                    {
-                        AssignCmnFltResult( IrpContext, FLT_PREOP_SUCCESS_NO_CALLBACK );
-                        __leave;
-                    }
-                }
-
-                Args->IsMetaDataOnCreate = TRUE;
-                Args->IsStubCodeOnCreate = TRUE;
             } break;
         }
 
-        if( ( FlagOn( Args->FileStatus, FILE_ALREADY_EXISTS ) && 
-            Args->MetaDataInfo.MetaData.Type == METADATA_STB_TYPE ) || Args->IsStubCodeOnCreate != FALSE )
+        // Notify To Client, and receive Client Response. once report for process, for file
+        Status = CheckEventFileCreateTo( IrpContext );
+
+        if( !NT_SUCCESS( Status ) )
+        {
+            KdPrint( ( "[WinIOSol] >> EvtID=%09d %s\n"
+                       , IrpContext->EvtID, __FUNCTION__ ) );
+            AssignCmnFltResult( IrpContext, FLT_PREOP_SUCCESS_NO_CALLBACK );
+            __leave;
+        }
+
+        if( !NT_SUCCESS( IrpContext->Result.Buffer->Status ) )
+        {
+            Status = IrpContext->Result.Buffer->Status;
+            AssignCmnResult( IrpContext, Status );
+            AssignCmnFltResult( IrpContext, FLT_PREOP_COMPLETE );
+            __leave;
+        }
+
+        const auto& Result = IrpContext->Result.Buffer->Parameters.CreateResult;
+        if( Result.IsUseIsolation == FALSE )
+        {
+            AssignCmnFltResult( IrpContext, FLT_PREOP_SUCCESS_NO_CALLBACK );
+            __leave;
+        }
+
+        Args->IsMetaDataOnCreate = Result.IsUseSolutionMetaData;
+        Args->IsStubCodeOnCreate = Result.IsUseContainor;
+
+        if( ( FlagOn( Args->FileStatus, FILE_ALREADY_EXISTS ) && Args->MetaDataInfo.MetaData.Type == METADATA_STB_TYPE ) 
+            || Args->IsStubCodeOnCreate != FALSE )
         {
             RtlZeroMemory( Args->CreateFileName.Buffer, Args->CreateFileName.BufferSize );
             RtlStringCbCatW( Args->CreateFileName.Buffer, Args->CreateFileName.BufferSize, IrpContext->InstanceContext->DeviceNameBuffer );
@@ -548,17 +556,6 @@ NTSTATUS CreateFileNonExistFCB( IRP_CONTEXT* IrpContext )
         }
 
         AssignCmnResultInfo( IrpContext, IoStatus.Information );
-
-        if( IoStatus.Information == FILE_CREATED || 
-            IoStatus.Information == FILE_SUPERSEDED || 
-            IoStatus.Information == FILE_OVERWRITTEN )
-        {
-            if( !FlagOn( Args->FileStatus, FILE_ALREADY_EXISTS ) )
-            {
-                Args->IsMetaDataOnCreate = TRUE;
-                Args->IsStubCodeOnCreate = TRUE;
-            }
-        }
 
         AcquireCmnResource( IrpContext, INST_EXCLUSIVE );
 
@@ -603,68 +600,45 @@ NTSTATUS CreateFileNonExistFCB( IRP_CONTEXT* IrpContext )
             }
         }
 
+        if( Result.IsUseSolutionMetaData != FALSE )
+        {
+            if( FlagOn( Args->FileStatus, FILE_ALREADY_EXISTS ) )
+            {
+                ASSERT( Args->SolutionMetaDataSize == Result.SolutionMetaDataSize );
+            }
+
+            if( Args->SolutionMetaDataSize == 0 && Args->SolutionMetaData == NULLPTR )
+            {
+                Args->SolutionMetaDataSize = Result.SolutionMetaDataSize;
+                Args->SolutionMetaData = ExAllocatePool( NonPagedPool, Result.SolutionMetaDataSize );
+                if( Args->SolutionMetaData == NULLPTR )
+                {
+                    Status = STATUS_INSUFFICIENT_RESOURCES;
+                    AssignCmnResult( IrpContext, Status );
+                    AssignCmnFltResult( IrpContext, FLT_PREOP_COMPLETE );
+
+                    SetFlag( IrpContext->CompleteStatus, COMPLETE_DONT_CONT_PROCESS );
+                    SetFlag( IrpContext->CompleteStatus, COMPLETE_FREE_LOWER_FILEOBJECT );
+                    __leave;
+                }
+                RtlCopyMemory( Args->SolutionMetaData, Result.SolutionMetaData, Result.SolutionMetaDataSize );
+            }
+        }
+
         if( Args->IsMetaDataOnCreate != FALSE || Args->MetaDataInfo.MetaData.Type != METADATA_UNK_TYPE )
         {
             IrpContext->Fcb->MetaDataInfo = AllocateMetaDataInfo();
             RtlCopyMemory( IrpContext->Fcb->MetaDataInfo, &Args->MetaDataInfo, METADATA_DRIVER_SIZE );
+            
 
             SetFlag( IrpContext->Fcb->Flags, FCB_STATE_METADATA_ASSOC );
         }
 
-        if( Args->IsMetaDataOnCreate != FALSE )
-        {
-            LARGE_INTEGER WRITE_OFFSET = { 0,0 };
-            ULONG BytesWritten = 0;
-
-            InitializeMetaDataInfo( IrpContext->Fcb->MetaDataInfo );
-
-            if( Args->IsStubCodeOnCreate != FALSE )
-            {
-                IrpContext->Fcb->MetaDataInfo->MetaData.Type = METADATA_STB_TYPE;
-                IrpContext->Fcb->MetaDataInfo->MetaData.ContainorSize = GetStubCodeX86Size();
-                RtlStringCchCatW( IrpContext->Fcb->MetaDataInfo->MetaData.ContainorSuffix,
-                                  _countof( IrpContext->Fcb->MetaDataInfo->MetaData.ContainorSuffix ),
-                                  L".EXE" );
-            }
-
-            if( Args->IsStubCodeOnCreate != FALSE )
-            {
-                WRITE_OFFSET = { 0,0 };
-
-                Status = FltWriteFile( IrpContext->FltObjects->Instance, IrpContext->Fcb->LowerFileObject, 
-                                       &WRITE_OFFSET, GetStubCodeX86Size(), GetStubCodeX86(), 
-                                       FLTFL_IO_OPERATION_DO_NOT_UPDATE_BYTE_OFFSET | FLTFL_IO_OPERATION_NON_CACHED, 
-                                       &BytesWritten, NULL, NULL );
-
-                if( !NT_SUCCESS( Status ) )
-                {
-                    KdPrint( ( "[WinIOSol] EvtID=%09d %s %s Line=%d Status=0x%08x,%s Src=%wZ\n"
-                               , IrpContext->EvtID, __FUNCTION__, "FltWriteFile FAILED", __LINE__
-                               , Status, ntkernel_error_category::find_ntstatus( Status )->message
-                               , &Args->CreateFileNameUS
-                               ) );
-                }
-
-                WRITE_OFFSET.QuadPart = IrpContext->Fcb->MetaDataInfo->MetaData.ContainorSize;
-            }
-
-            Status = FltWriteFile( IrpContext->FltObjects->Instance,
-                                   IrpContext->Fcb->LowerFileObject, &WRITE_OFFSET, METADATA_DRIVER_SIZE,
-                                   ( PVOID )IrpContext->Fcb->MetaDataInfo,
-                                   FLTFL_IO_OPERATION_DO_NOT_UPDATE_BYTE_OFFSET | FLTFL_IO_OPERATION_NON_CACHED,
-                                   &BytesWritten, NULL, NULL );
-
-            if( !NT_SUCCESS( Status ) )
-            {
-                KdPrint( ( "[WinIOSol] EvtID=%09d %s %s Line=%d Status=0x%08x,%s Src=%wZ\n"
-                           , IrpContext->EvtID, __FUNCTION__, "FltWriteFile FAILED", __LINE__
-                           , Status, ntkernel_error_category::find_ntstatus( Status )->message
-                           , &Args->CreateFileNameUS
-                           ) );
-            }
-
-            IrpContext->Fcb->MetaDataInfo->MetaData.ContentSize = 0;
-        }
+        if( Args->CreateDisposition != FILE_OPEN )
+            CreateMetaDataInfoTo( IrpContext );
+        else if( Result.IsUseSolutionMetaData != FALSE )
+            WriteSolutionMetaData( IrpContext, IrpContext->Fcb->LowerFileObject, IrpContext->Fcb,
+                                   Args->SolutionMetaData, Args->SolutionMetaDataSize );
 
         if( nsUtils::VerifyVersionInfoEx( 6, 1, ">=" ) == true )
         {
@@ -1265,7 +1239,7 @@ NTSTATUS GetFileStatus( IRP_CONTEXT* IrpContext )
             if( fsi.Directory != FALSE )
                 SetFlag( Args->FileStatus, FILE_DIRECTORY );
 
-            GetFileMetaDataInfo( IrpContext, FileObject, &Args->MetaDataInfo );
+            GetFileMetaDataInfo( IrpContext, FileObject, &Args->MetaDataInfo, &Args->SolutionMetaData, &Args->SolutionMetaDataSize );
         }
         else
         {
@@ -1280,6 +1254,81 @@ NTSTATUS GetFileStatus( IRP_CONTEXT* IrpContext )
         FltClose( FileHandle );
     if( FileObject != NULLPTR )
         ObDereferenceObject( FileObject );
+
+    return Status;
+}
+
+NTSTATUS CreateMetaDataInfoTo( IRP_CONTEXT* IrpContext )
+{
+    NTSTATUS Status = STATUS_SUCCESS;
+    auto Args = ( CREATE_ARGS* )IrpContext->Params;
+
+    do
+    {
+        if( Args->IsMetaDataOnCreate == FALSE )
+            break;
+
+        LARGE_INTEGER WRITE_OFFSET = { 0,0 };
+        ULONG BytesWritten = 0;
+
+        InitializeMetaDataInfo( IrpContext->Fcb->MetaDataInfo );
+
+        if( Args->IsStubCodeOnCreate != FALSE )
+        {
+            WRITE_OFFSET = { 0,0 };
+
+            Status = FltWriteFile( IrpContext->FltObjects->Instance, IrpContext->Fcb->LowerFileObject,
+                                   &WRITE_OFFSET, GetStubCodeX86Size(), GetStubCodeX86(),
+                                   FLTFL_IO_OPERATION_DO_NOT_UPDATE_BYTE_OFFSET | FLTFL_IO_OPERATION_NON_CACHED,
+                                   &BytesWritten, NULL, NULL );
+
+            if( !NT_SUCCESS( Status ) )
+            {
+                KdPrint( ( "[WinIOSol] EvtID=%09d %s %s Line=%d Status=0x%08x,%s Src=%wZ\n"
+                           , IrpContext->EvtID, __FUNCTION__, "FltWriteFile FAILED", __LINE__
+                           , Status, ntkernel_error_category::find_ntstatus( Status )->message
+                           , &Args->CreateFileNameUS
+                           ) );
+            }
+
+            IrpContext->Fcb->MetaDataInfo->MetaData.Type = METADATA_STB_TYPE;
+            IrpContext->Fcb->MetaDataInfo->MetaData.ContainorSize = GetStubCodeX86Size();
+            RtlStringCchCatW( IrpContext->Fcb->MetaDataInfo->MetaData.ContainorSuffix,
+                              _countof( IrpContext->Fcb->MetaDataInfo->MetaData.ContainorSuffix ),
+                              L".EXE" );
+
+            WRITE_OFFSET.QuadPart = IrpContext->Fcb->MetaDataInfo->MetaData.ContainorSize;
+        }
+
+        Status = FltWriteFile( IrpContext->FltObjects->Instance,
+                               IrpContext->Fcb->LowerFileObject, &WRITE_OFFSET, METADATA_DRIVER_SIZE,
+                               ( PVOID )IrpContext->Fcb->MetaDataInfo,
+                               FLTFL_IO_OPERATION_DO_NOT_UPDATE_BYTE_OFFSET | FLTFL_IO_OPERATION_NON_CACHED,
+                               &BytesWritten, NULL, NULL );
+
+        if( !NT_SUCCESS( Status ) )
+        {
+            KdPrint( ( "[WinIOSol] EvtID=%09d %s %s Line=%d Status=0x%08x,%s Src=%wZ\n"
+                       , IrpContext->EvtID, __FUNCTION__, "FltWriteFile FAILED", __LINE__
+                       , Status, ntkernel_error_category::find_ntstatus( Status )->message
+                       , &Args->CreateFileNameUS
+                       ) );
+        }
+
+        WRITE_OFFSET.QuadPart += METADATA_DRIVER_SIZE;
+
+        if( Args->SolutionMetaDataSize > 0 && Args->SolutionMetaData != NULLPTR )
+        {
+            Status = FltWriteFile( IrpContext->FltObjects->Instance,
+                                   IrpContext->Fcb->LowerFileObject, &WRITE_OFFSET, 
+                                   Args->SolutionMetaDataSize, Args->SolutionMetaData,
+                                   FLTFL_IO_OPERATION_DO_NOT_UPDATE_BYTE_OFFSET | FLTFL_IO_OPERATION_NON_CACHED,
+                                   &BytesWritten, NULL, NULL );
+        }
+
+        IrpContext->Fcb->MetaDataInfo->MetaData.ContentSize = 0;
+
+    } while( false );
 
     return Status;
 }

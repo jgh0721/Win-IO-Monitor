@@ -26,12 +26,19 @@ NTSTATUS    UninitializeNotifyEventWorker();
     클라이언트에 이벤트를 전송하고 처리 방향을 점검함
 
     * IRP_MJ_CREATE
-        Status = STATUS_SUCCESS, 해당 요청 허용
+        Status = STATUS_SUCCESS, 해당 요청 허용,
+                                 이외의 값을 설정하면 해당 값을 파일시스템에 돌려주면 완료처리됨
+                                 (예) STATUS_ACCESS_DENIED )
 
     * IRP_MJ_SET_INFORMATION
+        Status = STATUS_SUCCESS, 해당 요청 허용,
+                                 이외의 값을 설정하면 해당 값을 파일시스템에 돌려주면 완료처리됨
+                                 (예) STATUS_ACCESS_DENIED )
 
     @return NTSTATUS, 해당 함수의 실행결과, This is not returned NTSTATUS by Client,
                       클라이언트가 반환한 NTSTATUS 가 아님
+
+    ※ 클라이언트가 반환한 응답값은 IrpContext 의 Result 에 기록된다
 */
 NTSTATUS    CheckEventFileCreateTo( __in IRP_CONTEXT* IrpContext );
 NTSTATUS    CheckEventFileOpenTo( __in IRP_CONTEXT* IrpContext );

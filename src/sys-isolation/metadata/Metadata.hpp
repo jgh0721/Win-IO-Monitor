@@ -47,4 +47,11 @@ ULONG GetStubCodeX86Size();
 PVOID GetStubCodeX64();
 ULONG GetStubCodeX64Size();
 
+///////////////////////////////////////////////////////////////////////////////
+/// Solution MetaData Management
+
+NTSTATUS WriteSolutionMetaData( __in IRP_CONTEXT* IrpContext, __in PFILE_OBJECT FileObject, 
+                                __in FCB* Fcb, __in PVOID SolutionMetaData, __in ULONG SolutionMetaDataSize );
+
+
 #endif // HDR_ISOLATION_METADATA

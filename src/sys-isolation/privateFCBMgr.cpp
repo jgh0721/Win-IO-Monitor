@@ -287,6 +287,9 @@ NTSTATUS UninitializeFCB( IRP_CONTEXT* IrpContext )
             UninitializeMetaDataInfo( Fcb->MetaDataInfo );
         }
 
+        if( Fcb->SolutionMetaData != NULLPTR && Fcb->SolutionMetaDataSize > 0 )
+            ExFreePool( Fcb->SolutionMetaData );
+
         if( BooleanFlagOn( Fcb->Flags, FCB_STATE_DELETE_ON_CLOSE ) )
         {
             FILE_DISPOSITION_INFORMATION fdi;

@@ -193,7 +193,7 @@ NTSTATUS UninitializeNotifyEventWorker()
 
 NTSTATUS CheckEventFileCreateTo( IRP_CONTEXT* IrpContext )
 {
-    NTSTATUS Status = STATUS_SUCCESS;
+    NTSTATUS Status = STATUS_INVALID_PARAMETER;
     TyGenericBuffer<MSG_SEND_PACKET> Packet;
 
     ASSERT( IrpContext != NULLPTR );
@@ -274,6 +274,9 @@ NTSTATUS CheckEventFileCreateTo( IRP_CONTEXT* IrpContext )
                        , Status, ntkernel_error_category::find_ntstatus( Status )->message
                        , IrpContext->ProcessId, IrpContext->ProcessFileName ) );
 
+            if( Status == STATUS_TIMEOUT )
+                Status = STATUS_AUDIT_FAILED;
+
             __leave;
         }
     }
@@ -287,7 +290,7 @@ NTSTATUS CheckEventFileCreateTo( IRP_CONTEXT* IrpContext )
 
 NTSTATUS CheckEventProcCreateTo( ULONG ProcessId, TyGenericBuffer<WCHAR>* ProcessFileFullPath, __in_z const wchar_t* ProcessFileName )
 {
-    NTSTATUS Status = STATUS_SUCCESS;
+    NTSTATUS Status = STATUS_INVALID_PARAMETER;
     TyGenericBuffer<MSG_SEND_PACKET> Packet;
     TyGenericBuffer<MSG_REPLY_PACKET> Reply;
     LONG EvtID = CreateEvtID();
@@ -342,6 +345,9 @@ NTSTATUS CheckEventProcCreateTo( ULONG ProcessId, TyGenericBuffer<WCHAR>* Proces
                        , Status, ntkernel_error_category::find_ntstatus( Status )->message
                        , ProcessId, ProcessFileName ) );
 
+            if( Status == STATUS_TIMEOUT )
+                Status = STATUS_AUDIT_FAILED;
+
             __leave;
         }
     }
@@ -356,7 +362,7 @@ NTSTATUS CheckEventProcCreateTo( ULONG ProcessId, TyGenericBuffer<WCHAR>* Proces
 
 NTSTATUS CheckEventProcTerminateTo( ULONG ProcessId, TyGenericBuffer<WCHAR>* ProcessFileFullPath, __in_z const wchar_t* ProcessFileName )
 {
-    NTSTATUS Status = STATUS_SUCCESS;
+    NTSTATUS Status = STATUS_INVALID_PARAMETER;
     TyGenericBuffer<MSG_SEND_PACKET> Packet;
     TyGenericBuffer<MSG_REPLY_PACKET> Reply;
     LONG EvtID = CreateEvtID();
@@ -410,6 +416,9 @@ NTSTATUS CheckEventProcTerminateTo( ULONG ProcessId, TyGenericBuffer<WCHAR>* Pro
                        , ">>", EvtID, __FUNCTION__, "FltSendMessage", Status == STATUS_TIMEOUT ? "Timeout" : "FAILED"
                        , Status, ntkernel_error_category::find_ntstatus( Status )->message
                        , ProcessId, ProcessFileName ) );
+
+            if( Status == STATUS_TIMEOUT )
+                Status = STATUS_AUDIT_FAILED;
 
             __leave;
         }

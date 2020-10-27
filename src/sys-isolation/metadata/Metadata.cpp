@@ -546,3 +546,78 @@ ULONG GetStubCodeX64Size()
 {
     return MetaDataContext.StubCodeX64Size;
 }
+
+///////////////////////////////////////////////////////////////////////////////
+/// Solution MetaData Management
+
+NTSTATUS WriteSolutionMetaData( IRP_CONTEXT* IrpContext, PFILE_OBJECT FileObject, FCB* Fcb, PVOID SolutionMetaData, ULONG SolutionMetaDataSize )
+{
+    NTSTATUS Status = STATUS_INVALID_PARAMETER;
+
+    do
+    {
+        ASSERT( Fcb != NULLPTR );
+        ASSERT( Fcb->MetaDataInfo != NULLPTR );
+        ASSERT( SolutionMetaDataSize > 0 );
+        ASSERT( SolutionMetaData != NULLPTR );
+
+        if( SolutionMetaData == NULLPTR )
+            break;
+
+        FILE_BASIC_INFORMATION fbi;
+        ULONG LengthReturned = 0;
+
+        Status = FltQueryInformationFile( IrpContext->FltObjects->Instance,
+                                          FileObject, &fbi, sizeof( FILE_BASIC_INFORMATION ), FileBasicInformation,
+                                          &LengthReturned );
+
+        if( !NT_SUCCESS( Status ) )
+        {
+            KdPrint( ( "[WinIOSol] %s EvtID=%09d %s %s Status=0x%08x,%s Src=%ws\n"
+                       , ">>", IrpContext->EvtID, __FUNCTION__, "FltQueryInformationFile FAILED"
+                       , Status, ntkernel_error_category::find_ntstatus( Status )->message
+                       , IrpContext->SrcFileFullPath.Buffer
+                       ) );
+            break;
+        }
+
+        ULONG BytesWritten = 0;
+        LARGE_INTEGER FILE_BEGIN_OFFSET = GetMetaDataOffset( Fcb->MetaDataInfo );
+        FILE_BEGIN_OFFSET.QuadPart += METADATA_DRIVER_SIZE;
+
+        Status = FltWriteFile( IrpContext->FltObjects->Instance,
+                               FileObject,
+                               &FILE_BEGIN_OFFSET, 
+                               SolutionMetaDataSize, SolutionMetaData,
+                               FLTFL_IO_OPERATION_NON_CACHED | FLTFL_IO_OPERATION_DO_NOT_UPDATE_BYTE_OFFSET,
+                               &BytesWritten, NULL, NULL );
+
+        if( !NT_SUCCESS( Status ) )
+        {
+            KdPrint( ( "[WinIOSol] %s EvtID=%09d %s %s Status=0x%08x,%s Src=%ws\n"
+                       , ">>", IrpContext->EvtID, __FUNCTION__, "FltWriteFile FAILED"
+                       , Status, ntkernel_error_category::find_ntstatus( Status )->message
+                       , IrpContext->SrcFileFullPath.Buffer
+                       ) );
+            break;
+        }
+
+        Status = FltSetInformationFile( IrpContext->FltObjects->Instance,
+                                        FileObject,
+                                        &fbi, sizeof( FILE_BASIC_INFORMATION ),
+                                        FileBasicInformation );
+
+        if( !NT_SUCCESS( Status ) )
+        {
+            KdPrint( ( "[WinIOSol] %s EvtID=%09d %s %s Status=0x%08x,%s Src=%ws\n"
+                       , ">>", IrpContext->EvtID, __FUNCTION__, "FltSetInformationFile FAILED"
+                       , Status, ntkernel_error_category::find_ntstatus( Status )->message
+                       , IrpContext->SrcFileFullPath.Buffer
+                       ) );
+            break;
+        }
+
+    } while( false );
+
+    return Status;
+}

@@ -85,6 +85,11 @@ VOID ReleaseCmnResource( __in PIRP_CONTEXT IrpContext, __in LONG RsrcFlags );
 #define CHECK_EVENT_IS_ENCRYPTED        0x10
 #define CHECK_EVENT_IS_RENAME           0x20
 
+/*!
+    각 IRP 함수에 따라, 클라이언트에 이벤트를 전송해야하는지 확인
+
+    클라이언트에 이벤트를 전송해야한다면 IrpContext 의 isConcerned 를 true 로 설정한다
+*/
 NTSTATUS CheckEventTo( __in IRP_CONTEXT* IrpContext );
 
 NTSTATUS CheckEventToWithCREATE( __in IRP_CONTEXT* IrpContext, __in ULONG CheckFlags );
