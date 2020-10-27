@@ -481,7 +481,7 @@ NTSTATUS ProcessFilter_Match( ULONG ProcessId, TyGenericBuffer<WCHAR>* ProcessFi
     return Status;
 }
 
-NTSTATUS ProcessFilter_SubMatch( PROCESS_FILTER_ENTRY* PFilterItem, TyGenericBuffer<WCHAR>* FilePath, bool* IsIncludeMatch )
+NTSTATUS ProcessFilter_SubMatch( PROCESS_FILTER_ENTRY* PFilterItem, TyGenericBuffer<WCHAR>* FilePath, bool* IsIncludeMatch, __out_opt PPROCESS_FILTER_MASK_ENTRY* MatchItem )
 {
     NTSTATUS Status = STATUS_NOT_FOUND;
 
@@ -514,6 +514,9 @@ NTSTATUS ProcessFilter_SubMatch( PROCESS_FILTER_ENTRY* PFilterItem, TyGenericBuf
             if( ARGUMENT_PRESENT( IsIncludeMatch ) )
                 *IsIncludeMatch = false;
 
+            if( ARGUMENT_PRESENT( MatchItem ) )
+                *MatchItem = Item;
+
             Status = STATUS_SUCCESS;
             break;
         }
@@ -531,10 +534,13 @@ NTSTATUS ProcessFilter_SubMatch( PROCESS_FILTER_ENTRY* PFilterItem, TyGenericBuf
             if( ARGUMENT_PRESENT( IsIncludeMatch ) )
                 *IsIncludeMatch = true;
 
+            if( ARGUMENT_PRESENT( MatchItem ) )
+                *MatchItem = Item;
+
             Status = STATUS_SUCCESS;
             break;
         }
-
+        
     } while( false );
 
     return Status;

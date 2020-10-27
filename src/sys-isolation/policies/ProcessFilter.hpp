@@ -69,7 +69,7 @@ NTSTATUS ProcessFilter_Match( __in_opt ULONG ProcessId, __in_opt TyGenericBuffer
 
     @param IsIncludeMatch if criteria was matched, this variable set match type value
 */
-NTSTATUS ProcessFilter_SubMatch( __in PROCESS_FILTER_ENTRY* PFilterItem, __in TyGenericBuffer<WCHAR>* FilePath, __out bool* IsIncludeMatch );
+NTSTATUS ProcessFilter_SubMatch( __in PROCESS_FILTER_ENTRY* PFilterItem, __in TyGenericBuffer<WCHAR>* FilePath, __out bool* IsIncludeMatch, __out_opt PPROCESS_FILTER_MASK_ENTRY* MatchItem );
 
 void ProcessFilter_Close( __in HANDLE ProcessFilterHandle );
 NTSTATUS ProcessFilter_Reset();
