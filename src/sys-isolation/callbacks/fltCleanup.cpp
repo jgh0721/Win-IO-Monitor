@@ -7,6 +7,8 @@
 
 #include "utilities/osInfoMgr.hpp"
 #include "utilities/fltUtilities.hpp"
+#include "utilities/contextMgr.hpp"
+#include "utilities/detectDelete.hpp"
 
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
@@ -25,9 +27,6 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCleanup( PFLT_CALLBACK_DATA Data, PCFL
 
     __try
     {
-        if( IsOwnFileObject( FltObjects->FileObject ) == false )
-            __leave;
-
         if( FLT_IS_FASTIO_OPERATION( Data ) )
         {
             FltStatus = FLT_PREOP_DISALLOW_FASTIO;
@@ -37,10 +36,22 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCleanup( PFLT_CALLBACK_DATA Data, PCFL
         if( FLT_IS_IRP_OPERATION( Data ) == false )
             __leave;
 
+        IrpContext = CreateIrpContext( Data, FltObjects );
+
+        if( IrpContext->IsOwnObject == false )
+        {
+            if( IrpContext->StreamContext != NULLPTR )
+            {
+                *CompletionContext = IrpContext;
+                AssignCmnFltResult( IrpContext, FLT_PREOP_SYNCHRONIZE );
+                __leave;
+            }
+
+            __leave;
+        }
+
         FileObject = FltObjects->FileObject;
         Fcb = ( FCB* )FileObject->FsContext;
-        IrpContext = CreateIrpContext( Data, FltObjects );
-        PrintIrpContext( IrpContext );
 
         if( BooleanFlagOn( FileObject->Flags, FO_CLEANUP_COMPLETE ) )
         {
@@ -175,14 +186,24 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCleanup( PFLT_CALLBACK_DATA Data, PCFL
         Data->IoStatus.Status = STATUS_SUCCESS;
         Data->IoStatus.Information = 0;
 
-        FltStatus = FLT_PREOP_COMPLETE;
+        AssignCmnFltResult( IrpContext, FLT_PREOP_COMPLETE );
     }
     __finally
     {
         if( IrpContext != NULLPTR )
-            PrintIrpContext( IrpContext, true );
+        {
+            if( FlagOn( IrpContext->CompleteStatus, COMPLETE_RETURN_FLTSTATUS ) )
+                FltStatus = IrpContext->PreFltStatus;
 
-        CloseIrpContext( IrpContext );
+            if( IrpContext->IsOwnObject == true )
+            {
+                PrintIrpContext( IrpContext, true );
+            }
+
+            if( ( IrpContext->IsOwnObject == true ) || 
+                ( IrpContext->IsOwnObject == false && IrpContext->StreamContext == NULLPTR ) )
+                CloseIrpContext( IrpContext );
+        }
     }
 
     return FltStatus;
@@ -192,11 +213,75 @@ FLT_POSTOP_CALLBACK_STATUS FLTAPI FilterPostCleanup( PFLT_CALLBACK_DATA Data, PC
                                                     PVOID CompletionContext, FLT_POST_OPERATION_FLAGS Flags )
 {
     FLT_POSTOP_CALLBACK_STATUS                  FltStatus = FLT_POSTOP_FINISHED_PROCESSING;
+    IRP_CONTEXT*                                IrpContext = (IRP_CONTEXT*)CompletionContext;
 
     UNREFERENCED_PARAMETER( Data );
     UNREFERENCED_PARAMETER( FltObjects );
     UNREFERENCED_PARAMETER( CompletionContext );
     UNREFERENCED_PARAMETER( Flags );
 
+    /*!
+        해당 핸들러는 격리필터의 관리를 받지 않는 일반 파일을 위해 호출된다.
+        격리필터의 관리를 받는 모든 파일은 Pre 핸들러에서 처리가 완료된다 
+    */
+
+    do
+    {
+        if( !NT_SUCCESS( Data->IoStatus.Status ) )
+            break;
+
+        //  From MS Delete Sample
+        //
+        //  Determine whether or not we should check for deletion. What
+        //  flags a file as a deletion candidate is one or more of the following:
+        //
+        //  1. NumOps > 0. This means there are or were racing changes to
+        //  the file delete disposition state, and, in that case,
+        //  we don't know what that state is. So, let's err to the side of
+        //  caution and check if it was deleted.
+        //
+        //  2. SetDisp. If this is TRUE and we haven't raced in setting delete
+        //  disposition, this reflects the true delete disposition state of the
+        //  file, meaning we must check for deletes if it is set to TRUE.
+        //
+        //  3. DeleteOnClose. If the file was ever opened with
+        //  FILE_DELETE_ON_CLOSE, we must check to see if it was deleted.
+        //  FileDispositionInformationEx allows the this flag to be unset.
+        //
+        //  Also, if a deletion of this stream was already notified, there is no
+        //  point notifying it again.
+        //
+
+        if( ( ( IrpContext->StreamContext->NumOps > 0 ) ||
+              ( IrpContext->StreamContext->SetDisp ) ||
+              ( IrpContext->StreamContext->DeleteOnClose ) ) &&
+            ( 0 == IrpContext->StreamContext->IsNotified ) )
+        {
+            NTSTATUS Status = STATUS_SUCCESS;
+            FILE_STANDARD_INFORMATION fileInfo;
+
+            //
+            //  The check for deletion is done via a query to
+            //  FileStandardInformation. If that returns STATUS_FILE_DELETED
+            //  it means the stream was deleted.
+            //
+
+            Status = FltQueryInformationFile( Data->Iopb->TargetInstance,
+                                              Data->Iopb->TargetFileObject,
+                                              &fileInfo,
+                                              sizeof( fileInfo ),
+                                              FileStandardInformation,
+                                              NULL );
+
+            if( Status == STATUS_FILE_DELETED )
+            {
+
+                Status = SolProcessDelete( IrpContext );
+            }
+        }
+
+    } while( false );
+
+    CloseIrpContext( IrpContext );
     return FltStatus;
 }

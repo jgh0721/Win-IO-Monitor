@@ -20,6 +20,7 @@
 #endif
 
 #define IRP_UM_DRIVER_INITIATED_IO 0x00400000
+#define VOLUME_GUID_NAME_SIZE                   48
 
 #define FILE_OPEN_REQUIRING_OPLOCK              0x00010000
 #define FILE_DISALLOW_EXCLUSIVE                 0x00020000
@@ -300,6 +301,11 @@ namespace nsW32API
     #define FILE_DISPOSITION_ON_CLOSE                   0x00000008      // Specifies if the system sets or clears the on-close state.
     #define FILE_DISPOSITION_IGNORE_READONLY_ATTRIBUTE  0x00000010      // Allows read-only files to be deleted. See more info in Remarks.
 
+    typedef struct _FILE_ID_128
+    {
+        BYTE Identifier[ 16 ];
+    } FILE_ID_128, *PFILE_ID_128;
+
     //  This helps us deal with ReFS 128-bit file IDs and NTFS 64-bit file IDs.
     typedef union _UNIFIED_FILE_REFERENCE
     {
@@ -318,6 +324,24 @@ namespace nsW32API
         sizeof((FID).FileId64.Value)    :   \
         sizeof((FID).FileId128)             \
     )
+
+#ifndef FILE_INVALID_FILE_ID
+#define FILE_INVALID_FILE_ID ((LONGLONG)-1LL)
+#endif
+
+    // Windows Server 2012, Windows 10 ~
+    typedef struct _FILE_ID_INFO
+    {
+        ULONGLONG       VolumeSerialNumber;
+        FILE_ID_128     FileId;
+    } FILE_ID_INFO, * PFILE_ID_INFO;
+
+    // Windows Server 2012, Windows 10 ~
+    typedef struct _FILE_ID_INFORMATION
+    {
+        ULONGLONG       VolumeSerialNumber;
+        FILE_ID_128     FileId;
+    } FILE_ID_INFORMATION, *PFILE_ID_INFORMATION;
 
     typedef struct _FILE_FS_FULL_SIZE_INFORMATION_EX
     {

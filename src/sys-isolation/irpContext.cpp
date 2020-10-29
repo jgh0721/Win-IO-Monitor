@@ -46,14 +46,15 @@ PIRP_CONTEXT CreateIrpContext( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_
 
         RtlZeroMemory( IrpContext, sizeof( IRP_CONTEXT ) );
 
+        IrpContext->EvtID           = CreateEvtID();
+        IrpContext->DebugText       = ( CHAR* )ExAllocateFromNPagedLookasideList( &GlobalContext.DebugLookasideList );
+        RtlZeroMemory( IrpContext->DebugText, DEBUG_TEXT_SIZE * sizeof( CHAR ) );
+
         IrpContext->Data            = Data;
         IrpContext->FltObjects      = FltObjects;
-        IrpContext->DebugText       = (CHAR*)ExAllocateFromNPagedLookasideList( &GlobalContext.DebugLookasideList );
-        RtlZeroMemory( IrpContext->DebugText, 1024 * sizeof( CHAR ) );
+        IrpContext->IsOwnObject     = IsOwnFileObject( FltObjects->FileObject );
 
-        IrpContext->EvtID           = CreateEvtID();
-
-        if( IsOwnFileObject( FltObjects->FileObject ) == true )
+        if( IrpContext->IsOwnObject == true )
         {
             IrpContext->Fcb = ( FCB* )FltObjects->FileObject->FsContext;
             IrpContext->Ccb = ( CCB* )FltObjects->FileObject->FsContext2;
@@ -66,14 +67,32 @@ PIRP_CONTEXT CreateIrpContext( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_
                 if( IrpContext->ProcessFileName != NULLPTR )
                     IrpContext->ProcessFileName++;
             }
-        }
 
-        if( IrpContext->Fcb != NULLPTR )
-        {
+            CtxGetContext( FltObjects, IrpContext->Fcb->LowerFileObject, FLT_STREAM_CONTEXT, ( PFLT_CONTEXT* )&IrpContext->StreamContext );
+
             InstanceContext = IrpContext->Fcb->InstanceContext;
             FltReferenceContext( InstanceContext );
+
+            if( IrpContext->Fcb->MetaDataInfo != NULLPTR )
+            {
+                if( IrpContext->Fcb->MetaDataInfo->MetaData.Type != METADATA_STB_TYPE )
+                    IrpContext->SrcFileFullPath = CloneBuffer( &IrpContext->Fcb->FileFullPath );
+                else
+                {
+                    if( IrpContext->Fcb->PretendFileFullPath.Buffer != NULLPTR )
+                        IrpContext->SrcFileFullPath = CloneBuffer( &IrpContext->Fcb->PretendFileFullPath );
+                    else
+                        IrpContext->SrcFileFullPath = CloneBuffer( &IrpContext->Fcb->FileFullPath );
+                }
+            }
         }
         else
+        {
+            if( MajorFunction != IRP_MJ_CREATE )
+                CtxGetContext( FltObjects, FltObjects->FileObject, FLT_STREAM_CONTEXT, (PFLT_CONTEXT*)&IrpContext->StreamContext );
+        }
+
+        if( InstanceContext != NULLPTR )
         {
             Status = CtxGetContext( FltObjects, NULLPTR, FLT_INSTANCE_CONTEXT, ( PFLT_CONTEXT* )&InstanceContext );
             if( !NT_SUCCESS( Status ) || InstanceContext == NULLPTR )
@@ -90,41 +109,6 @@ PIRP_CONTEXT CreateIrpContext( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_
         {
             IrpContext->ProcessId = FltGetRequestorProcessId( Data );
             SearchProcessInfo( IrpContext->ProcessId, &IrpContext->ProcessFullPath, &IrpContext->ProcessFileName );
-        }
-
-        if( IsOwnFileObject( FltObjects->FileObject ) == true )
-        {
-            if( IrpContext->ProcessFilter != NULLPTR )
-                IrpContext->SrcFileFullPath = CloneBuffer( &IrpContext->Fcb->FileFullPath );
-            else
-            {
-                if( IrpContext->Fcb->PretendFileFullPath.Buffer != NULLPTR )
-                    IrpContext->SrcFileFullPath = CloneBuffer( &IrpContext->Fcb->PretendFileFullPath );
-                else
-                    IrpContext->SrcFileFullPath = CloneBuffer( &IrpContext->Fcb->FileFullPath );
-            }
-        }
-
-        if( MajorFunction == IRP_MJ_CREATE && IsPreIO == true )
-        {
-            /*!
-                MSDN 의 권고문에는 InstanceSetupCallback 에서 수행하는 것을 권장하지만,
-                몇몇 USB 장치의 볼륨에 대한 정보를 가져올 때 OS 가 응답없음에 빠지는 경우가 존재하여
-                이곳에서 값을 가져옴
-            */
-            if( InstanceContext->IsVolumePropertySet == FALSE && FltObjects->Volume != NULL )
-            {
-                ULONG                      nReturnedLength = 0;
-
-                FltGetVolumeProperties( FltObjects->Volume,
-                                        &InstanceContext->VolumeProperties,
-                                        sizeof( UCHAR ) * _countof( InstanceContext->Data ),
-                                        &nReturnedLength );
-
-                KeMemoryBarrier();
-
-                InstanceContext->IsVolumePropertySet = TRUE;
-            }
         }
 
         if( IrpContext->SrcFileFullPath.Buffer == NULLPTR )
@@ -169,21 +153,6 @@ PIRP_CONTEXT CreateIrpContext( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_
                 IrpContext->SrcFileFullPath = nsUtils::ExtractFileFullPath( FltObjects->FileObject, InstanceContext,
                                                                             ( MajorFunction == IRP_MJ_CREATE ) && ( IsPreIO == true ) );
             }
-        }
-        
-        if( IrpContext->SrcFileFullPath.Buffer != NULLPTR )
-        {
-            if( IrpContext->SrcFileFullPath.Buffer[ 1 ] == L':' )
-                IrpContext->SrcFileFullPathWOVolume = &IrpContext->SrcFileFullPath.Buffer[ 2 ];
-            else
-            {
-                auto cchDeviceName = nsUtils::strlength( InstanceContext->DeviceNameBuffer );
-                if( cchDeviceName > 0 )
-                    IrpContext->SrcFileFullPathWOVolume = &IrpContext->SrcFileFullPath.Buffer[ cchDeviceName ];
-            }
-
-            if( IrpContext->SrcFileFullPathWOVolume == NULLPTR )
-                IrpContext->SrcFileFullPathWOVolume = IrpContext->SrcFileFullPath.Buffer;
         }
 
         IrpContext->UserBuffer = FltMapUserBuffer( Data );
@@ -278,21 +247,62 @@ PIRP_CONTEXT CreateIrpContext( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_
         } // switch MajorFunction
 
         if( IrpContext->SrcFileFullPath.Buffer != NULLPTR )
-            IrpContext->SrcFileName = nsUtils::ReverseFindW( IrpContext->SrcFileFullPath.Buffer, L'\\' );
-        if( IrpContext->SrcFileName == NULLPTR )
-            IrpContext->SrcFileFullPath.Buffer;
-        else
-            IrpContext->SrcFileName++;
+        {
+            if( IrpContext->SrcFileFullPathWOVolume == NULLPTR )
+            {
+                if( IrpContext->SrcFileFullPath.Buffer[ 1 ] == L':' )
+                    IrpContext->SrcFileFullPathWOVolume = &IrpContext->SrcFileFullPath.Buffer[ 2 ];
+                else
+                {
+                    auto cchDeviceName = nsUtils::strlength( InstanceContext->DeviceNameBuffer );
+                    if( cchDeviceName > 0 )
+                        IrpContext->SrcFileFullPathWOVolume = &IrpContext->SrcFileFullPath.Buffer[ cchDeviceName ];
+                }
+
+                if( IrpContext->SrcFileFullPathWOVolume == NULLPTR )
+                    IrpContext->SrcFileFullPathWOVolume = IrpContext->SrcFileFullPath.Buffer;
+            }
+
+            if( IrpContext->SrcFileName == NULLPTR )
+            {
+                IrpContext->SrcFileName = nsUtils::ReverseFindW( IrpContext->SrcFileFullPath.Buffer, L'\\' );
+
+                if( IrpContext->SrcFileName == NULLPTR )
+                    IrpContext->SrcFileFullPath.Buffer;
+                else
+                    IrpContext->SrcFileName++;
+            }
+        }
 
         if( IrpContext->DstFileFullPath.Buffer != NULLPTR )
-            IrpContext->DstFileName = nsUtils::ReverseFindW( IrpContext->DstFileFullPath.Buffer, L'\\' );
-        if( IrpContext->DstFileName == NULLPTR )
-            IrpContext->DstFileFullPath.Buffer;
-        else
-            IrpContext->DstFileName++;
+        {
+            if( IrpContext->DstFileFullPathWOVolume == NULLPTR )
+            {
+                if( IrpContext->DstFileFullPath.Buffer[ 1 ] == L':' )
+                    IrpContext->DstFileFullPathWOVolume = &IrpContext->DstFileFullPath.Buffer[ 2 ];
+                else
+                {
+                    auto cchDeviceName = nsUtils::strlength( InstanceContext->DeviceNameBuffer );
+                    if( cchDeviceName > 0 )
+                        IrpContext->DstFileFullPathWOVolume = &IrpContext->DstFileFullPath.Buffer[ cchDeviceName ];
+                }
+
+                if( IrpContext->DstFileFullPathWOVolume == NULLPTR )
+                    IrpContext->DstFileFullPathWOVolume = IrpContext->DstFileFullPath.Buffer;
+            }
+
+            if( IrpContext->DstFileName == NULLPTR )
+            {
+                IrpContext->DstFileName = nsUtils::ReverseFindW( IrpContext->DstFileFullPath.Buffer, L'\\' );
+
+                if( IrpContext->DstFileName == NULLPTR )
+                    IrpContext->DstFileFullPath.Buffer;
+                else
+                    IrpContext->DstFileName++;
+            }
+        }
 
         CheckEventTo( IrpContext );
-
     }
     __finally
     {
@@ -344,6 +354,7 @@ VOID CloseIrpContext( __in PIRP_CONTEXT IrpContext )
     DeallocateBuffer( &IrpContext->SrcFileFullPath );
     DeallocateBuffer( &IrpContext->DstFileFullPath );
 
+    CtxReleaseContext( IrpContext->StreamContext );
     CtxReleaseContext( IrpContext->InstanceContext );
 
     ExFreeToNPagedLookasideList( &GlobalContext.IrpContextLookasideList, IrpContext );

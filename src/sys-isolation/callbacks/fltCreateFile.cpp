@@ -9,6 +9,7 @@
 #include "utilities/osInfoMgr.hpp"
 #include "utilities/bufferMgr.hpp"
 #include "utilities/fltUtilities.hpp"
+#include "utilities/contextMgr.hpp"
 #include "communication/Communication.hpp"
 
 #include "W32API.hpp"
@@ -89,7 +90,15 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
             __leave;
 
         if( IrpContext->IsConcerned == false )
+        {
+            if( Args.DeleteOnClose == true )
+            {
+                SetFlag( IrpContext->CompleteStatus, COMPLETE_CRTE_STREAM_CONTEXT );
+                AssignCmnFltResult( IrpContext, FLT_PREOP_SYNCHRONIZE );
+            }
+
             __leave;
+        }
 
         IrpContext->Params = &Args;
 
@@ -122,6 +131,7 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
             CreateFileExistFCB( IrpContext );
         }
 
+        // TODO: 이곳에서 파일시스템에 처리를 맡기는 파일에 대해서도 StreamContext 생성이 필요하다
         IF_DONT_CONTINUE_PROCESS_LEAVE( IrpContext );
 
         if( BooleanFlagOn( Args.CreateOptions, FILE_DELETE_ON_CLOSE ) )
@@ -136,6 +146,15 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
     {
         if( IrpContext != NULLPTR )
         {
+            if( FlagOn( IrpContext->CompleteStatus, COMPLETE_CRTE_STREAM_CONTEXT ) )
+            {
+                CTX_STREAM_CONTEXT* StreamContext = NULLPTR;
+                CtxAllocateContext( GlobalContext.Filter, FLT_STREAM_CONTEXT, ( PFLT_CONTEXT* )&StreamContext );
+
+                if( StreamContext != NULLPTR )
+                    *CompletionContext = StreamContext;
+            }
+
             if( IrpContext->IsConcerned == true )
                 PrintIrpContext( IrpContext, true );
 
@@ -452,6 +471,7 @@ NTSTATUS CreateFileNonExistFCB( IRP_CONTEXT* IrpContext )
         if( FlagOn( Args->FileStatus, FILE_DIRECTORY ) )
         {
             AssignCmnFltResult( IrpContext, FLT_PREOP_SUCCESS_NO_CALLBACK );
+            SetFlag( IrpContext->CompleteStatus, COMPLETE_DONT_CONT_PROCESS );
             __leave;
         }
 
@@ -512,6 +532,7 @@ NTSTATUS CreateFileNonExistFCB( IRP_CONTEXT* IrpContext )
         if( Result.IsUseIsolation == FALSE )
         {
             AssignCmnFltResult( IrpContext, FLT_PREOP_SUCCESS_NO_CALLBACK );
+            SetFlag( IrpContext->CompleteStatus, COMPLETE_DONT_CONT_PROCESS );
             __leave;
         }
 
@@ -702,7 +723,59 @@ FLT_POSTOP_CALLBACK_STATUS FLTAPI FilterPostCreate( PFLT_CALLBACK_DATA Data, PCF
                                                     PVOID CompletionContext, FLT_POST_OPERATION_FLAGS Flags )
 {
     FLT_POSTOP_CALLBACK_STATUS                  FltStatus = FLT_POSTOP_FINISHED_PROCESSING;
+    CTX_STREAM_CONTEXT*                         StreamContext = ( CTX_STREAM_CONTEXT* )CompletionContext;
+    NTSTATUS                                    Status = STATUS_SUCCESS;
 
+    UNREFERENCED_PARAMETER( Data );
+    UNREFERENCED_PARAMETER( FltObjects );
+    UNREFERENCED_PARAMETER( CompletionContext );
+    UNREFERENCED_PARAMETER( Flags );
+
+    ASSERT( StreamContext != NULLPTR );
+
+    do
+    {
+        if( !NT_SUCCESS( Data->IoStatus.Status ) || Data->IoStatus.Status == STATUS_REPARSE )
+            break;
+
+        //
+        //  Flag the stream as a deletion candidate: try setting the stream
+        //  context on it to the stream context allocated by DfPreCreateCallback.
+        //  If a context is already attached to the stream, DfGetOrSetContext
+        //  will do the right thing and set streamContext to it, freeing the
+        //  other context.
+        //
+
+        Status = CtxGetOrSetContext( FltObjects,
+                                    Data->Iopb->TargetFileObject,
+                                    (PFLT_CONTEXT*)&StreamContext,
+                                    FLT_STREAM_CONTEXT );
+
+        if( NT_SUCCESS( Status ) )
+        {
+            //
+            //  Set DeleteOnClose on the stream context: a delete-on-close stream will
+            //  always be checked for deletion on cleanup.
+            //
+
+            StreamContext->DeleteOnClose = BooleanFlagOn( Data->Iopb->Parameters.Create.Options,
+                                                          FILE_DELETE_ON_CLOSE );
+        }
+
+    } while( false );
+
+    //
+    //  We will have a context in streamContext, because if allocation fails
+    //  in DfPreCreateCallback, FLT_PREOP_SUCCESS_NO_CALLBACK is returned, so
+    //  there is no post-create callback.
+    //
+    //  If DfGetOrSetContext failed, if will have released streamContext
+    //  already, so only release it if status is successful.
+    //
+
+    if( NT_SUCCESS( Status ) )
+        CtxReleaseContext( StreamContext );
+    
     return FltStatus;
 }
 

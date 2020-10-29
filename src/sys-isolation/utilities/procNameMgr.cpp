@@ -629,7 +629,7 @@ NTSTATUS GetProcessNameByHandle( HANDLE ProcessHandle, PUNICODE_STRING* ProcessN
         if( GlobalNtOsKrnlMgr.Is_ZwQueryInformationProcess() == false )
             break;
 
-        ProcessImageFilePath = ( PUNICODE_STRING )ExAllocatePoolWithTag( PagedPool, ProcessImageFilePathBytes, POOL_MAIN_TAG );
+        ProcessImageFilePath = ( PUNICODE_STRING )ExAllocatePoolWithTag( NonPagedPool, ProcessImageFilePathBytes, POOL_MAIN_TAG );
 
         if( ProcessImageFilePath != NULL )
         {

@@ -249,6 +249,9 @@
     <ClInclude Include="communication\Communication_Defs.hpp">
       <Filter>Features\Communication</Filter>
     </ClInclude>
+    <ClInclude Include="utilities\detectDelete.hpp">
+      <Filter>Features</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="WinIOIsolation.cpp">
@@ -391,6 +394,9 @@
     </ClCompile>
     <ClCompile Include="communication\Communication.cpp">
       <Filter>Features\Communication</Filter>
+    </ClCompile>
+    <ClCompile Include="utilities\detectDelete.cpp">
+      <Filter>Features</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

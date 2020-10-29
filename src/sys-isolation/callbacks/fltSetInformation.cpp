@@ -17,26 +17,56 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreSetInformation( PFLT_CALLBACK_DATA Dat
 {
     FLT_PREOP_CALLBACK_STATUS                   FltStatus = FLT_PREOP_SUCCESS_NO_CALLBACK;
     IRP_CONTEXT*                                IrpContext = NULLPTR;
+    auto FileInformationClass = ( nsW32API::FILE_INFORMATION_CLASS )Data->Iopb->Parameters.SetFileInformation.FileInformationClass;
 
     UNREFERENCED_PARAMETER( CompletionContext );
 
     __try
     {
-        if( IsOwnFileObject( FltObjects->FileObject ) == false )
-            __leave;
-
         if( FLT_IS_FASTIO_OPERATION( Data ) )
         {
             FltStatus = FLT_PREOP_DISALLOW_FASTIO;
             __leave;
         }
 
+        IrpContext = CreateIrpContext( Data, FltObjects );
+
+        if( IrpContext->IsOwnObject == false )
+        {
+            if( IrpContext->StreamContext != NULLPTR )
+            {
+                switch( FileInformationClass )
+                {
+                    case FileDispositionInformation:
+                    case nsW32API::FileDispositionInformationEx: {
+
+                        //
+                        //  Race detection logic. The NumOps field in the StreamContext
+                        //  counts the number of in-flight changes to delete disposition
+                        //  on the stream.
+                        //
+                        //  If there's already some operations in flight, don't bother
+                        //  doing postop. Since there will be no postop, this value won't
+                        //  be decremented, staying forever 2 or more, which is one of
+                        //  the conditions for checking deletion at post-cleanup.
+                        //
+                        BOOLEAN Race = ( InterlockedIncrement( &IrpContext->StreamContext->NumOps ) > 1 );
+
+                        if( !Race )
+                        {
+                            *CompletionContext = IrpContext;
+                            AssignCmnFltResult( IrpContext, FLT_PREOP_SYNCHRONIZE );
+                        }
+                    } break;
+                } // switch
+            }
+
+            __leave;
+        }
+
         FILE_OBJECT* FileObject = FltObjects->FileObject;
         FCB* Fcb = ( FCB* )FileObject->FsContext;
-        IrpContext = CreateIrpContext( Data, FltObjects );
         PrintIrpContext( IrpContext );
-
-        auto FileInformationClass = ( nsW32API::FILE_INFORMATION_CLASS )IrpContext->Data->Iopb->Parameters.SetFileInformation.FileInformationClass;
 
         switch( FileInformationClass )
         {
@@ -79,10 +109,14 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreSetInformation( PFLT_CALLBACK_DATA Dat
             if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_RETURN_FLTSTATUS ) )
                 FltStatus = IrpContext->PreFltStatus;
 
-            PrintIrpContext( IrpContext, true );
-        }
+            if( IrpContext->IsOwnObject == true)
+                PrintIrpContext( IrpContext, true );
 
-        CloseIrpContext( IrpContext );
+            if( ( IrpContext->IsOwnObject == true ) ||
+                ( IrpContext->IsOwnObject == false && IrpContext->StreamContext == NULLPTR ) || 
+                ( IrpContext->IsOwnObject == false && IrpContext->StreamContext != NULLPTR && FltStatus != FLT_PREOP_SYNCHRONIZE ) )
+                CloseIrpContext( IrpContext );
+        }
     }
 
     return FltStatus;
@@ -92,12 +126,77 @@ FLT_POSTOP_CALLBACK_STATUS FLTAPI FilterPostSetInformation( PFLT_CALLBACK_DATA D
                                                             PVOID CompletionContext, FLT_POST_OPERATION_FLAGS Flags )
 {
     FLT_POSTOP_CALLBACK_STATUS                  FltStatus = FLT_POSTOP_FINISHED_PROCESSING;
+    IRP_CONTEXT*                                IrpContext = (IRP_CONTEXT*)CompletionContext;
+    PCTX_STREAM_CONTEXT                         StreamContext = IrpContext->StreamContext;
 
     UNREFERENCED_PARAMETER( Data );
     UNREFERENCED_PARAMETER( FltObjects );
     UNREFERENCED_PARAMETER( CompletionContext );
     UNREFERENCED_PARAMETER( Flags );
 
+    do
+    {
+        if( !NT_SUCCESS( Data->IoStatus.Status ) )
+            break;
+
+        if( ( Data->Iopb->Parameters.SetFileInformation.FileInformationClass != FileDispositionInformation ) &&
+            ( Data->Iopb->Parameters.SetFileInformation.FileInformationClass != nsW32API::FileDispositionInformationEx ) )
+            break;
+
+        //
+        //  No synchronization is needed to set the SetDisp field,
+        //  because in case of races, the NumOps field will be perpetually
+        //  positive, and it being positive is already an indication this
+        //  file is a delete candidate, so it will be checked at post-
+        //  -cleanup regardless of the value of SetDisp.
+        //
+
+        //
+        //  Using FileDispositinInformationEx -
+        //    FILE_DISPOSITION_ON_CLOSE controls delete on close
+        //    or set disposition behavior. It uses FILE_DISPOSITION_INFORMATION_EX structure.
+        //    FILE_DISPOSITION_ON_CLOSE is set - Set or clear DeleteOnClose
+        //    depending on FILE_DISPOSITION_DELETE flag.
+        //    FILE_DISPOSITION_ON_CLOSE is NOT set - Set or clear disposition information
+        //    depending on the flag FILE_DISPOSITION_DELETE.
+        //
+        //
+        //   Using FileDispositionInformation -
+        //    Controls only set disposition information behavior. It uses FILE_DISPOSITION_INFORMATION structure.
+        //
+
+        if( Data->Iopb->Parameters.SetFileInformation.FileInformationClass == nsW32API::FileDispositionInformationEx )
+        {
+            ULONG flags = ( ( nsW32API::PFILE_DISPOSITION_INFORMATION_EX )Data->Iopb->Parameters.SetFileInformation.InfoBuffer )->Flags;
+
+            if( FlagOn( flags, FILE_DISPOSITION_ON_CLOSE ) )
+            {
+
+                StreamContext->DeleteOnClose = BooleanFlagOn( flags, FILE_DISPOSITION_DELETE );
+
+            }
+            else
+            {
+
+                StreamContext->SetDisp = BooleanFlagOn( flags, FILE_DISPOSITION_DELETE );
+            }
+
+        }
+        else
+        {
+
+            StreamContext->SetDisp = ( ( PFILE_DISPOSITION_INFORMATION )Data->Iopb->Parameters.SetFileInformation.InfoBuffer )->DeleteFile;
+        }
+
+    } while( false );
+
+    //
+    //  Now that the operation is over, decrement NumOps.
+    //
+
+    InterlockedDecrement( &StreamContext->NumOps );
+
+    CloseIrpContext( IrpContext );
     return FltStatus;
 }
 
