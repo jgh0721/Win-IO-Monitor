@@ -531,7 +531,7 @@ NTSTATUS SolGetVolumeGuidName( PFLT_VOLUME Volume, CTX_INSTANCE_CONTEXT* Instanc
             //  free our temporary string buffer.
             //
 
-            InterlockedCompareExchangePointer( &sourceGuidName->Buffer,
+            InterlockedCompareExchangePointer( (PVOID*)&sourceGuidName->Buffer,
                                                tempString.Buffer,
                                                NULL );
 
