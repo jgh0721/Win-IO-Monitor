@@ -4,6 +4,7 @@
 #include "fltBase.hpp"
 
 #include "bufferMgr_Defs.hpp"
+#include "Cipher_Defs.hpp"
 #include "W32API.hpp"
 
 #if defined(_MSC_VER)
@@ -11,6 +12,19 @@
 #endif
 
 #define MAX_CLIENT_CONNECTION 16
+
+typedef struct _ENCRYPT_CONTEXT
+{
+    // TODO: 향후 AES 암호화의 경우, AES_CONTEXT 를 키를 설정할 때 미리 계산하도록 하여,
+    // 암복호화를 수행할 때 마다 생성하는 것을 하지 않도록 한다
+    CIPHER_ID                       CipherID;
+
+    ULONG                           IVSize;
+    UCHAR                           IVKey[ 16 ];                // 16 * 8, 128bits
+    ULONG                           KeySize;
+    UCHAR                           EncryptionKey[ 32 ];        // max 256bits, 32 * 8
+    
+} ENCRYPT_CONTEXT;
 
 typedef struct _CTX_GLOBAL_DATA
 {
@@ -27,6 +41,8 @@ typedef struct _CTX_GLOBAL_DATA
 
     ULONG                           DebugLevel;
     NPAGED_LOOKASIDE_LIST           DebugLookasideList;
+
+    ENCRYPT_CONTEXT                 EncryptContext[ CIPHER_MAX ];
 
     NPAGED_LOOKASIDE_LIST           IrpContextLookasideList;
     NPAGED_LOOKASIDE_LIST           FileNameLookasideList;

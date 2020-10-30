@@ -6,6 +6,7 @@
 #include "metadata/Metadata.hpp"
 
 #include "fltCmnLibs.hpp"
+#include "Cipher.hpp"
 
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
@@ -1338,6 +1339,11 @@ NTSTATUS WritePagingIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer, ULONG BytesT
             ByteOffset.QuadPart += GetHDRSizeFromMetaData( Fcb->MetaDataInfo );
         }
 
+        EncryptBuffer( Fcb->EncryptConfig.CipherID, ByteOffset.QuadPart,
+                       TySwapBuffer.Buffer, BytesToWrite,
+                       Fcb->EncryptConfig.EncryptionKey, Fcb->EncryptConfig.KeySize,
+                       NULLPTR, 0 );
+
         Status = FltWriteFile( IrpContext->FltObjects->Instance,
                                Fcb->LowerFileObject,
                                &ByteOffset, Length,
@@ -1459,9 +1465,14 @@ NTSTATUS WriteNonCachedIO( IRP_CONTEXT* IrpContext, PVOID WriteBuffer, ULONG Byt
         if( BooleanFlagOn( Fcb->Flags, FCB_STATE_METADATA_ASSOC ) )
             ByteOffset.QuadPart += GetHDRSizeFromMetaData( Fcb->MetaDataInfo );
 
+        EncryptBuffer( Fcb->EncryptConfig.CipherID, ByteOffset.QuadPart,
+                       TySwapBuffer.Buffer, BytesToWrite,
+                       Fcb->EncryptConfig.EncryptionKey, Fcb->EncryptConfig.KeySize,
+                       NULLPTR, 0 );
+
         Status = FltWriteFile( IrpContext->FltObjects->Instance,
                                Fcb->LowerFileObject,
-                               &ByteOffset, Length,
+                               &ByteOffset, BytesToWrite,
                                TySwapBuffer.Buffer, FLTFL_IO_OPERATION_NON_CACHED,
                                &BytesWritten, NULLPTR, NULL );
 

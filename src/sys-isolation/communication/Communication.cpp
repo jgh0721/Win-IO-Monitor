@@ -234,8 +234,11 @@ NTSTATUS CheckEventFileCreateTo( IRP_CONTEXT* IrpContext )
         KeQuerySystemTime( &Packet.Buffer->EventTime );
 
         Packet.Buffer->ProcessId = IrpContext->ProcessId;
-        
+        Packet.Buffer->ThreadId = (ULONG)PsGetCurrentThreadId();
+
         const auto Args = ( CREATE_ARGS* )IrpContext->Params;
+        Packet.Buffer->FileType = Args->MetaDataInfo.MetaData.Type;
+
         Packet.Buffer->Parameters.Create.DesiredAccess                  = Args->CreateDesiredAccess;
         Packet.Buffer->Parameters.Create.FileAttributes;
         Packet.Buffer->Parameters.Create.ShareAccess                    = 0;
@@ -316,6 +319,7 @@ NTSTATUS NotifyEventFileRenameTo( IRP_CONTEXT* IrpContext )
         KeQuerySystemTime( &Packet.Buffer->EventTime );
 
         Packet.Buffer->ProcessId = IrpContext->ProcessId;
+        Packet.Buffer->ThreadId = ( ULONG )PsGetCurrentThreadId();
 
         Packet.Buffer->Parameters.SetFileInformation.FileInformationClass = IrpContext->Data->Iopb->Parameters.SetFileInformation.FileInformationClass;
 
@@ -377,6 +381,7 @@ NTSTATUS NotifyEventFileDeleteTo( IRP_CONTEXT* IrpContext )
         KeQuerySystemTime( &Packet.Buffer->EventTime );
 
         Packet.Buffer->ProcessId = IrpContext->ProcessId;
+        Packet.Buffer->ThreadId = ( ULONG )PsGetCurrentThreadId();
 
         Packet.Buffer->Parameters.SetFileInformation.FileInformationClass = IrpContext->Data->Iopb->Parameters.SetFileInformation.FileInformationClass;
 
@@ -405,7 +410,7 @@ NTSTATUS NotifyEventFileDeleteTo( IRP_CONTEXT* IrpContext )
     return Status;
 }
 
-NTSTATUS CheckEventProcCreateTo( ULONG ProcessId, TyGenericBuffer<WCHAR>* ProcessFileFullPath, __in_z const wchar_t* ProcessFileName )
+NTSTATUS CheckEventProcCreateTo( ULONG ProcessId, ULONG ParentProcessId, TyGenericBuffer<WCHAR>* ProcessFileFullPath, __in_z const wchar_t* ProcessFileName )
 {
     NTSTATUS Status = STATUS_INVALID_PARAMETER;
     TyGenericBuffer<MSG_SEND_PACKET> Packet;
@@ -441,6 +446,11 @@ NTSTATUS CheckEventProcCreateTo( ULONG ProcessId, TyGenericBuffer<WCHAR>* Proces
         KeQuerySystemTime( &Packet.Buffer->EventTime );
 
         Packet.Buffer->ProcessId = ProcessId;
+        Packet.Buffer->ThreadId = ( ULONG )PsGetCurrentThreadId();
+
+        Packet.Buffer->Parameters.Process.IsCreate = TRUE;
+        Packet.Buffer->Parameters.Process.ProcessId = ProcessId;
+        Packet.Buffer->Parameters.Process.ParentProcessId = ParentProcessId;
 
         Packet.Buffer->LengthOfProcessFullPath = CchProcessFullPath * sizeof( WCHAR );
         Packet.Buffer->OffsetOfProcessFullPath = sizeof( MSG_SEND_PACKET );
@@ -477,7 +487,7 @@ NTSTATUS CheckEventProcCreateTo( ULONG ProcessId, TyGenericBuffer<WCHAR>* Proces
     return Status;
 }
 
-NTSTATUS CheckEventProcTerminateTo( ULONG ProcessId, TyGenericBuffer<WCHAR>* ProcessFileFullPath, __in_z const wchar_t* ProcessFileName )
+NTSTATUS CheckEventProcTerminateTo( ULONG ProcessId, ULONG ParentProcessId, TyGenericBuffer<WCHAR>* ProcessFileFullPath, __in_z const wchar_t* ProcessFileName )
 {
     NTSTATUS Status = STATUS_INVALID_PARAMETER;
     TyGenericBuffer<MSG_SEND_PACKET> Packet;
@@ -513,6 +523,11 @@ NTSTATUS CheckEventProcTerminateTo( ULONG ProcessId, TyGenericBuffer<WCHAR>* Pro
         KeQuerySystemTime( &Packet.Buffer->EventTime );
 
         Packet.Buffer->ProcessId = ProcessId;
+        Packet.Buffer->ThreadId = ( ULONG )PsGetCurrentThreadId();
+
+        Packet.Buffer->Parameters.Process.IsCreate = FALSE;
+        Packet.Buffer->Parameters.Process.ProcessId = ProcessId;
+        Packet.Buffer->Parameters.Process.ParentProcessId = ParentProcessId;
 
         Packet.Buffer->LengthOfProcessFullPath = CchProcessFullPath * sizeof( WCHAR );
         Packet.Buffer->OffsetOfProcessFullPath = sizeof( MSG_SEND_PACKET );

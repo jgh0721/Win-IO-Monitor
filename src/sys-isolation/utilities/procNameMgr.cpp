@@ -400,7 +400,7 @@ void CreateProcessNotifyRoutine( HANDLE ParentId, HANDLE ProcessId, BOOLEAN Crea
             if( !FlagOn( ProcessFilterItem->ProcessFilter, PROCESS_NOTIFY_CREATION_TERMINATION ) )
                 break;
             
-            CheckEventProcCreateTo( ( ULONG )ProcessId, &ProcessFileFullPath, ProcessName );
+            CheckEventProcCreateTo( ( ULONG )ProcessId, (ULONG)ParentId, &ProcessFileFullPath, ProcessName );
         }
         else
         {
@@ -409,7 +409,7 @@ void CreateProcessNotifyRoutine( HANDLE ParentId, HANDLE ProcessId, BOOLEAN Crea
             {
                 if( FlagOn( ProcessFilterItem->ProcessFilter, PROCESS_NOTIFY_CREATION_TERMINATION ) )
                 {
-                    CheckEventProcTerminateTo( ( ULONG )ProcessId, &ProcessFileFullPath, ProcessName );
+                    CheckEventProcTerminateTo( ( ULONG )ProcessId, (ULONG)ParentId, &ProcessFileFullPath, ProcessName );
                 }
             }
 

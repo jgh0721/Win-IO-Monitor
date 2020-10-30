@@ -53,6 +53,9 @@ do {                                                        \
     #endif
 #endif
 
+typedef unsigned char uint8_t;
+typedef unsigned int uint32_t;
+
 #include "pool.hpp"
 
 #endif //WINIOMONITOR_FLTBASE_HPP

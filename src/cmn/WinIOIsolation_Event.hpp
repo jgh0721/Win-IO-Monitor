@@ -34,8 +34,10 @@ typedef struct _ENCRYPT_CONFIG
 {
     ENCRYPTION_METHOD                       Method;
 
+    ULONG                                   IVSize;
+    UCHAR                                   IVKey[ 16 ];                // 16 * 8, 128bits
     ULONG                                   KeySize;
-    UCHAR                                   EncryptionKey[ 32 ];
+    UCHAR                                   EncryptionKey[ 32 ];        // max 256bits, 32 * 8
 
 } ENCRYPT_CONFIG;
 
@@ -74,6 +76,7 @@ typedef enum _MSG_CATEGORY
     MSG_CATE_FILESYSTEM                     = 0x1,
     MSG_CATE_FILESYSTEM_NOTIFY              = 0x2,
     MSG_CATE_PROCESS                        = 0x4,
+    MSG_CATE_DEVICE                         = 0x8,
 } MSG_CATEGORY;
 
 typedef enum _MSG_FS_TYPE
@@ -115,6 +118,12 @@ typedef enum _MSG_PROC_TYPE
     PROC_WAS_CREATED                        = 0x00000001,
     PROC_WAS_TERMINATED                     = 0x00000002
 } MSG_PROC_TYPE;
+
+typedef enum _MSG_DEVICE_TYPE
+{
+    DEV_VOLUME_MOUNT                         = 0x00000004,
+    DEV_VOLUME_DISMOUNT                      = 0x00000008
+} MSG_VOLUME_TYPE;
 
 typedef enum
 {
@@ -171,10 +180,12 @@ typedef union TyMsgParameters
 
         // only apply if this file is not exists
         BOOLEAN                             IsUseEncryption;
+        BOOLEAN                             IsUseGlobalEncryption;
+        // if IsUseGlobalEncryption was TRUE, only use EncryptConfig.Method
+        ENCRYPT_CONFIG                      EncryptConfig;
         // only apply if this file is already exists
         // caller process has rights for read/write decrypted data on encrypted file
         BOOLEAN                             IsAccessEncryption;
-        ENCRYPTION_METHOD                   EncryptionMethod;
 
         BOOLEAN                             IsUseSolutionMetaData;
         ULONG                               SolutionMetaDataSize;
@@ -185,6 +196,25 @@ typedef union TyMsgParameters
     {
         ULONG                               FileInformationClass;
     } SetFileInformation;
+
+    struct
+    {
+        BOOLEAN                             IsModified;
+    } Clean;
+
+    struct
+    {
+        BOOLEAN                             IsModified;
+    } Close;
+
+    struct
+    {
+        BOOLEAN                             IsCreate;
+        ULONG                               ParentProcessId;
+        ULONG                               ProcessId;
+        ULONG                               SessionId;
+        // NOTE: 프로세스의 명령행 정보는 패킷의 Contents 로 포함되어 전송
+    } Process;
 
 } MSG_PARAMETERS, *PMSG_PARAMETERS;
 
@@ -198,17 +228,19 @@ typedef struct _MSG_SEND_PACKET
     LARGE_INTEGER                           EventTime;
 
     ULONG                                   ProcessId;
+    ULONG                                   ThreadId;
 
     MSG_PARAMETERS                          Parameters;
+    ULONG                                   FileType;                   // 0 = Normal, 
 
-    ULONG                                   LengthOfProcessFullPath;  // BYTE    
-    ULONG                                   OffsetOfProcessFullPath;  // BYTE
-    ULONG                                   LengthOfSrcFileFullPath;  // BYTE
-    ULONG                                   OffsetOfSrcFileFullPath;  // BYTE
-    ULONG                                   LengthOfDstFileFullPath;  // BYTE
-    ULONG                                   OffsetOfDstFileFullPath;  // BYTE
-    ULONG                                   LengthOfContents;         // BYTE
-    ULONG                                   OffsetOfContents;         // BYTE
+    ULONG                                   LengthOfProcessFullPath;    // BYTE    
+    ULONG                                   OffsetOfProcessFullPath;    // BYTE
+    ULONG                                   LengthOfSrcFileFullPath;    // BYTE
+    ULONG                                   OffsetOfSrcFileFullPath;    // BYTE
+    ULONG                                   LengthOfDstFileFullPath;    // BYTE
+    ULONG                                   OffsetOfDstFileFullPath;    // BYTE
+    ULONG                                   LengthOfContents;           // BYTE
+    ULONG                                   OffsetOfContents;           // BYTE
 
 } MSG_SEND_PACKET, *PMSG_SEND_PACKET;
 
@@ -223,10 +255,22 @@ typedef struct _MSG_SEND_PACKETU
 
 const unsigned int MSG_SEND_PACKET_SIZE = sizeof( MSG_SEND_PACKET );
 
+typedef enum _MSG_JUDGE_RESULT
+{
+    MSG_JUDGE_NONE                          = 0x00000000,
+    MSG_JUDGE_ALLOW                         = 0x00000001,
+    MSG_JUDGE_REJECT                        = 0x00000002,
+    MSG_JUDGE_APPLY_ACCESS                  = 0x00000004,       // CreateResult.IsAccessEncryption
+
+} MSG_JUDGE_RESULT;
+
 typedef struct _MSG_REPLY_PACKET
 {
+    // MSG_JUDGE_RESULT
+    ULONG                                   Result;
     // If received msg was MSG_CATE_FILESYSTEM_NOTIFY, this status was ignored
-    // STATUS_SUCCESS, STATUS_ACCESS_DENIED, ... 
+    // STATUS_SUCCESS, STATUS_ACCESS_DENIED, ...
+    // this value pass down to OS
     NTSTATUS                                Status;
 
     MSG_PARAMETERS                          Parameters;

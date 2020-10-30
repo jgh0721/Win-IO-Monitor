@@ -252,6 +252,18 @@
     <ClInclude Include="utilities\detectDelete.hpp">
       <Filter>Features</Filter>
     </ClInclude>
+    <ClInclude Include="..\cmn\Cipher.hpp">
+      <Filter>Features\Encryption</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cmn\Cipher_Defs.hpp">
+      <Filter>Features\Encryption</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cmn\Cipher_XTEA.hpp">
+      <Filter>Features\Encryption</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cmn\Cipher_AES.hpp">
+      <Filter>Features\Encryption</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="WinIOIsolation.cpp">
@@ -397,6 +409,15 @@
     </ClCompile>
     <ClCompile Include="utilities\detectDelete.cpp">
       <Filter>Features</Filter>
+    </ClCompile>
+    <ClCompile Include="..\cmn\Cipher.cpp">
+      <Filter>Features\Encryption</Filter>
+    </ClCompile>
+    <ClCompile Include="..\cmn\Cipher_XTEA.cpp">
+      <Filter>Features\Encryption</Filter>
+    </ClCompile>
+    <ClCompile Include="..\cmn\Cipher_AES.cpp">
+      <Filter>Features\Encryption</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

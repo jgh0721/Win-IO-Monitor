@@ -110,6 +110,9 @@ NTSTATUS InitializeFcbAndCcb( IRP_CONTEXT* IrpContext )
         Fcb->AdvFcbHeader.Resource = &Fcb->MainResource;
         Fcb->AdvFcbHeader.PagingIoResource = &Fcb->PagingIoResource;
 
+        Fcb->InstanceContext = IrpContext->InstanceContext;
+        FltReferenceContext( Fcb->InstanceContext );
+
         const auto Args = ( CREATE_ARGS* )IrpContext->Params;
 
         if( Args->MetaDataInfo.MetaData.Type == METADATA_UNK_TYPE)
@@ -127,10 +130,10 @@ NTSTATUS InitializeFcbAndCcb( IRP_CONTEXT* IrpContext )
             Fcb->AdvFcbHeader.AllocationSize.QuadPart = ROUND_TO_SIZE( Args->FileSize.QuadPart, IrpContext->InstanceContext->ClusterSize );
         }
 
-        ///////////////////////////////////////////////////////////////////////
+        RtlZeroMemory( &Fcb->EncryptConfig, sizeof( Fcb->EncryptConfig ) );
+        RtlCopyMemory( &Fcb->EncryptConfig, &Args->EncryptContext, sizeof( Fcb->EncryptConfig ) );
 
-        Fcb->InstanceContext = IrpContext->InstanceContext;
-        FltReferenceContext( Fcb->InstanceContext );
+        ///////////////////////////////////////////////////////////////////////
 
         /*! In IRP_MJ_CREATE
 

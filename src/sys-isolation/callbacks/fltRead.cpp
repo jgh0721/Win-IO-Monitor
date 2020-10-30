@@ -6,6 +6,7 @@
 #include "utilities/bufferMgr.hpp"
 
 #include "fltCmnLibs.hpp"
+#include "Cipher.hpp"
 
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
@@ -710,6 +711,11 @@ NTSTATUS ReadPagingIO( IRP_CONTEXT* IrpContext, PVOID ReadBuffer, ULONG BytesToC
             __leave;
         }
 
+        DecryptBuffer( Fcb->EncryptConfig.CipherID, ByteOffset.QuadPart, 
+                       TySwapBuffer.Buffer, BytesToRead, 
+                       Fcb->EncryptConfig.EncryptionKey, Fcb->EncryptConfig.KeySize, 
+                       NULLPTR, 0 );
+        
         RtlCopyMemory( ReadBuffer, TySwapBuffer.Buffer, BytesToCopy );
     }
     __finally
@@ -848,6 +854,11 @@ NTSTATUS ReadNonCachedIO( IRP_CONTEXT* IrpContext, PVOID ReadBuffer, ULONG Bytes
                        ) );
             __leave;
         }
+
+        DecryptBuffer( Fcb->EncryptConfig.CipherID, ByteOffset.QuadPart,
+                       TySwapBuffer.Buffer, BytesToRead,
+                       Fcb->EncryptConfig.EncryptionKey, Fcb->EncryptConfig.KeySize,
+                       NULLPTR, 0 );
 
         RtlCopyMemory( ReadBuffer, TySwapBuffer.Buffer, BytesToCopy );
         if( BytesToZero > 0 )

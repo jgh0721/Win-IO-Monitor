@@ -19,6 +19,10 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\cmn\Cipher.hpp" />
+    <ClInclude Include="..\cmn\Cipher_AES.hpp" />
+    <ClInclude Include="..\cmn\Cipher_Defs.hpp" />
+    <ClInclude Include="..\cmn\Cipher_XTEA.hpp" />
     <ClInclude Include="..\cmn\fltCmnLibs.hpp" />
     <ClInclude Include="..\cmn\fltCmnLibs_base.hpp" />
     <ClInclude Include="..\cmn\fltCmnLibs_path.hpp" />
@@ -88,6 +92,9 @@
     <ClInclude Include="WinIOIsolation_Filter.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\cmn\Cipher.cpp" />
+    <ClCompile Include="..\cmn\Cipher_AES.cpp" />
+    <ClCompile Include="..\cmn\Cipher_XTEA.cpp" />
     <ClCompile Include="..\cmn\fltCmnLibs.cpp" />
     <ClCompile Include="..\cmn\fltCmnLibs_base.cpp" />
     <ClCompile Include="..\cmn\fltCmnLibs_path.cpp" />

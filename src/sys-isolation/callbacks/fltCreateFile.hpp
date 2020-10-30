@@ -80,10 +80,12 @@ typedef struct _CREATE_ARGS
     HANDLE                  LowerFileHandle;
 
     METADATA_DRIVER         MetaDataInfo;
+    ENCRYPT_CONTEXT         EncryptContext;
     BOOLEAN                 IsMetaDataOnCreate; // 해당 파일이 새로 생성되었고, 메타 데이터 생성 필요함 여부
     BOOLEAN                 IsStubCodeOnCreate; // 해당 파일이 새로 생성되었고, 스텁 코드 및 메타 데이터 생성이 필요함 여부( 반드시 IsMetaDataOnCreate 가 TRUE 여야한다 )
     PVOID                   SolutionMetaData;
     ULONG                   SolutionMetaDataSize;
+
 } CREATE_ARGS, * PCREATE_ARGS;
 
 NTSTATUS ProcessPreCreate_SUPERSEDE( __in IRP_CONTEXT* Args );

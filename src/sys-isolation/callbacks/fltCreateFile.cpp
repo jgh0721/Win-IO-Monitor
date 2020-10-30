@@ -539,6 +539,27 @@ NTSTATUS CreateFileNonExistFCB( IRP_CONTEXT* IrpContext )
         Args->IsMetaDataOnCreate = Result.IsUseSolutionMetaData;
         Args->IsStubCodeOnCreate = Result.IsUseContainor;
 
+        if( Result.IsUseEncryption != FALSE )
+        {
+            Args->EncryptContext.CipherID = (CIPHER_ID)Result.EncryptConfig.Method;
+
+            if( Result.IsUseGlobalEncryption == FALSE )
+            {
+                Args->EncryptContext.KeySize = Result.EncryptConfig.KeySize;
+                RtlCopyMemory( Args->EncryptContext.EncryptionKey, Result.EncryptConfig.EncryptionKey, Result.EncryptConfig.KeySize );
+                Args->EncryptContext.IVSize = Result.EncryptConfig.IVSize;
+                RtlCopyMemory( Args->EncryptContext.IVKey, Result.EncryptConfig.IVKey, Result.EncryptConfig.IVSize );
+            }
+            else
+            {
+                const auto& context = GlobalContext.EncryptContext[ Result.EncryptConfig.Method - 1 ];
+                Args->EncryptContext.KeySize = context.CipherID;
+                RtlCopyMemory( Args->EncryptContext.EncryptionKey, context.EncryptionKey, context.KeySize );
+                Args->EncryptContext.IVSize = context.IVSize;
+                RtlCopyMemory( Args->EncryptContext.IVKey, context.IVKey, context.IVSize );
+            }
+        }
+
         if( ( FlagOn( Args->FileStatus, FILE_ALREADY_EXISTS ) && Args->MetaDataInfo.MetaData.Type == METADATA_STB_TYPE ) 
             || Args->IsStubCodeOnCreate != FALSE )
         {
