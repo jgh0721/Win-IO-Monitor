@@ -298,6 +298,92 @@ NTSTATUS CheckEventFileCreateTo( IRP_CONTEXT* IrpContext )
     return Status;
 }
 
+NTSTATUS CheckEventFileCleanup( IRP_CONTEXT* IrpContext )
+{
+    NTSTATUS Status = STATUS_INVALID_PARAMETER;
+    TyGenericBuffer<MSG_SEND_PACKET> Packet;
+
+    ASSERT( IrpContext != NULLPTR );
+
+    __try
+    {
+        if( IrpContext == NULLPTR )
+            __leave;
+
+        PFLT_PORT ClientPort = GetClientPort( IrpContext );
+
+        if( GlobalContext.Filter == NULL || ClientPort == NULLPTR )
+            __leave;
+
+        if( IrpContext->Result.Buffer == NULLPTR )
+        {
+            IrpContext->Result = AllocateBuffer<MSG_REPLY_PACKET>( BUFFER_MSG_REPLY );
+            if( IrpContext->Result.Buffer == NULLPTR )
+            {
+                Status = STATUS_INSUFFICIENT_RESOURCES;
+                __leave;
+            }
+        }
+
+        unsigned int SendPacketSize = MSG_SEND_PACKET_SIZE;
+        unsigned int CchProcessFullPath = nsUtils::strlength( IrpContext->ProcessFullPath.Buffer ) + 1;
+        unsigned int CchSrcFileFullpath = nsUtils::strlength( IrpContext->SrcFileFullPath.Buffer ) + 1;
+
+        if( Packet.Buffer == NULLPTR || IrpContext->Result.Buffer == NULLPTR )
+        {
+            Status = STATUS_INSUFFICIENT_RESOURCES;
+            __leave;
+        }
+
+        Packet.Buffer->MessageSize = SendPacketSize;
+        Packet.Buffer->MessageCate = MSG_CATE_FILESYSTEM;
+        Packet.Buffer->MessageType = FS_PRE_CLEANUP;
+        KeQuerySystemTime( &Packet.Buffer->EventTime );
+
+        Packet.Buffer->ProcessId = IrpContext->ProcessId;
+        Packet.Buffer->ThreadId = ( ULONG )PsGetCurrentThreadId();
+        Packet.Buffer->Parameters.Clean.IsModified = FlagOn( IrpContext->Fcb->Flags, FCB_STATE_FILE_MODIFIED ) != FALSE;
+
+        Packet.Buffer->LengthOfProcessFullPath = CchProcessFullPath * sizeof( WCHAR );
+        Packet.Buffer->OffsetOfProcessFullPath = sizeof( MSG_SEND_PACKET );
+        RtlStringCbPrintfW( ( PWCH )( Add2Ptr( Packet.Buffer, Packet.Buffer->OffsetOfProcessFullPath ) ),
+                            Packet.Buffer->LengthOfProcessFullPath,
+                            L"%s", IrpContext->ProcessFullPath.Buffer );
+
+        Packet.Buffer->LengthOfSrcFileFullPath = CchSrcFileFullpath * sizeof( WCHAR );
+        Packet.Buffer->OffsetOfSrcFileFullPath = Packet.Buffer->OffsetOfProcessFullPath = Packet.Buffer->LengthOfProcessFullPath;
+        RtlStringCbPrintfW( ( PWCH )( Add2Ptr( Packet.Buffer, Packet.Buffer->OffsetOfSrcFileFullPath ) ),
+                            Packet.Buffer->LengthOfSrcFileFullPath,
+                            L"%s", IrpContext->SrcFileFullPath.Buffer );
+
+        ULONG ReplyLength = IrpContext->Result.BufferSize;
+
+        Status = FltSendMessage( GlobalContext.Filter, &ClientPort,
+                                 Packet.Buffer, Packet.Buffer->MessageSize,
+                                 IrpContext->Result.Buffer, &ReplyLength,
+                                 &GlobalContext.TimeOutMs );
+
+        if( ( NT_SUCCESS( Status ) && Status == STATUS_TIMEOUT ) || ( !NT_SUCCESS( Status ) ) )
+        {
+            KdPrint( ( "[WinIOSol] %s EvtID=%09d %s %s %s Status=0x%08x,%s Proc=%06d,%ws\n"
+                       , JudgeInOut( IrpContext ), IrpContext->EvtID, __FUNCTION__, "FltSendMessage", Status == STATUS_TIMEOUT ? "Timeout" : "FAILED"
+                       , Status, ntkernel_error_category::find_ntstatus( Status )->message
+                       , IrpContext->ProcessId, IrpContext->ProcessFileName ) );
+
+            if( Status == STATUS_TIMEOUT )
+                Status = STATUS_AUDIT_FAILED;
+
+            __leave;
+        }
+    }
+    __finally
+    {
+        DeallocateBuffer( &Packet );
+    }
+
+    return Status;
+}
+
 NTSTATUS NotifyEventFileRenameTo( IRP_CONTEXT* IrpContext )
 {
     NTSTATUS Status = STATUS_INVALID_PARAMETER;

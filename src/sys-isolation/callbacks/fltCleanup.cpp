@@ -10,6 +10,8 @@
 #include "utilities/contextMgr.hpp"
 #include "utilities/detectDelete.hpp"
 
+#include "communication/Communication.hpp"
+
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
 #endif
@@ -103,6 +105,8 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCleanup( PFLT_CALLBACK_DATA Data, PCFL
                     CcSetFileSizes( FileObject, ( PCC_FILE_SIZES )&Fcb->AdvFcbHeader.AllocationSize );
                 }
             }
+
+            CheckEventFileCleanup( IrpContext );
         }
 
         // File Oplock 점검, 완료될 때 까지 대기한다

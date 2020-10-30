@@ -42,6 +42,7 @@ NTSTATUS    UninitializeNotifyEventWorker();
 */
 NTSTATUS    CheckEventFileCreateTo( __in IRP_CONTEXT* IrpContext );
 NTSTATUS    CheckEventFileOpenTo( __in IRP_CONTEXT* IrpContext );
+NTSTATUS    CheckEventFileCleanup( __in IRP_CONTEXT* IrpContext );
 
 ///////////////////////////////////////////////////////////////////////////////
 /// MSG_FS_NOTIFY_TYPE

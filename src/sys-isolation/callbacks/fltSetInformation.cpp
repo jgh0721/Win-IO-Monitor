@@ -672,7 +672,7 @@ NTSTATUS ProcessSetFileRenameInformation( IRP_CONTEXT* IrpContext )
                 __leave;
             }
 
-            auto Test = AllocateBuffer<WCHAR>( BUFFER_FILENAME, IrpContext->SrcFileFullPath.BufferSize + CONTAINOR_SUFFIX_MAX * sizeof( WCHAR ) );
+            Test = AllocateBuffer<WCHAR>( BUFFER_FILENAME, IrpContext->SrcFileFullPath.BufferSize + CONTAINOR_SUFFIX_MAX * sizeof( WCHAR ) );
 
             // if dst filename equals pretended filename + suffix then reject request
             RtlStringCbPrintfW( Test.Buffer, Test.BufferSize, L"%s%s", IrpContext->SrcFileName, Fcb->MetaDataInfo->MetaData.ContainorSuffix );
@@ -702,7 +702,7 @@ NTSTATUS ProcessSetFileRenameInformation( IRP_CONTEXT* IrpContext )
             NewCallbackData->Iopb->TargetFileObject = IrpContext->Ccb->LowerFileObject != NULLPTR ? IrpContext->Ccb->LowerFileObject : IrpContext->Fcb->LowerFileObject;
 
             auto RequiredSize = Length + ( nsUtils::strlength( Fcb->MetaDataInfo->MetaData.ContainorSuffix ) * sizeof(WCHAR) );
-            auto NewInfoBuffer = ( nsW32API::FILE_RENAME_INFORMATION* )ExAllocatePool( PagedPool, RequiredSize );
+            NewInfoBuffer = ( nsW32API::FILE_RENAME_INFORMATION* )ExAllocatePool( PagedPool, RequiredSize );
 
             RtlZeroMemory( NewInfoBuffer, RequiredSize );
 
@@ -781,7 +781,7 @@ NTSTATUS ProcessSetFileRenameInformationEx( IRP_CONTEXT* IrpContext )
     auto InfoBuffer = (nsW32API::FILE_RENAME_INFORMATION_EX*)IrpContext->Data->Iopb->Parameters.SetFileInformation.InfoBuffer;
 
     PFLT_CALLBACK_DATA                          NewCallbackData = NULLPTR;
-    nsW32API::FILE_RENAME_INFORMATION*          NewInfoBuffer = NULLPTR;
+    nsW32API::FILE_RENAME_INFORMATION_EX*       NewInfoBuffer = NULLPTR;
     TyGenericBuffer<WCHAR>                      Test;
 
     __try
@@ -801,7 +801,7 @@ NTSTATUS ProcessSetFileRenameInformationEx( IRP_CONTEXT* IrpContext )
                 __leave;
             }
 
-            auto Test = AllocateBuffer<WCHAR>( BUFFER_FILENAME, IrpContext->SrcFileFullPath.BufferSize + CONTAINOR_SUFFIX_MAX * sizeof( WCHAR ) );
+            Test = AllocateBuffer<WCHAR>( BUFFER_FILENAME, IrpContext->SrcFileFullPath.BufferSize + CONTAINOR_SUFFIX_MAX * sizeof( WCHAR ) );
 
             // if dst filename equals pretended filename + suffix then reject request
             RtlStringCbPrintfW( Test.Buffer, Test.BufferSize, L"%s%s", IrpContext->SrcFileName, Fcb->MetaDataInfo->MetaData.ContainorSuffix );
@@ -831,7 +831,7 @@ NTSTATUS ProcessSetFileRenameInformationEx( IRP_CONTEXT* IrpContext )
             NewCallbackData->Iopb->TargetFileObject = IrpContext->Ccb->LowerFileObject != NULLPTR ? IrpContext->Ccb->LowerFileObject : IrpContext->Fcb->LowerFileObject;
 
             auto RequiredSize = Length + ( nsUtils::strlength( Fcb->MetaDataInfo->MetaData.ContainorSuffix ) * sizeof( WCHAR ) );
-            auto NewInfoBuffer = ( nsW32API::FILE_RENAME_INFORMATION_EX* )ExAllocatePool( PagedPool, RequiredSize );
+            NewInfoBuffer = ( nsW32API::FILE_RENAME_INFORMATION_EX* )ExAllocatePool( PagedPool, RequiredSize );
 
             RtlZeroMemory( NewInfoBuffer, RequiredSize );
 
