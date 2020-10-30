@@ -77,6 +77,7 @@
     <ClInclude Include="pool.hpp" />
     <ClInclude Include="privateFCBMgr.hpp" />
     <ClInclude Include="privateFCBMgr_Defs.hpp" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="stdafx.hpp" />
     <ClInclude Include="utilities\bufferMgr.hpp" />
     <ClInclude Include="utilities\bufferMgr_Defs.hpp" />
@@ -143,6 +144,9 @@
     <ClCompile Include="utilities\volumeMgr.cpp" />
     <ClCompile Include="WinIOIsolation.cpp" />
     <ClCompile Include="WinIOIsolation_Filter.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="WinIOIsolation.rc" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{9EE7618A-125D-4616-8673-033D5D79C230}</ProjectGuid>
