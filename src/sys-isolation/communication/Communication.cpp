@@ -4,6 +4,7 @@
 
 #include "irpContext.hpp"
 #include "utilities/bufferMgr.hpp"
+#include "driverMgmt.hpp"
 
 #include "fltCmnLibs.hpp"
 
@@ -131,6 +132,9 @@ NTSTATUS NotifyFSEventToClient( FS_NOTIFY_ITEM* NotifyEventItem )
         if( NotifyEventItem == NULLPTR )
             break;
 
+        if( FeatureContext.IsRunning <= 0 )
+            break;
+
         LONG EvtID = CreateEvtID();
         PFLT_PORT ClientPort = GetClientPort( EvtID );
 
@@ -156,10 +160,13 @@ NTSTATUS NotifyFSEventToClient( FS_NOTIFY_ITEM* NotifyEventItem )
             KdPrint( ( "[WinIOSol] EVENT FltSendMessage Failed|0x%08x", Status ) );
         }
 
+    } while( false );
+
+    if( NotifyEventItem != NULLPTR )
+    {
         DeallocateBuffer( &NotifyEventItem->SendPacket );
         ExFreePool( NotifyEventItem );
-
-    } while( false );
+    }
 
     if( Reply.Buffer != NULLPTR )
         DeallocateBuffer( &Reply );
