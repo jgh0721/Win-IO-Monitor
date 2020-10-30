@@ -40,6 +40,8 @@
 
 ## Build Environments
 
+    * Copy WinDDK's sal.h to VS Include path 
+
 ### Driver
 
     1. Windows Driver Kits 7.1 ( 7600.16385.1 )
@@ -59,3 +61,4 @@
 
     * https://github.com/xiao70/X70FSD
     * https://github.com/ned14/ntkernel-error-category
+    * https://github.com/HoneProject/Windows-Sensor

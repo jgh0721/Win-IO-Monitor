@@ -25,7 +25,9 @@
     <ClInclude Include="..\cmn\Cipher_XTEA.hpp" />
     <ClInclude Include="..\cmn\fltCmnLibs.hpp" />
     <ClInclude Include="..\cmn\fltCmnLibs_base.hpp" />
+    <ClInclude Include="..\cmn\fltCmnLibs_llrb.hpp" />
     <ClInclude Include="..\cmn\fltCmnLibs_path.hpp" />
+    <ClInclude Include="..\cmn\fltCmnLibs_ring_buffer.hpp" />
     <ClInclude Include="..\cmn\fltCmnLibs_string.hpp" />
     <ClInclude Include="..\cmn\W32API.hpp" />
     <ClInclude Include="..\cmn\W32API_Base.hpp" />

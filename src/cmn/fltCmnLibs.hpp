@@ -5,6 +5,8 @@
 #include "fltCmnLibs_base.hpp"
 #include "fltCmnLibs_string.hpp"
 #include "fltCmnLibs_path.hpp"
+#include "fltCmnLibs_llrb.hpp"
+#include "fltCmnLibs_ring_buffer.hpp"
 
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
