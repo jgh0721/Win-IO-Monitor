@@ -195,18 +195,25 @@ WCHAR* ExtractFileFullPathWOVolume( CTX_INSTANCE_CONTEXT* InstanceContext, TyGen
     ASSERT( FileFullPath != NULLPTR );
     ASSERT( FileFullPath->Buffer != NULLPTR );
 
+    return ExtractFileFullPathWOVolume( InstanceContext, FileFullPath->Buffer );
+}
+
+WCHAR* ExtractFileFullPathWOVolume( CTX_INSTANCE_CONTEXT* InstanceContext, WCHAR* FileFullPath )
+{
+    ASSERT( FileFullPath != NULLPTR );
+
     WCHAR* FileFullPathWOVolume = NULLPTR;
 
-    if( FileFullPath->Buffer[ 1 ] == L':' )
-        FileFullPathWOVolume = &FileFullPath->Buffer[ 2 ];
+    if( FileFullPath[ 1 ] == L':' )
+        FileFullPathWOVolume = &FileFullPath[ 2 ];
     else
     {
         ASSERT( InstanceContext != NULLPTR );
-        FileFullPathWOVolume = &FileFullPath->Buffer[ InstanceContext->DeviceNameCch ];
+        FileFullPathWOVolume = &FileFullPath[ InstanceContext->DeviceNameCch ];
     }
 
     if( FileFullPathWOVolume == NULLPTR )
-        FileFullPathWOVolume = FileFullPath->Buffer;
+        FileFullPathWOVolume = FileFullPath;
 
     return FileFullPathWOVolume;
 }

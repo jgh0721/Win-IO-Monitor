@@ -84,7 +84,8 @@ void SolNotifyDelete( IRP_CONTEXT* IrpContext, BOOLEAN IsFile, CTX_TRANSACTION_C
                          , JudgeInOut( IrpContext ), IrpContext->EvtID, __FUNCTION__ 
                          , "File Deleted!", IrpContext->SrcFileFullPath.Buffer ) );
 
-            NotifyEventFileDeleteTo( IrpContext );
+            if( IrpContext->IsConcerned == true && FeatureContext.IsRunning > 0 )
+                NotifyEventFileDeleteTo( IrpContext );
         }
         else
         {
@@ -92,7 +93,8 @@ void SolNotifyDelete( IRP_CONTEXT* IrpContext, BOOLEAN IsFile, CTX_TRANSACTION_C
                          , JudgeInOut( IrpContext ), IrpContext->EvtID, __FUNCTION__
                          , "File Deleted In Transaction", IrpContext->SrcFileFullPath.Buffer ) );
 
-            SolAddTransDeleteNotify( IrpContext, TransactionContext, IsFile );
+            if( IrpContext->IsConcerned == true && FeatureContext.IsRunning > 0 )
+                SolAddTransDeleteNotify( IrpContext, TransactionContext, IsFile );
 
         }
     }
@@ -110,7 +112,8 @@ void SolNotifyDelete( IRP_CONTEXT* IrpContext, BOOLEAN IsFile, CTX_TRANSACTION_C
                          , JudgeInOut( IrpContext ), IrpContext->EvtID, __FUNCTION__
                          , "Alternate FileStream Deleted In Transaction", IrpContext->SrcFileFullPath.Buffer ) );
 
-            SolAddTransDeleteNotify( IrpContext, TransactionContext, IsFile );
+            if( IrpContext->IsConcerned == true && FeatureContext.IsRunning > 0 )
+                SolAddTransDeleteNotify( IrpContext, TransactionContext, IsFile );
 
         }
     }

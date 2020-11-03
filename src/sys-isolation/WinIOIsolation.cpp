@@ -211,7 +211,6 @@ NTSTATUS InitializeGlobalContext( PDRIVER_OBJECT DriverObject )
     {
         RtlZeroMemory( &GlobalContext, sizeof( CTX_GLOBAL_DATA ) );
         GlobalContext.DriverObject = DriverObject;
-        GlobalContext.TimeOutMs.QuadPart = RELATIVE( MILLISECONDS( 3000 ) );
 
         IF_FAILED_BREAK( Status, CreateControlDevice( GlobalContext ) );
 
@@ -269,7 +268,7 @@ NTSTATUS InitializeGlobalContext( PDRIVER_OBJECT DriverObject )
         ExInitializePagedLookasideList( &GlobalContext.SwapWriteLookasideList_65536, NULL, NULL, 0,
                                         BUFFER_SWAP_WRITE_65536_SIZE, POOL_WRITE_TAG, 0 );
 
-        GlobalContext.TimeOutMs.QuadPart = RELATIVE( SECONDS( 5 ) );
+        SetTimeOutMs( 5000 );
 
         Status = STATUS_SUCCESS;
 

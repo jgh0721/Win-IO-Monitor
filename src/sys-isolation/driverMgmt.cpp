@@ -38,3 +38,8 @@ NTSTATUS UninitializeFeatureMgr()
 
     return Status;
 }
+
+void SetTimeOutMs( ULONG TimeOutMs )
+{
+    FeatureContext.TimeOutMs.QuadPart = RELATIVE( MILLISECONDS( TimeOutMs ) );
+}

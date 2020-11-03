@@ -29,5 +29,6 @@ VOID VolumeMgr_Replace( __inout_bcount_z( BufferSize ) WCHAR* Path, __in ULONG B
     호출자는 사용 후 반드시 CtxReleaseContext 를 호출해야한다
 */
 CTX_INSTANCE_CONTEXT* VolumeMgr_SearchContext( __in WCHAR DriveLetter );
+CTX_INSTANCE_CONTEXT* VolumeMgr_SearchContext( __in const WCHAR* Win32FilePath );
 
 #endif // HDR_WINIOISOLATION_VOLUMENAME_MGR

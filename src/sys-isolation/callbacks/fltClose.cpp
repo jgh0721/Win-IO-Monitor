@@ -2,6 +2,7 @@
 
 #include "privateFCBMgr.hpp"
 #include "irpContext.hpp"
+#include "communication/Communication.hpp"
 
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
@@ -50,6 +51,9 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreClose( PFLT_CALLBACK_DATA Data, PCFLT_
 
         if( RefCount == 0 )
         {
+            if( FeatureContext.IsRunning > 0 && IrpContext->IsConcerned == true )
+                CheckEventFileClose( IrpContext );
+
             Vcb_DeleteFCB( IrpContext->InstanceContext, Fcb );
             IsUninitializeFcb = true;
         }

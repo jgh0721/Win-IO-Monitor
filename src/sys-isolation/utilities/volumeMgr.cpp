@@ -282,3 +282,19 @@ CTX_INSTANCE_CONTEXT* VolumeMgr_SearchContext( WCHAR DriveLetter )
     return InstanceContext;
 }
 
+CTX_INSTANCE_CONTEXT* VolumeMgr_SearchContext( const WCHAR* Win32FilePath )
+{
+    ASSERT( Win32FilePath != NULLPTR );
+    if( Win32FilePath == NULLPTR )
+        return NULLPTR;
+
+    size_t length = nsUtils::strlength( Win32FilePath );
+    if( length < 3 )
+        return NULLPTR;
+
+    if( Win32FilePath[ 1 ] != L':' && Win32FilePath[ 2 ] != L'\\' )
+        return NULLPTR;
+
+    return VolumeMgr_SearchContext( Win32FilePath[ 0 ] );
+}
+

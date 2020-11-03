@@ -106,7 +106,8 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCleanup( PFLT_CALLBACK_DATA Data, PCFL
                 }
             }
 
-            CheckEventFileCleanup( IrpContext );
+            if( FeatureContext.IsRunning > 0 && IrpContext->IsConcerned == true )
+                CheckEventFileCleanup( IrpContext );
         }
 
         // File Oplock 점검, 완료될 때 까지 대기한다

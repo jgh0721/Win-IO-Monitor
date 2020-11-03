@@ -4,6 +4,7 @@
 #include "utilities/contextMgr_Defs.hpp"
 
 #include "fltCmnLibs.hpp"
+#include "WinIOIsolation_Event.hpp"
 
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
@@ -299,4 +300,58 @@ NTSTATUS GlobalFilter_Reset()
     GlobalFilter_Release( Filter );
 
     return STATUS_SUCCESS;
+}
+
+ULONG GlobalFilter_Count( bool IsInclude )
+{
+    ULONG Count = 0;
+    auto GFilter = GlobalFilter_Ref();
+
+    do
+    {
+        if( GFilter == NULLPTR )
+            break;
+
+        auto Head = IsInclude == true ? &GFilter->IncludeListHead : &GFilter->ExcludeListHead;
+
+        for( auto Current = Head->Flink; Current != Head; Current = Current->Flink )
+            Count++;
+
+    } while( false );
+
+    GlobalFilter_Release( GFilter );
+    return Count;
+}
+
+NTSTATUS GlobalFilter_Copy( PVOID Buffer, ULONG BufferSize, bool IsInclude )
+{
+    NTSTATUS Status = STATUS_INVALID_PARAMETER;
+    auto GFilter = GlobalFilter_Ref();
+
+    do
+    {
+        if( GFilter == NULLPTR )
+            break;
+
+        if( Buffer == NULLPTR || BufferSize == 0 )
+            break;
+
+        auto T = ( USER_GLOBAL_FILTER* )Buffer;
+        auto Head = IsInclude == true ? &GFilter->IncludeListHead : &GFilter->ExcludeListHead;
+        for( auto Current = Head->Flink; Current != Head; Current = Current->Flink )
+        {
+            auto Item = CONTAINING_RECORD( Current, GLOBAL_FILTER_ENTRY, ListEntry );
+
+            RtlCopyMemory( T->FilterMask, Item->FilterMask, sizeof( WCHAR ) * MAX_PATH );
+            T->IsInclude = IsInclude;
+
+            T = (USER_GLOBAL_FILTER*)Add2Ptr( T, sizeof( USER_GLOBAL_FILTER ) );
+        }
+
+        Status = STATUS_SUCCESS;
+
+    } while( false );
+
+    GlobalFilter_Release( GFilter );
+    return Status;
 }

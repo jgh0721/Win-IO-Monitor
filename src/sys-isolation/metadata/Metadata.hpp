@@ -53,5 +53,10 @@ ULONG GetStubCodeX64Size();
 NTSTATUS WriteSolutionMetaData( __in IRP_CONTEXT* IrpContext, __in PFILE_OBJECT FileObject, 
                                 __in FCB* Fcb, __in PVOID SolutionMetaData, __in ULONG SolutionMetaDataSize );
 
+NTSTATUS WriteSolutionMetaData( __in wchar_t* SrcFileFullPath, __in PVOID SolutionMetaData, __in ULONG SolutionMetaDataSize );
+
+NTSTATUS WriteSolutionMetaData( __in LONG EvtID, __in CTX_INSTANCE_CONTEXT* InstanceContext, __in wchar_t* SrcFileFullPath, __in PFILE_OBJECT FileObject, 
+                                __in METADATA_DRIVER* MetaDataInfo, __in PVOID SolutionMetaData, __in ULONG SolutionMetaDataSize );
+
 
 #endif // HDR_ISOLATION_METADATA

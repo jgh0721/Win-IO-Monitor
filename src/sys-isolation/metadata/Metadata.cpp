@@ -137,7 +137,7 @@ METADATA_TYPE GetFileMetaDataInfo( __in IRP_CONTEXT* IrpContext, __in PFILE_OBJE
         METADATA_DRIVER MetaDataBuffer;
         RtlZeroMemory( &MetaDataBuffer, METADATA_DRIVER_SIZE );
 
-        Status = FltReadFile( IrpContext->FltObjects->Instance, FileObject,
+        Status = FltReadFile( IrpContext->InstanceContext->Instance, FileObject,
                               &READ_OFFSET, _countof( CONTAINOR_MAGIC_NUMBER ), ( PVOID )&CONTAINOR_MAGIC_NUMBER[ 0 ],
                               FLTFL_IO_OPERATION_DO_NOT_UPDATE_BYTE_OFFSET | FLTFL_IO_OPERATION_NON_CACHED,
                               &BytesRead, NULL, NULL );
@@ -155,12 +155,12 @@ METADATA_TYPE GetFileMetaDataInfo( __in IRP_CONTEXT* IrpContext, __in PFILE_OBJE
         if( RtlCompareMemory( CONTAINOR_MAGIC_NUMBER, "MZ", 2 ) == 2 )
         {
             FILE_STANDARD_INFORMATION fsi;
-            Status = FltQueryInformationFile( IrpContext->FltObjects->Instance, FileObject, &fsi, sizeof( fsi ), FileStandardInformation, &BytesRead );
+            Status = FltQueryInformationFile( IrpContext->InstanceContext->Instance, FileObject, &fsi, sizeof( fsi ), FileStandardInformation, &BytesRead );
 
-            ULONG BufferSize = fsi.EndOfFile.QuadPart > METADATA_MAXIMUM_CONTAINOR_SIZE + METADATA_DRIVER_SIZE ? METADATA_MAXIMUM_CONTAINOR_SIZE + METADATA_DRIVER_SIZE : fsi.EndOfFile.QuadPart;
+            ULONG BufferSize = (ULONG)( fsi.EndOfFile.QuadPart > METADATA_MAXIMUM_CONTAINOR_SIZE + METADATA_DRIVER_SIZE ? METADATA_MAXIMUM_CONTAINOR_SIZE + METADATA_DRIVER_SIZE : fsi.EndOfFile.QuadPart );
             PBYTE Buffer = (PBYTE)ExAllocatePool( NonPagedPool, BufferSize );
 
-            Status = FltReadFile( IrpContext->FltObjects->Instance, FileObject, &READ_OFFSET, BufferSize, Buffer,
+            Status = FltReadFile( IrpContext->InstanceContext->Instance, FileObject, &READ_OFFSET, BufferSize, Buffer,
                                   FLTFL_IO_OPERATION_DO_NOT_UPDATE_BYTE_OFFSET | FLTFL_IO_OPERATION_NON_CACHED,
                                   &BytesRead, NULL, NULL );
 
@@ -179,7 +179,7 @@ METADATA_TYPE GetFileMetaDataInfo( __in IRP_CONTEXT* IrpContext, __in PFILE_OBJE
 
             READ_OFFSET.QuadPart = idx;
 
-            Status = FltReadFile( IrpContext->FltObjects->Instance, FileObject, &READ_OFFSET, METADATA_DRIVER_SIZE,
+            Status = FltReadFile( IrpContext->InstanceContext->Instance, FileObject, &READ_OFFSET, METADATA_DRIVER_SIZE,
                                   ( PVOID )&MetaDataBuffer,
                                   FLTFL_IO_OPERATION_DO_NOT_UPDATE_BYTE_OFFSET | FLTFL_IO_OPERATION_NON_CACHED,
                                   &BytesRead, NULL, NULL );
@@ -198,7 +198,7 @@ METADATA_TYPE GetFileMetaDataInfo( __in IRP_CONTEXT* IrpContext, __in PFILE_OBJE
         {
             READ_OFFSET = { 0,0 };
 
-            Status = FltReadFile( IrpContext->FltObjects->Instance, FileObject, &READ_OFFSET, METADATA_DRIVER_SIZE,
+            Status = FltReadFile( IrpContext->InstanceContext->Instance, FileObject, &READ_OFFSET, METADATA_DRIVER_SIZE,
                                   ( PVOID )&MetaDataBuffer,
                                   FLTFL_IO_OPERATION_DO_NOT_UPDATE_BYTE_OFFSET | FLTFL_IO_OPERATION_NON_CACHED,
                                   &BytesRead, NULL, NULL );
@@ -233,7 +233,7 @@ METADATA_TYPE GetFileMetaDataInfo( __in IRP_CONTEXT* IrpContext, __in PFILE_OBJE
             if( *SolutionMetaData == NULLPTR )
                 break;
 
-            Status = FltReadFile( IrpContext->FltObjects->Instance, FileObject,
+            Status = FltReadFile( IrpContext->InstanceContext->Instance, FileObject,
                                   &READ_OFFSET, *SolutionMetaDataSize, *SolutionMetaData,
                                   FLTFL_IO_OPERATION_DO_NOT_UPDATE_BYTE_OFFSET | FLTFL_IO_OPERATION_NON_CACHED,
                                   &BytesRead, NULL, NULL );
@@ -556,8 +556,109 @@ NTSTATUS WriteSolutionMetaData( IRP_CONTEXT* IrpContext, PFILE_OBJECT FileObject
 
     do
     {
+        ASSERT( IrpContext != NULLPTR );
+        ASSERT( IrpContext->InstanceContext != NULLPTR );
         ASSERT( Fcb != NULLPTR );
-        ASSERT( Fcb->MetaDataInfo != NULLPTR );
+
+        if( Fcb->MetaDataInfo == NULLPTR )
+            break;
+
+        Status = WriteSolutionMetaData( IrpContext->EvtID, IrpContext->InstanceContext, IrpContext->SrcFileFullPath.Buffer, FileObject,
+                                        Fcb->MetaDataInfo, SolutionMetaData, SolutionMetaDataSize );
+        
+    } while( false );
+
+    return Status;
+}
+
+NTSTATUS WriteSolutionMetaData( wchar_t* SrcFileFullPath, PVOID SolutionMetaData, ULONG SolutionMetaDataSize )
+{
+    NTSTATUS Status = STATUS_UNSUCCESSFUL;
+    IRP_CONTEXT* IrpContext = NULLPTR;
+
+    HANDLE FileHandle = NULL;
+    PFILE_OBJECT FileObject = NULLPTR;
+    WCHAR* SrcFileFullPathWOVolume = NULLPTR;
+
+    METADATA_DRIVER* MetaDataInfo = NULLPTR;
+
+    __try
+    {
+        IrpContext = ( PIRP_CONTEXT )ExAllocateFromNPagedLookasideList( &GlobalContext.IrpContextLookasideList );
+        if( IrpContext == NULLPTR )
+        {
+            Status = STATUS_INSUFFICIENT_RESOURCES;
+            __leave;
+        }
+
+        RtlZeroMemory( IrpContext, sizeof( IRP_CONTEXT ) );
+
+        IrpContext->EvtID = CreateEvtID();
+        IrpContext->InstanceContext = VolumeMgr_SearchContext( SrcFileFullPath );
+        if( IrpContext->InstanceContext == NULLPTR )
+        {
+            Status = STATUS_INTERNAL_ERROR;
+            __leave;
+        }
+
+        SrcFileFullPathWOVolume = ExtractFileFullPathWOVolume( IrpContext->InstanceContext, SrcFileFullPath );
+
+        AcquireCmnResource( IrpContext, INST_SHARED );
+        IrpContext->Fcb = Vcb_SearchFCB( IrpContext, SrcFileFullPathWOVolume );
+        if( IrpContext->Fcb != NULLPTR )
+        {
+            Status = WriteSolutionMetaData( IrpContext, IrpContext->Fcb->LowerFileObject, IrpContext->Fcb,
+                                            SolutionMetaData, SolutionMetaDataSize );
+            __leave;
+        }
+        ReleaseCmnResource( IrpContext, INST_SHARED );
+
+        IO_STATUS_BLOCK iosb;
+
+        Status = FltCreateFileOwn( IrpContext, SrcFileFullPath, &FileHandle, &FileObject, &iosb );
+        if( !NT_SUCCESS( Status ) )
+        {
+            KdPrint( ( "[WinIOSol] >> EvtID=%09d %s %s Status=0x%08x,%s Name=%ws\n"
+                       , IrpContext->EvtID, __FUNCTION__, "FltCreateFile Failed"
+                       , Status, ntkernel_error_category::find_ntstatus( Status )->message
+                       , SrcFileFullPath
+                       ) );
+            __leave;
+        }
+
+        auto Type = GetFileMetaDataInfo( IrpContext, FileObject, MetaDataInfo );
+        if( Type == METADATA_UNK_TYPE )
+        {
+            Status = STATUS_NOT_SUPPORTED;
+            __leave;
+        }
+
+        Status = WriteSolutionMetaData( IrpContext->EvtID, IrpContext->InstanceContext, SrcFileFullPath, FileObject,
+                                        MetaDataInfo, SolutionMetaData, SolutionMetaDataSize );
+    }
+    __finally
+    {
+        UninitializeMetaDataInfo( MetaDataInfo );
+
+        if( FileHandle != NULL )
+            FltClose( FileHandle );
+        if( FileObject != NULLPTR )
+            ObDereferenceObject( FileObject );
+
+        CloseIrpContext( IrpContext );
+    }
+
+    return Status;
+}
+
+NTSTATUS WriteSolutionMetaData( LONG EvtID, CTX_INSTANCE_CONTEXT* InstanceContext, wchar_t* SrcFileFullPath, PFILE_OBJECT FileObject, METADATA_DRIVER* MetaDataInfo, PVOID SolutionMetaData, ULONG SolutionMetaDataSize )
+{
+    NTSTATUS Status = STATUS_INVALID_PARAMETER;
+
+    do
+    {
+        ASSERT( InstanceContext != NULLPTR );
+        ASSERT( MetaDataInfo != NULLPTR );
         ASSERT( SolutionMetaDataSize > 0 );
         ASSERT( SolutionMetaData != NULLPTR );
 
@@ -567,27 +668,27 @@ NTSTATUS WriteSolutionMetaData( IRP_CONTEXT* IrpContext, PFILE_OBJECT FileObject
         FILE_BASIC_INFORMATION fbi;
         ULONG LengthReturned = 0;
 
-        Status = FltQueryInformationFile( IrpContext->FltObjects->Instance,
+        Status = FltQueryInformationFile( InstanceContext->Instance,
                                           FileObject, &fbi, sizeof( FILE_BASIC_INFORMATION ), FileBasicInformation,
                                           &LengthReturned );
 
         if( !NT_SUCCESS( Status ) )
         {
             KdPrint( ( "[WinIOSol] %s EvtID=%09d %s %s Status=0x%08x,%s Src=%ws\n"
-                       , ">>", IrpContext->EvtID, __FUNCTION__, "FltQueryInformationFile FAILED"
+                       , ">>", EvtID, __FUNCTION__, "FltQueryInformationFile FAILED"
                        , Status, ntkernel_error_category::find_ntstatus( Status )->message
-                       , IrpContext->SrcFileFullPath.Buffer
+                       , SrcFileFullPath
                        ) );
             break;
         }
 
         ULONG BytesWritten = 0;
-        LARGE_INTEGER FILE_BEGIN_OFFSET = GetMetaDataOffset( Fcb->MetaDataInfo );
+        LARGE_INTEGER FILE_BEGIN_OFFSET = GetMetaDataOffset( MetaDataInfo );
         FILE_BEGIN_OFFSET.QuadPart += METADATA_DRIVER_SIZE;
 
-        Status = FltWriteFile( IrpContext->FltObjects->Instance,
+        Status = FltWriteFile( InstanceContext->Instance,
                                FileObject,
-                               &FILE_BEGIN_OFFSET, 
+                               &FILE_BEGIN_OFFSET,
                                SolutionMetaDataSize, SolutionMetaData,
                                FLTFL_IO_OPERATION_NON_CACHED | FLTFL_IO_OPERATION_DO_NOT_UPDATE_BYTE_OFFSET,
                                &BytesWritten, NULL, NULL );
@@ -595,14 +696,14 @@ NTSTATUS WriteSolutionMetaData( IRP_CONTEXT* IrpContext, PFILE_OBJECT FileObject
         if( !NT_SUCCESS( Status ) )
         {
             KdPrint( ( "[WinIOSol] %s EvtID=%09d %s %s Status=0x%08x,%s Src=%ws\n"
-                       , ">>", IrpContext->EvtID, __FUNCTION__, "FltWriteFile FAILED"
+                       , ">>", EvtID, __FUNCTION__, "FltWriteFile FAILED"
                        , Status, ntkernel_error_category::find_ntstatus( Status )->message
-                       , IrpContext->SrcFileFullPath.Buffer
+                       , SrcFileFullPath
                        ) );
             break;
         }
 
-        Status = FltSetInformationFile( IrpContext->FltObjects->Instance,
+        Status = FltSetInformationFile( InstanceContext->Instance,
                                         FileObject,
                                         &fbi, sizeof( FILE_BASIC_INFORMATION ),
                                         FileBasicInformation );
@@ -610,9 +711,9 @@ NTSTATUS WriteSolutionMetaData( IRP_CONTEXT* IrpContext, PFILE_OBJECT FileObject
         if( !NT_SUCCESS( Status ) )
         {
             KdPrint( ( "[WinIOSol] %s EvtID=%09d %s %s Status=0x%08x,%s Src=%ws\n"
-                       , ">>", IrpContext->EvtID, __FUNCTION__, "FltSetInformationFile FAILED"
+                       , ">>", EvtID, __FUNCTION__, "FltSetInformationFile FAILED"
                        , Status, ntkernel_error_category::find_ntstatus( Status )->message
-                       , IrpContext->SrcFileFullPath.Buffer
+                       , SrcFileFullPath
                        ) );
             break;
         }

@@ -11,105 +11,78 @@
 
 #pragma comment( lib, "fltlib" )
 
+#pragma warning( disable: 4996 )
+
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
 #endif
 
 ///////////////////////////////////////////////////////////////////////////////
 
-struct
+HRESULT CWinIOIsolator::ConnectToIo()
 {
-    HANDLE                          hPort[ MAX_CLIENT_CONNECTION ] = { INVALID_HANDLE_VALUE, };
-    HANDLE                          hDevice = INVALID_HANDLE_VALUE;
-    HANDLE                          hWorker[ MAX_CLIENT_CONNECTION ] = { NULL, };
+    Context* context = new Context;
+    memset( context, '0', sizeof( Context ) );
 
-    MessageCallbackRoutine          MessageCallback = NULL;
-    DisconnectCallbackRoutine       DiscoonectCallback = NULL;
-
-    std::atomic_bool                isExit{ false };
-} GlobalContext;
-
-unsigned int WINAPI FilterMessageWorker( PVOID Param );
-
-///////////////////////////////////////////////////////////////////////////////
-
-HRESULT ConnectTo( __in unsigned int uThreadCount /* = 0 */ )
-{
-    HRESULT hRet = S_OK;
-    auto ThreadCount = uThreadCount;
-
-    do
-    {
-        if( ThreadCount == 0 )
-            ThreadCount = std::thread::hardware_concurrency();
-
-        if( ThreadCount == 0 )
-            ThreadCount = 8;
-
-        if( ThreadCount > MAX_CLIENT_CONNECTION )
-            ThreadCount = MAX_CLIENT_CONNECTION;
-
-        for( auto idx = 0; idx < ThreadCount; ++idx )
-        {
-            hRet = FilterConnectCommunicationPort( PORT_NAME, 0,
+    context->self = this;
+    
+    HRESULT hRet = FilterConnectCommunicationPort( PORT_NAME, 0,
                                                    NULL, 0, NULL,
-                                                   &GlobalContext.hPort[ idx ] );
+                                                   &context->hPort );
 
-            if( FAILED( hRet ) )
-                break;
+    if( FAILED( context->hPort ) )
+        return hRet;
 
-            GlobalContext.hWorker[ idx ] = ( HANDLE )_beginthreadex( NULL, 0,
-                                                                     &FilterMessageWorker, GlobalContext.hPort[ idx ],
-                                                                     0, 0 );
+    context->hWorker = ( HANDLE )_beginthreadex( NULL, 0,
+                                                &messageWorker, context,
+                                                0, 0 );
 
-            if( GlobalContext.hWorker[ idx ] == NULL )
-            {
-                CloseHandle( GlobalContext.hPort[ idx ] );
-                GlobalContext.hPort[ idx ] = INVALID_HANDLE_VALUE;
-            }
-        }
-
-        if( FAILED( hRet ) )
-            break;
-
-    } while( false );
-
+    vecIOWorkContext.push_back( context );
     return hRet;
 }
 
-HRESULT Disconnect()
+HRESULT CWinIOIsolator::ConnectToProc()
 {
-    GlobalContext.isExit = true;
+    Context* context = new Context;
+    memset( context, '0', sizeof( Context ) );
 
-    for( auto idx = 0; idx < MAX_CLIENT_CONNECTION; ++idx )
-    {
-        if( GlobalContext.hPort[ idx ] != INVALID_HANDLE_VALUE )
-            CloseHandle( GlobalContext.hPort[ idx ] );
-        GlobalContext.hPort[ idx ] = INVALID_HANDLE_VALUE;
+    context->self = this;
 
-        if( GlobalContext.hWorker[ idx ] != NULL )
-            CloseHandle( GlobalContext.hWorker[ idx ] );
-        GlobalContext.hWorker[ idx ] = NULL;
-    }
+    HRESULT hRet = FilterConnectCommunicationPort( PORT_PROC_NAME, 0,
+                                                   NULL, 0, NULL,
+                                                   &context->hPort );
 
-    return S_OK;
+    if( FAILED( context->hPort ) )
+        return hRet;
+
+    context->hWorker = ( HANDLE )_beginthreadex( NULL, 0,
+                                                 &messageWorker, context,
+                                                 0, 0 );
+
+    vecProcWorkContext.push_back( context );
+    return hRet;
 }
 
-DWORD SetDriverStatus( BOOLEAN IsRunning )
+void CWinIOIsolator::DisconnectIo()
 {
-    DWORD dwRet = ERROR_SUCCESS;
+}
+
+void CWinIOIsolator::DisconnectProc()
+{
+}
+
+DWORD CWinIOIsolator::SetDriverConfig( DRIVER_CONFIG* DriverConfig, ULONG Size )
+{
+    DWORD dwRet = ERROR_INVALID_ACCESS;
     DWORD dwRetLen = 0;
     HANDLE hDevice = INVALID_HANDLE_VALUE;
 
     do
     {
-        hDevice = CreateFileW( L"\\\\." DEVICE_NAME,
-                               GENERIC_READ | GENERIC_WRITE,
-                               FILE_SHARE_READ | FILE_SHARE_WRITE,
-                               NULL,
-                               OPEN_EXISTING,
-                               FILE_ATTRIBUTE_NORMAL,
-                               NULL );
+        if( DriverConfig == NULL )
+            break;
+
+        hDevice = retrieveDevice();
 
         if( hDevice == INVALID_HANDLE_VALUE )
         {
@@ -118,29 +91,27 @@ DWORD SetDriverStatus( BOOLEAN IsRunning )
         }
 
         BOOL bSuccess = DeviceIoControl( hDevice,
-                                    IOCTL_SET_DRIVER_STATUS,
-                                    &IsRunning,
-                                    sizeof(BOOLEAN),
-                                    NULL,
-                                    0,
-                                    ( LPDWORD )&dwRetLen,
-                                    NULL );
+                                         IOCTL_SET_DRIVER_CONFIG,
+                                         DriverConfig,
+                                         Size,
+                                         NULL,
+                                         0,
+                                         ( LPDWORD )&dwRetLen,
+                                         NULL );
 
         if( !bSuccess )
         {
             dwRet = GetLastError();
             break;
         }
-        
+
     } while( false );
 
-    if( hDevice != INVALID_HANDLE_VALUE )
-        CloseHandle( hDevice );
-
+    closeDevice( hDevice );
     return dwRet;
 }
 
-DWORD GetDriverStatus( BOOLEAN* IsRunning )
+DWORD CWinIOIsolator::GetDriverConfig( DRIVER_CONFIG* DriverConfig, ULONG Size )
 {
     DWORD dwRet = ERROR_SUCCESS;
     DWORD dwRetLen = 0;
@@ -148,13 +119,116 @@ DWORD GetDriverStatus( BOOLEAN* IsRunning )
 
     do
     {
-        hDevice = CreateFileW( L"\\\\." DEVICE_NAME,
-                               GENERIC_READ | GENERIC_WRITE,
-                               FILE_SHARE_READ | FILE_SHARE_WRITE,
-                               NULL,
-                               OPEN_EXISTING,
-                               FILE_ATTRIBUTE_NORMAL,
-                               NULL );
+        hDevice = retrieveDevice();
+
+        if( hDevice == INVALID_HANDLE_VALUE )
+        {
+            dwRet = GetLastError();
+            break;
+        }
+
+        BOOL bSuccess = DeviceIoControl( hDevice,
+                                         IOCTL_GET_DRIVER_CONFIG,
+                                         NULL,
+                                         0,
+                                         DriverConfig,
+                                         Size,
+                                         ( LPDWORD )&dwRetLen,
+                                         NULL );
+
+        if( !bSuccess )
+        {
+            dwRet = GetLastError();
+            break;
+        }
+
+    } while( false );
+
+    closeDevice( hDevice );
+    return dwRet;
+}
+
+bool CWinIOIsolator::RegisterMessageCallback( ULONG ThreadCount, PVOID Context, MessageCallbackRoutine MessageCallback, DisconnectCallbackRoutine DisconnectCallback )
+{
+    MessageCallbackFn.first = MessageCallback;
+    MessageCallbackFn.second = Context;
+
+    DisconnectCallbackFn.first = DisconnectCallback;
+    DisconnectCallbackFn.second = Context;
+
+    if( ThreadCount == 0 )
+        ThreadCount = std::thread::hardware_concurrency();
+
+    if( ThreadCount < 4 )
+        ThreadCount = 4;
+
+    if( ThreadCount >= MAX_CLIENT_CONNECTION )
+        ThreadCount = MAX_CLIENT_CONNECTION - 1;
+
+    if( vecIOWorkContext.empty() == false )
+    {
+        for( int idx = 0; idx < ThreadCount; ++idx )
+            ConnectToIo();
+    }
+
+    if( vecProcWorkContext.empty() == false )
+    {
+        if( ThreadCount > 4 )
+            ThreadCount = 4;
+
+        for( int idx = 0; idx < ThreadCount; ++idx )
+            ConnectToProc();
+    }
+
+    return true;
+}
+
+DWORD CWinIOIsolator::SetDriverStatus( BOOLEAN IsRunning )
+{
+    DWORD dwRet = ERROR_SUCCESS;
+    DWORD dwRetLen = 0;
+    HANDLE hDevice = INVALID_HANDLE_VALUE;
+
+    do
+    {
+        hDevice = retrieveDevice();
+
+        if( hDevice == INVALID_HANDLE_VALUE )
+        {
+            dwRet = GetLastError();
+            break;
+        }
+
+        BOOL bSuccess = DeviceIoControl( hDevice,
+                                         IOCTL_SET_DRIVER_STATUS,
+                                         &IsRunning,
+                                         sizeof( BOOLEAN ),
+                                         NULL,
+                                         0,
+                                         ( LPDWORD )&dwRetLen,
+                                         NULL );
+
+        if( !bSuccess )
+        {
+            dwRet = GetLastError();
+            break;
+        }
+
+    } while( false );
+
+    closeDevice( hDevice );
+    return dwRet;
+}
+
+DWORD CWinIOIsolator::GetDriverStatus( BOOLEAN* IsRunning )
+{
+    DWORD dwRet = ERROR_SUCCESS;
+    DWORD dwRetLen = 0;
+    HANDLE hDevice = INVALID_HANDLE_VALUE;
+
+    do
+    {
+        hDevice = retrieveDevice();
 
         if( hDevice == INVALID_HANDLE_VALUE )
         {
@@ -167,7 +241,7 @@ DWORD GetDriverStatus( BOOLEAN* IsRunning )
                                          NULL,
                                          0,
                                          IsRunning,
-                                         sizeof(BOOLEAN),
+                                         sizeof( BOOLEAN ),
                                          ( LPDWORD )&dwRetLen,
                                          NULL );
 
@@ -179,13 +253,14 @@ DWORD GetDriverStatus( BOOLEAN* IsRunning )
 
     } while( false );
 
-    if( hDevice != INVALID_HANDLE_VALUE )
-        CloseHandle( hDevice );
-
+    closeDevice( hDevice );
     return dwRet;
 }
 
-DWORD AddGlobalFilterMask( const wchar_t* wszFilterMask, bool isInclude )
+///////////////////////////////////////////////////////////////////////////
+/// Global Filter Mgmt
+
+DWORD CWinIOIsolator::AddGlobalFilterMask( const wchar_t* wszFilterMask, bool isInclude )
 {
     DWORD dwRet = ERROR_SUCCESS;
     DWORD dwRetLen = 0;
@@ -194,13 +269,7 @@ DWORD AddGlobalFilterMask( const wchar_t* wszFilterMask, bool isInclude )
 
     do
     {
-        hDevice = CreateFileW( L"\\\\." DEVICE_NAME,
-                               GENERIC_READ | GENERIC_WRITE,
-                               FILE_SHARE_READ | FILE_SHARE_WRITE,
-                               NULL,
-                               OPEN_EXISTING,
-                               FILE_ATTRIBUTE_NORMAL,
-                               NULL );
+        hDevice = retrieveDevice();
 
         if( hDevice == INVALID_HANDLE_VALUE )
         {
@@ -233,13 +302,11 @@ DWORD AddGlobalFilterMask( const wchar_t* wszFilterMask, bool isInclude )
     if( wszBuffer != NULL )
         free( wszBuffer );
 
-    if( hDevice != INVALID_HANDLE_VALUE )
-        CloseHandle( hDevice );
-
+    closeDevice( hDevice );
     return dwRet;
 }
 
-DWORD DelGlobalFilterMask( const wchar_t* wszFilterMask, bool isInclude )
+DWORD CWinIOIsolator::DelGlobalFilterMask( const wchar_t* wszFilterMask, bool isInclude )
 {
     DWORD dwRet = ERROR_SUCCESS;
     DWORD dwRetLen = 0;
@@ -248,13 +315,7 @@ DWORD DelGlobalFilterMask( const wchar_t* wszFilterMask, bool isInclude )
 
     do
     {
-        hDevice = CreateFileW( L"\\\\." DEVICE_NAME,
-                               GENERIC_READ | GENERIC_WRITE,
-                               FILE_SHARE_READ | FILE_SHARE_WRITE,
-                               NULL,
-                               OPEN_EXISTING,
-                               FILE_ATTRIBUTE_NORMAL,
-                               NULL );
+        hDevice = retrieveDevice();
 
         if( hDevice == INVALID_HANDLE_VALUE )
         {
@@ -287,28 +348,19 @@ DWORD DelGlobalFilterMask( const wchar_t* wszFilterMask, bool isInclude )
     if( wszBuffer != NULL )
         free( wszBuffer );
 
-    if( hDevice != INVALID_HANDLE_VALUE )
-        CloseHandle( hDevice );
-
+    closeDevice( hDevice );
     return dwRet;
 }
 
-DWORD GetGlobalFilterMaskCnt( bool isInclude, ULONG* Count )
+DWORD CWinIOIsolator::GetGlobalFilterMaskCnt( bool isInclude, ULONG* Count )
 {
     DWORD dwRet = ERROR_SUCCESS;
     DWORD dwRetLen = 0;
     HANDLE hDevice = INVALID_HANDLE_VALUE;
-    WCHAR* wszBuffer = NULL;
 
     do
     {
-        hDevice = CreateFileW( L"\\\\." DEVICE_NAME,
-                               GENERIC_READ | GENERIC_WRITE,
-                               FILE_SHARE_READ | FILE_SHARE_WRITE,
-                               NULL,
-                               OPEN_EXISTING,
-                               FILE_ATTRIBUTE_NORMAL,
-                               NULL );
+        hDevice = retrieveDevice();
 
         if( hDevice == INVALID_HANDLE_VALUE )
         {
@@ -316,16 +368,10 @@ DWORD GetGlobalFilterMaskCnt( bool isInclude, ULONG* Count )
             break;
         }
 
-        size_t RequiredSize = 0;
-        RequiredSize += sizeof( WCHAR );        // 0 = Exclude, 1 = Include
-
-        wszBuffer = ( WCHAR* )malloc( RequiredSize );
-        memset( wszBuffer, '\0', RequiredSize );
-        swprintf( wszBuffer, L"%d", isInclude == true ? TRUE : FALSE );
-
-        BOOL bSuccess = DeviceIoControl( hDevice, IOCTL_DEL_GLOBAL_POLICY_BY_MASK,
-                                         wszBuffer, ( DWORD )RequiredSize,
-                                         Count, sizeof(ULONG),
+        BOOLEAN IsInclude = isInclude == true ? TRUE : FALSE;
+        BOOL bSuccess = DeviceIoControl( hDevice, IOCTL_GET_GLOBAL_POLICY_COUNT,
+                                         &IsInclude, sizeof( BOOLEAN ),
+                                         Count, sizeof( ULONG ),
                                          ( LPDWORD )&dwRetLen, NULL );
 
         if( bSuccess != FALSE )
@@ -335,16 +381,11 @@ DWORD GetGlobalFilterMaskCnt( bool isInclude, ULONG* Count )
 
     } while( false );
 
-    if( wszBuffer != NULL )
-        free( wszBuffer );
-
-    if( hDevice != INVALID_HANDLE_VALUE )
-        CloseHandle( hDevice );
-
+    closeDevice( hDevice );
     return dwRet;
 }
 
-DWORD ResetGlobalFilter()
+DWORD CWinIOIsolator::ResetGlobalFilter()
 {
     DWORD dwRet = ERROR_SUCCESS;
     DWORD dwRetLen = 0;
@@ -352,13 +393,7 @@ DWORD ResetGlobalFilter()
 
     do
     {
-        hDevice = CreateFileW( L"\\\\." DEVICE_NAME,
-                               GENERIC_READ | GENERIC_WRITE,
-                               FILE_SHARE_READ | FILE_SHARE_WRITE,
-                               NULL,
-                               OPEN_EXISTING,
-                               FILE_ATTRIBUTE_NORMAL,
-                               NULL );
+        hDevice = retrieveDevice();
 
         if( hDevice == INVALID_HANDLE_VALUE )
         {
@@ -379,13 +414,11 @@ DWORD ResetGlobalFilter()
 
     } while( false );
 
-    if( hDevice != INVALID_HANDLE_VALUE )
-        CloseHandle( hDevice );
-
+    closeDevice( hDevice );
     return dwRet;
 }
 
-DWORD AddProcessFilter( const USER_PROCESS_FILTER& ProcessFilter )
+DWORD CWinIOIsolator::GetGlobalFilterMask( PVOID Buffer, ULONG BufferSize, bool isInclude )
 {
     DWORD dwRet = ERROR_SUCCESS;
     DWORD dwRetLen = 0;
@@ -393,13 +426,43 @@ DWORD AddProcessFilter( const USER_PROCESS_FILTER& ProcessFilter )
 
     do
     {
-        hDevice = CreateFileW( L"\\\\." DEVICE_NAME,
-                               GENERIC_READ | GENERIC_WRITE,
-                               FILE_SHARE_READ | FILE_SHARE_WRITE,
-                               NULL,
-                               OPEN_EXISTING,
-                               FILE_ATTRIBUTE_NORMAL,
-                               NULL );
+        hDevice = retrieveDevice();
+
+        if( hDevice == INVALID_HANDLE_VALUE )
+        {
+            dwRet = GetLastError();
+            break;
+        }
+
+        BOOLEAN IsInclude = isInclude == true ? TRUE : FALSE;
+        BOOL bSuccess = DeviceIoControl( hDevice, IOCTL_GET_GLOBAL_POLICY,
+                                         &IsInclude, sizeof( BOOLEAN ),
+                                         Buffer, BufferSize,
+                                         ( LPDWORD )&dwRetLen, NULL );
+
+        if( bSuccess != FALSE )
+            dwRet = ERROR_SUCCESS;
+        else
+            dwRet = GetLastError();
+
+    } while( false );
+
+    closeDevice( hDevice );
+    return dwRet;
+}
+
+///////////////////////////////////////////////////////////////////////////
+/// Process Filter Mgmt
+
+DWORD CWinIOIsolator::AddProcessFilter( const USER_PROCESS_FILTER& ProcessFilter )
+{
+    DWORD dwRet = ERROR_SUCCESS;
+    DWORD dwRetLen = 0;
+    HANDLE hDevice = INVALID_HANDLE_VALUE;
+
+    do
+    {
+        hDevice = retrieveDevice();
 
         if( hDevice == INVALID_HANDLE_VALUE )
         {
@@ -419,13 +482,11 @@ DWORD AddProcessFilter( const USER_PROCESS_FILTER& ProcessFilter )
 
     } while( false );
 
-    if( hDevice != INVALID_HANDLE_VALUE )
-        CloseHandle( hDevice );
-
+    closeDevice( hDevice );
     return dwRet;
 }
 
-DWORD DelProcessFilterByID( const USER_PROCESS_FILTER& ProcessFilter )
+DWORD CWinIOIsolator::DelProcessFilterByID( const USER_PROCESS_FILTER& ProcessFilter )
 {
     DWORD dwRet = ERROR_SUCCESS;
     DWORD dwRetLen = 0;
@@ -433,13 +494,7 @@ DWORD DelProcessFilterByID( const USER_PROCESS_FILTER& ProcessFilter )
 
     do
     {
-        hDevice = CreateFileW( L"\\\\." DEVICE_NAME,
-                               GENERIC_READ | GENERIC_WRITE,
-                               FILE_SHARE_READ | FILE_SHARE_WRITE,
-                               NULL,
-                               OPEN_EXISTING,
-                               FILE_ATTRIBUTE_NORMAL,
-                               NULL );
+        hDevice = retrieveDevice();
 
         if( hDevice == INVALID_HANDLE_VALUE )
         {
@@ -459,13 +514,11 @@ DWORD DelProcessFilterByID( const USER_PROCESS_FILTER& ProcessFilter )
 
     } while( false );
 
-    if( hDevice != INVALID_HANDLE_VALUE )
-        CloseHandle( hDevice );
-
+    closeDevice( hDevice );
     return dwRet;
 }
 
-DWORD DelProcessFilterByPID( ULONG ProcessId )
+DWORD CWinIOIsolator::DelProcessFilterByPID( ULONG ProcessId )
 {
     DWORD dwRet = ERROR_SUCCESS;
     DWORD dwRetLen = 0;
@@ -473,13 +526,7 @@ DWORD DelProcessFilterByPID( ULONG ProcessId )
 
     do
     {
-        hDevice = CreateFileW( L"\\\\." DEVICE_NAME,
-                               GENERIC_READ | GENERIC_WRITE,
-                               FILE_SHARE_READ | FILE_SHARE_WRITE,
-                               NULL,
-                               OPEN_EXISTING,
-                               FILE_ATTRIBUTE_NORMAL,
-                               NULL );
+        hDevice = retrieveDevice();
 
         if( hDevice == INVALID_HANDLE_VALUE )
         {
@@ -499,13 +546,11 @@ DWORD DelProcessFilterByPID( ULONG ProcessId )
 
     } while( false );
 
-    if( hDevice != INVALID_HANDLE_VALUE )
-        CloseHandle( hDevice );
-
+    closeDevice( hDevice );
     return dwRet;
 }
 
-DWORD DelProcessFilterByFilterMask( const wchar_t* wszFilterMask )
+DWORD CWinIOIsolator::DelProcessFilterByFilterMask( const wchar_t* wszFilterMask )
 {
     DWORD dwRet = ERROR_SUCCESS;
     DWORD dwRetLen = 0;
@@ -513,13 +558,7 @@ DWORD DelProcessFilterByFilterMask( const wchar_t* wszFilterMask )
 
     do
     {
-        hDevice = CreateFileW( L"\\\\." DEVICE_NAME,
-                               GENERIC_READ | GENERIC_WRITE,
-                               FILE_SHARE_READ | FILE_SHARE_WRITE,
-                               NULL,
-                               OPEN_EXISTING,
-                               FILE_ATTRIBUTE_NORMAL,
-                               NULL );
+        hDevice = retrieveDevice();
 
         if( hDevice == INVALID_HANDLE_VALUE )
         {
@@ -528,7 +567,7 @@ DWORD DelProcessFilterByFilterMask( const wchar_t* wszFilterMask )
         }
 
         BOOL bSuccess = DeviceIoControl( hDevice, IOCTL_DEL_PROCESS_POLICY_BY_MASK,
-                                         ( LPVOID )&wszFilterMask, ( wcslen( wszFilterMask ) + 1 ) * sizeof(WCHAR),
+                                         ( LPVOID )&wszFilterMask, ( wcslen( wszFilterMask ) + 1 ) * sizeof( WCHAR ),
                                          NULL, 0,
                                          ( LPDWORD )&dwRetLen, NULL );
 
@@ -539,13 +578,11 @@ DWORD DelProcessFilterByFilterMask( const wchar_t* wszFilterMask )
 
     } while( false );
 
-    if( hDevice != INVALID_HANDLE_VALUE )
-        CloseHandle( hDevice );
-
+    closeDevice( hDevice );
     return dwRet;
 }
 
-DWORD AddProcessFilterItem( const GUID& Id, const USER_PROCESS_FILTER_ENTRY& ProcessFilterItem )
+DWORD CWinIOIsolator::AddProcessFilterItem( const GUID& Id, const USER_PROCESS_FILTER_ENTRY& ProcessFilterItem )
 {
     DWORD dwRet = ERROR_SUCCESS;
     DWORD dwRetLen = 0;
@@ -556,13 +593,7 @@ DWORD AddProcessFilterItem( const GUID& Id, const USER_PROCESS_FILTER_ENTRY& Pro
 
     do
     {
-        hDevice = CreateFileW( L"\\\\." DEVICE_NAME,
-                               GENERIC_READ | GENERIC_WRITE,
-                               FILE_SHARE_READ | FILE_SHARE_WRITE,
-                               NULL,
-                               OPEN_EXISTING,
-                               FILE_ATTRIBUTE_NORMAL,
-                               NULL );
+        hDevice = retrieveDevice();
 
         if( hDevice == INVALID_HANDLE_VALUE )
         {
@@ -591,13 +622,11 @@ DWORD AddProcessFilterItem( const GUID& Id, const USER_PROCESS_FILTER_ENTRY& Pro
     if( Buffer != NULL )
         free( Buffer );
 
-    if( hDevice != INVALID_HANDLE_VALUE )
-        CloseHandle( hDevice );
-
+    closeDevice( hDevice );
     return dwRet;
 }
 
-DWORD DelProcessFilterItem( const GUID& Id, const USER_PROCESS_FILTER_ENTRY& ProcessFilterItem )
+DWORD CWinIOIsolator::DelProcessFilterItem( const GUID& Id, const USER_PROCESS_FILTER_ENTRY& ProcessFilterItem )
 {
     DWORD dwRet = ERROR_SUCCESS;
     DWORD dwRetLen = 0;
@@ -608,13 +637,7 @@ DWORD DelProcessFilterItem( const GUID& Id, const USER_PROCESS_FILTER_ENTRY& Pro
 
     do
     {
-        hDevice = CreateFileW( L"\\\\." DEVICE_NAME,
-                               GENERIC_READ | GENERIC_WRITE,
-                               FILE_SHARE_READ | FILE_SHARE_WRITE,
-                               NULL,
-                               OPEN_EXISTING,
-                               FILE_ATTRIBUTE_NORMAL,
-                               NULL );
+        hDevice = retrieveDevice();
 
         if( hDevice == INVALID_HANDLE_VALUE )
         {
@@ -643,13 +666,11 @@ DWORD DelProcessFilterItem( const GUID& Id, const USER_PROCESS_FILTER_ENTRY& Pro
     if( Buffer != NULL )
         free( Buffer );
 
-    if( hDevice != INVALID_HANDLE_VALUE )
-        CloseHandle( hDevice );
-
+    closeDevice( hDevice );
     return dwRet;
 }
 
-DWORD ResetProcessFilter()
+DWORD CWinIOIsolator::ResetProcessFilter()
 {
     DWORD dwRet = ERROR_SUCCESS;
     DWORD dwRetLen = 0;
@@ -657,13 +678,7 @@ DWORD ResetProcessFilter()
 
     do
     {
-        hDevice = CreateFileW( L"\\\\." DEVICE_NAME,
-                               GENERIC_READ | GENERIC_WRITE,
-                               FILE_SHARE_READ | FILE_SHARE_WRITE,
-                               NULL,
-                               OPEN_EXISTING,
-                               FILE_ATTRIBUTE_NORMAL,
-                               NULL );
+        hDevice = retrieveDevice();
 
         if( hDevice == INVALID_HANDLE_VALUE )
         {
@@ -683,16 +698,14 @@ DWORD ResetProcessFilter()
 
     } while( false );
 
-    if( hDevice != INVALID_HANDLE_VALUE )
-        CloseHandle( hDevice );
-
+    closeDevice( hDevice );
     return dwRet;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 /// File Management
 
-DWORD GetFileType( const wchar_t* wszFileFullPath, ULONG* FileType )
+DWORD CWinIOIsolator::GetFileType( const wchar_t* wszFileFullPath, ULONG* FileType )
 {
     DWORD dwRet = ERROR_SUCCESS;
     DWORD dwRetLen = 0;
@@ -700,13 +713,7 @@ DWORD GetFileType( const wchar_t* wszFileFullPath, ULONG* FileType )
 
     do
     {
-        hDevice = CreateFileW( L"\\\\." DEVICE_NAME,
-                               GENERIC_READ | GENERIC_WRITE,
-                               FILE_SHARE_READ | FILE_SHARE_WRITE,
-                               NULL,
-                               OPEN_EXISTING,
-                               FILE_ATTRIBUTE_NORMAL,
-                               NULL );
+        hDevice = retrieveDevice();
 
         if( hDevice == INVALID_HANDLE_VALUE )
         {
@@ -715,8 +722,8 @@ DWORD GetFileType( const wchar_t* wszFileFullPath, ULONG* FileType )
         }
 
         BOOL bSuccess = DeviceIoControl( hDevice, IOCTL_FILE_GET_FILE_TYPE,
-                                         (LPVOID)wszFileFullPath, (wcslen( wszFileFullPath ) + 1) * sizeof(WCHAR),
-                                         FileType, sizeof(ULONG),
+                                         ( LPVOID )wszFileFullPath, ( wcslen( wszFileFullPath ) + 1 ) * sizeof( WCHAR ),
+                                         FileType, sizeof( ULONG ),
                                          ( LPDWORD )&dwRetLen, NULL );
 
 
@@ -727,13 +734,11 @@ DWORD GetFileType( const wchar_t* wszFileFullPath, ULONG* FileType )
 
     } while( false );
 
-    if( hDevice != INVALID_HANDLE_VALUE )
-        CloseHandle( hDevice );
-
+    closeDevice( hDevice );
     return dwRet;
 }
 
-DWORD SetFileSolutionMetaData( const wchar_t* wszFileFullPath, PVOID Buffer, ULONG* BufferSize )
+DWORD CWinIOIsolator::SetFileSolutionMetaData( const wchar_t* wszFileFullPath, PVOID Buffer, ULONG* BufferSize )
 {
     DWORD dwRet = ERROR_SUCCESS;
     DWORD dwRetLen = 0;
@@ -748,13 +753,7 @@ DWORD SetFileSolutionMetaData( const wchar_t* wszFileFullPath, PVOID Buffer, ULO
             break;
         }
 
-        hDevice = CreateFileW( L"\\\\." DEVICE_NAME,
-                               GENERIC_READ | GENERIC_WRITE,
-                               FILE_SHARE_READ | FILE_SHARE_WRITE,
-                               NULL,
-                               OPEN_EXISTING,
-                               FILE_ATTRIBUTE_NORMAL,
-                               NULL );
+        hDevice = retrieveDevice();
 
         if( hDevice == INVALID_HANDLE_VALUE )
         {
@@ -773,7 +772,7 @@ DWORD SetFileSolutionMetaData( const wchar_t* wszFileFullPath, PVOID Buffer, ULO
 
         UserFileSolutionData->LengthOfFileName = ( wcslen( wszFileFullPath ) + 1 ) * sizeof( WCHAR );
         UserFileSolutionData->OffsetOfFileName = sizeof( USER_FILE_SOLUTION_DATA );
-        swprintf( ( PWCH )( ( PBYTE )( UserFileSolutionData ) + UserFileSolutionData->OffsetOfFileName ),
+        swprintf( ( PWCH )( ( PBYTE )( UserFileSolutionData )+UserFileSolutionData->OffsetOfFileName ),
                   L"%s", wszFileFullPath );
 
         UserFileSolutionData->LengthOfSolutionData = *BufferSize;
@@ -798,13 +797,11 @@ DWORD SetFileSolutionMetaData( const wchar_t* wszFileFullPath, PVOID Buffer, ULO
     if( UserFileSolutionData != NULL )
         free( UserFileSolutionData );
 
-    if( hDevice != INVALID_HANDLE_VALUE )
-        CloseHandle( hDevice );
-
+    closeDevice( hDevice );
     return dwRet;
 }
 
-DWORD GetFileSolutionMetaData( const wchar_t* wszFileFullPath, PVOID Buffer, ULONG* BufferSize )
+DWORD CWinIOIsolator::GetFileSolutionMetaData( const wchar_t* wszFileFullPath, PVOID Buffer, ULONG* BufferSize )
 {
     DWORD dwRet = ERROR_SUCCESS;
     DWORD dwRetLen = 0;
@@ -812,13 +809,7 @@ DWORD GetFileSolutionMetaData( const wchar_t* wszFileFullPath, PVOID Buffer, ULO
 
     do
     {
-        hDevice = CreateFileW( L"\\\\." DEVICE_NAME,
-                               GENERIC_READ | GENERIC_WRITE,
-                               FILE_SHARE_READ | FILE_SHARE_WRITE,
-                               NULL,
-                               OPEN_EXISTING,
-                               FILE_ATTRIBUTE_NORMAL,
-                               NULL );
+        hDevice = retrieveDevice();
 
         if( hDevice == INVALID_HANDLE_VALUE )
         {
@@ -841,22 +832,179 @@ DWORD GetFileSolutionMetaData( const wchar_t* wszFileFullPath, PVOID Buffer, ULO
 
     } while( false );
 
-    if( hDevice != INVALID_HANDLE_VALUE )
-        CloseHandle( hDevice );
+    closeDevice( hDevice );
+    return dwRet;
+}
 
+DWORD CWinIOIsolator::GetFileTypeSelf( const wchar_t* wszFileFullPath, ULONG* FileType )
+{
+    DWORD dwRet = ERROR_SUCCESS;
+    HANDLE hFile = INVALID_HANDLE_VALUE;
+
+    do
+    {
+
+    } while( false );
+
+    CloseHandle( hFile );
+    return dwRet;
+}
+
+DWORD CWinIOIsolator::EncryptFileByDriver( const wchar_t* wszSrcFileFullPath, const wchar_t* wszDstFileFullPath, PVOID SolutionMetaData, ULONG* SolutionMetaDataSize, ENCRYPT_CONFIG* EncryptConfig )
+{
+    DWORD dwRet = ERROR_SUCCESS;
+    DWORD dwRetLen = 0;
+    HANDLE hDevice = INVALID_HANDLE_VALUE;
+    USER_FILE_ENCRYPT* Buffer = NULL;
+
+    do
+    {
+        hDevice = retrieveDevice();
+
+        if( hDevice == INVALID_HANDLE_VALUE )
+        {
+            dwRet = GetLastError();
+            break;
+        }
+
+        ULONG RequiredSize = sizeof( USER_FILE_ENCRYPT );
+        RequiredSize += wcslen( wszSrcFileFullPath ) * sizeof( WCHAR ) + sizeof( WCHAR );
+        RequiredSize += wcslen( wszDstFileFullPath ) * sizeof( WCHAR ) + sizeof( WCHAR );
+
+        if( SolutionMetaData != NULL && SolutionMetaDataSize != NULL && *SolutionMetaDataSize > 0 )
+            RequiredSize += *SolutionMetaDataSize;
+
+        Buffer = ( USER_FILE_ENCRYPT* )malloc( RequiredSize );
+        RtlZeroMemory( Buffer, RequiredSize );
+
+        Buffer->SizeOfStruct = RequiredSize;
+
+        Buffer->LengthOfSrcFileFullPath = wcslen( wszSrcFileFullPath ) * sizeof( WCHAR ) + sizeof( WCHAR );
+        Buffer->OffsetOfSrcFileFullPath = sizeof( USER_FILE_ENCRYPT );
+        wcscpy( ( WCHAR* )Add2Ptr( Buffer, Buffer->OffsetOfSrcFileFullPath ), wszSrcFileFullPath );
+
+        Buffer->LengthOfDstFileFullPath = wcslen( wszDstFileFullPath ) * sizeof( WCHAR ) + sizeof( WCHAR );
+        Buffer->OffsetOfDstFileFullPath = Buffer->OffsetOfSrcFileFullPath + Buffer->LengthOfSrcFileFullPath;
+        wcscpy( ( WCHAR* )Add2Ptr( Buffer, Buffer->OffsetOfDstFileFullPath ), wszDstFileFullPath );
+
+        if( SolutionMetaData != NULL && SolutionMetaDataSize != NULL && *SolutionMetaDataSize > 0 )
+        {
+            Buffer->LengthOfSolutionData = *SolutionMetaDataSize;
+            Buffer->OffsetOfSolutionData = Buffer->OffsetOfDstFileFullPath + Buffer->LengthOfDstFileFullPath;
+            RtlCopyMemory( Add2Ptr( Buffer, Buffer->OffsetOfSolutionData ), SolutionMetaData, *SolutionMetaDataSize );
+        }
+
+        if( EncryptConfig != NULL )
+            RtlCopyMemory( &Buffer->EncryptConfig, EncryptConfig, sizeof( ENCRYPT_CONFIG ) );
+
+        BOOL bSuccess = DeviceIoControl( hDevice, IOCTL_FILE_ENCRYPT_FILE,
+                                         Buffer, RequiredSize,
+                                         NULL, 0,
+                                         ( LPDWORD )&dwRetLen, NULL );
+
+        if( bSuccess != FALSE )
+            dwRet = ERROR_SUCCESS;
+        else
+            dwRet = GetLastError();
+
+    } while( false );
+
+    if( Buffer != NULL )
+        free( Buffer );
+
+    closeDevice( hDevice );
+    return dwRet;
+}
+
+DWORD CWinIOIsolator::DecryptFileByDriver( const wchar_t* wszSrcFileFullPath, const wchar_t* wszDstFileFullPath, ENCRYPT_CONFIG* EncryptConfig, PVOID SolutionMetaData, ULONG* SolutionMetaDataSize )
+{
+    DWORD dwRet = ERROR_SUCCESS;
+    DWORD dwRetLen = 0;
+    HANDLE hDevice = INVALID_HANDLE_VALUE;
+    USER_FILE_ENCRYPT* Buffer = NULL;
+
+    do
+    {
+        hDevice = retrieveDevice();
+
+        if( hDevice == INVALID_HANDLE_VALUE )
+        {
+            dwRet = GetLastError();
+            break;
+        }
+
+        ULONG RequiredSize = sizeof( USER_FILE_ENCRYPT );
+        RequiredSize += wcslen( wszSrcFileFullPath ) * sizeof( WCHAR ) + sizeof( WCHAR );
+        RequiredSize += wcslen( wszDstFileFullPath ) * sizeof( WCHAR ) + sizeof( WCHAR );
+
+        if( SolutionMetaData != NULL && SolutionMetaDataSize != NULL && *SolutionMetaDataSize > 0 )
+            RequiredSize += *SolutionMetaDataSize;
+
+        Buffer = ( USER_FILE_ENCRYPT* )malloc( RequiredSize );
+        RtlZeroMemory( Buffer, RequiredSize );
+
+        Buffer->SizeOfStruct = RequiredSize;
+
+        Buffer->LengthOfSrcFileFullPath = wcslen( wszSrcFileFullPath ) * sizeof( WCHAR ) + sizeof( WCHAR );
+        Buffer->OffsetOfSrcFileFullPath = sizeof( USER_FILE_ENCRYPT );
+        wcscpy( ( WCHAR* )Add2Ptr( Buffer, Buffer->OffsetOfSrcFileFullPath ), wszSrcFileFullPath );
+
+        Buffer->LengthOfDstFileFullPath = wcslen( wszDstFileFullPath ) * sizeof( WCHAR ) + sizeof( WCHAR );
+        Buffer->OffsetOfDstFileFullPath = Buffer->OffsetOfSrcFileFullPath + Buffer->LengthOfSrcFileFullPath;
+        wcscpy( ( WCHAR* )Add2Ptr( Buffer, Buffer->OffsetOfDstFileFullPath ), wszDstFileFullPath );
+
+        if( EncryptConfig != NULL )
+            RtlCopyMemory( &Buffer->EncryptConfig, EncryptConfig, sizeof( ENCRYPT_CONFIG ) );
+
+        BOOL bSuccess = DeviceIoControl( hDevice, IOCTL_FILE_DECRYPT_FILE,
+                                         Buffer, RequiredSize,
+                                         Buffer, RequiredSize,
+                                         ( LPDWORD )&dwRetLen, NULL );
+
+        if( bSuccess != FALSE )
+            dwRet = ERROR_SUCCESS;
+        else
+            dwRet = GetLastError();
+
+    } while( false );
+
+    if( Buffer != NULL )
+        free( Buffer );
+
+    closeDevice( hDevice );
     return dwRet;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-/// Worker
 
-unsigned int WINAPI FilterMessageWorker( PVOID Param )
+HANDLE CWinIOIsolator::retrieveDevice()
+{
+    HANDLE hDevice = INVALID_HANDLE_VALUE;
+
+    hDevice = CreateFileW( L"\\\\." DEVICE_NAME,
+                           GENERIC_READ | GENERIC_WRITE,
+                           FILE_SHARE_READ | FILE_SHARE_WRITE,
+                           NULL,
+                           OPEN_EXISTING,
+                           FILE_ATTRIBUTE_NORMAL,
+                           NULL );
+
+    return hDevice;
+}
+
+void CWinIOIsolator::closeDevice( HANDLE hDevice )
+{
+    if( hDevice != INVALID_HANDLE_VALUE )
+        CloseHandle( hDevice );
+}
+
+unsigned CWinIOIsolator::messageWorker( PVOID Param )
 {
     if( Param == NULL )
         return 0;
 
     HRESULT hr = S_OK;
-    HANDLE hPort = ( HANDLE )Param;
+    CWinIOIsolator::Context* context = ( CWinIOIsolator::Context* )Param;
     OVERLAPPED ov;
     memset( &ov, 0, sizeof( OVERLAPPED ) );
     HANDLE hEvent = CreateEventW( NULL, FALSE, FALSE, NULL );
@@ -868,36 +1016,36 @@ unsigned int WINAPI FilterMessageWorker( PVOID Param )
     MSG_REPLY_PACKETU outgoing;
 
     DWORD dwRet = 0;
-    while( GlobalContext.isExit == false )
+    while( context->self->isExit == false )
     {
         memset( incoming, '\0', MAX_PACKET_SIZE );
 
-        hr = FilterGetMessage( hPort, &incoming->MessageHDR, MAX_PACKET_SIZE, &ov );
+        hr = FilterGetMessage( context->hPort, &incoming->MessageHDR, MAX_PACKET_SIZE, &ov );
         if( hr != HRESULT_FROM_WIN32( ERROR_IO_PENDING ) )
             break;
 
-        if( GlobalContext.isExit == true )
+        if( context->self->isExit == true )
             break;
 
         do
         {
             dwRet = WaitForSingleObject( ov.hEvent, 500 );
-            
-        } while( GlobalContext.isExit == false && dwRet == WAIT_TIMEOUT );
 
-        if( GlobalContext.isExit == true )
+        } while( context->self->isExit == false && dwRet == WAIT_TIMEOUT );
+
+        if( context->self->isExit == true )
             break;
 
         memset( &outgoing, 0, sizeof( outgoing ) );
 
-        if( GlobalContext.MessageCallback != NULL && incoming->MessageHDR.MessageId > 0 )
-            GlobalContext.MessageCallback( &incoming->MessageBody, &outgoing.ReplyBody );
+        if( context->self->MessageCallbackFn.first != NULL && incoming->MessageHDR.MessageId > 0 )
+            context->self->MessageCallbackFn.first( &incoming->MessageBody, &outgoing.ReplyBody, context->self->MessageCallbackFn.second );
 
         outgoing.ReplyHDR.Status = 0;
         outgoing.ReplyHDR.MessageId = incoming->MessageHDR.MessageId;
         if( incoming->MessageHDR.ReplyLength > 0 )
         {
-            hr = FilterReplyMessage( hPort, ( PFILTER_REPLY_HEADER )&outgoing, sizeof( outgoing ) );
+            hr = FilterReplyMessage( context->hPort, ( PFILTER_REPLY_HEADER )&outgoing, sizeof( outgoing ) );
         }
     }
 
@@ -908,3 +1056,4 @@ unsigned int WINAPI FilterMessageWorker( PVOID Param )
         delete[] incoming;
     return 0;
 }
+

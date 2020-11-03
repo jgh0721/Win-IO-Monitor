@@ -7,9 +7,10 @@
 #include "utilities/contextMgr.hpp"
 
 #include "policies/GlobalFilter.hpp"
+#include "cipher/Cipher_Krnl.hpp"
+#include "metadata/Metadata.hpp"
 
 #include "WinIOIsolation_IOCTL.hpp"
-#include "metadata/Metadata.hpp"
 
 #pragma warning(disable: 4311)
 #pragma warning(disable: 4302)
@@ -30,31 +31,41 @@ BOOLEAN FLTAPI FastIoDeviceControl( PFILE_OBJECT FileObject, BOOLEAN Wait, PVOID
 
     switch( (int)IoControlCode )
     {
+        case IOCTL_SET_DRIVER_CONFIG: {
+            DevIOCntlSetDriverConfig( InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength, IoStatus );
+        } break;
+        case IOCTL_GET_DRIVER_CONFIG: {
+            DevIOCntlGetDriverConfig( InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength, IoStatus );
+        } break;
+
         case IOCTL_SET_DRIVER_STATUS: {
-            DevIOCntlSetDriverStatus( FileObject, Wait, InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength, IoControlCode, IoStatus, DeviceObject );
+            DevIOCntlSetDriverStatus( InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength, IoStatus );
         } break;
         case IOCTL_GET_DRIVER_STATUS: {
-            DevIOCntlGetDriverStatus( FileObject, Wait, InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength, IoControlCode, IoStatus, DeviceObject );
+            DevIOCntlGetDriverStatus( InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength, IoStatus );
         } break;
 
         case IOCTL_SET_STUB_CODE: {
-            DevIOCntlSetStubCode( FileObject, Wait, InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength, IoControlCode, IoStatus, DeviceObject );
+            DevIOCntlSetStubCode( InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength, IoStatus );
         } break;
         case IOCTL_GET_STUB_CODE: {
-            DevIOCntlGetStubCode( FileObject, Wait, InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength, IoControlCode, IoStatus, DeviceObject );
+            DevIOCntlGetStubCode( InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength, IoStatus );
         } break;
 
         case IOCTL_ADD_GLOBAL_POLICY: {
-            DevIOCntlAddGlobalPolicy( FileObject, Wait, InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength, IoControlCode, IoStatus, DeviceObject );
+            DevIOCntlAddGlobalPolicy( InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength, IoStatus );
         } break;
         case IOCTL_DEL_GLOBAL_POLICY_BY_MASK: {
-            DevIOCntlDelGlobalPolicy( FileObject, Wait, InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength, IoControlCode, IoStatus, DeviceObject );
+            DevIOCntlDelGlobalPolicy( InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength, IoStatus );
         } break;
         case IOCTL_GET_GLOBAL_POLICY_COUNT: {
-            DevIOCntlGetGlobalPolicyCnt( FileObject, Wait, InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength, IoControlCode, IoStatus, DeviceObject );
+            DevIOCntlGetGlobalPolicyCnt( InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength, IoStatus );
         } break;
         case IOCTL_RST_GLOBAL_POLICY: {
-            DevIOCntlRstGlobalPolicy( FileObject, Wait, InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength, IoControlCode, IoStatus, DeviceObject );
+            DevIOCntlRstGlobalPolicy( InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength, IoStatus );
+        } break;
+        case IOCTL_GET_GLOBAL_POLICY: {
+            DevIOCntlGetGlobalPolicy( InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength, IoStatus );
         } break;
 
         case IOCTL_ADD_PROCESS_POLICY: {
@@ -80,13 +91,19 @@ BOOLEAN FLTAPI FastIoDeviceControl( PFILE_OBJECT FileObject, BOOLEAN Wait, PVOID
         } break;
 
         case IOCTL_FILE_GET_FILE_TYPE: {
-            DevIOCntlFileGetType( FileObject, Wait, InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength, IoControlCode, IoStatus, DeviceObject );
+            DevIOCntlFileGetType( InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength, IoStatus );
         } break;
         case IOCTL_FILE_SET_SOLUTION_DATA: {
-            DevIOCntlFileSetSolutionData( FileObject, Wait, InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength, IoControlCode, IoStatus, DeviceObject );
+            DevIOCntlFileSetSolutionData( InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength, IoStatus );
         } break;
         case IOCTL_FILE_GET_SOLUTION_DATA: {
-            DevIOCntlFileGetSolutionData( FileObject, Wait, InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength, IoControlCode, IoStatus, DeviceObject );
+            DevIOCntlFileGetSolutionData( InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength, IoStatus );
+        } break;
+        case IOCTL_FILE_ENCRYPT_FILE: {
+            DevIOCntlFileEncrypt( InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength, IoStatus );
+        } break;
+        case IOCTL_FILE_DECRYPT_FILE: {
+            DevIOCntlFileDecrypt( InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength, IoStatus );
         } break;
 
     }
@@ -98,11 +115,103 @@ BOOLEAN FLTAPI FastIoDeviceControl( PFILE_OBJECT FileObject, BOOLEAN Wait, PVOID
 ///////////////////////////////////////////////////////////////////////////////
 // IOCTL Handler
 
-
-BOOLEAN DevIOCntlSetDriverStatus( PFILE_OBJECT FileObject, BOOLEAN Wait, PVOID InputBuffer, ULONG InputBufferLength, PVOID OutputBuffer, ULONG OutputBufferLength, ULONG IoControlCode, PIO_STATUS_BLOCK IoStatus, PDEVICE_OBJECT DeviceObject )
+BOOLEAN DevIOCntlSetDriverConfig( PVOID InputBuffer, ULONG InputBufferLength, PVOID OutputBuffer, ULONG OutputBufferLength, PIO_STATUS_BLOCK IoStatus )
 {
     do
     {
+        UNREFERENCED_PARAMETER( InputBuffer );
+        UNREFERENCED_PARAMETER( InputBufferLength );
+        UNREFERENCED_PARAMETER( OutputBuffer );
+        UNREFERENCED_PARAMETER( OutputBufferLength );
+
+        if( FeatureContext.CntlProcessId != ( ULONG )PsGetCurrentProcessId() )
+        {
+            IoStatus->Status = STATUS_PRIVILEGE_NOT_HELD;
+            break;
+        }
+
+        if( InputBuffer == NULLPTR || InputBufferLength < sizeof( DRIVER_CONFIG ) )
+        {
+            IoStatus->Status = STATUS_INVALID_PARAMETER;
+            break;
+        }
+
+        auto DriverConfig = ( DRIVER_CONFIG* )InputBuffer;
+        if( InputBufferLength != DriverConfig->SizeOfStruct )
+        {
+            IoStatus->Status = STATUS_INVALID_PARAMETER;
+            break;
+        }
+
+        SetTimeOutMs( DriverConfig->TimeOutMs );
+
+        for( int idx = 0; DriverConfig->SolutionMetaDataSize; ++idx )
+        {
+            RtlCopyMemory( &FeatureContext.EncryptContext[ idx ], &DriverConfig->EncryptConfig[idx],
+                           sizeof( ENCRYPT_CONTEXT ) );
+        }
+
+        PVOID StubCodeX86 = NULLPTR; ULONG StubCodeX86Size = 0;
+        PVOID StubCodeX64 = NULLPTR; ULONG StubCodeX64Size = 0;
+
+        if( DriverConfig->LengthOfStubCodeX86 > 0 && DriverConfig->OffsetOfStubCodeX86 > 0 )
+        {
+            StubCodeX86 = Add2Ptr( DriverConfig, DriverConfig->OffsetOfStubCodeX86 );
+            StubCodeX86Size = DriverConfig->LengthOfStubCodeX86;
+        }
+
+        if( DriverConfig->LengthOfStubCodeX64 > 0 && DriverConfig->OffsetOfStubCodeX64 > 0 )
+        {
+            StubCodeX64 = Add2Ptr( DriverConfig, DriverConfig->OffsetOfStubCodeX64 );
+            StubCodeX64Size = DriverConfig->LengthOfStubCodeX64;
+        }
+
+        SetMetaDataStubCode( StubCodeX86, StubCodeX86Size, StubCodeX64, StubCodeX64Size );
+
+        IoStatus->Status = STATUS_SUCCESS;
+
+    } while( false );
+
+    return TRUE;
+}
+
+BOOLEAN DevIOCntlGetDriverConfig( PVOID InputBuffer, ULONG InputBufferLength, PVOID OutputBuffer, ULONG OutputBufferLength, PIO_STATUS_BLOCK IoStatus )
+{
+    do
+    {
+        UNREFERENCED_PARAMETER( InputBuffer );
+        UNREFERENCED_PARAMETER( InputBufferLength );
+        UNREFERENCED_PARAMETER( OutputBuffer );
+        UNREFERENCED_PARAMETER( OutputBufferLength );
+
+        if( FeatureContext.CntlProcessId != ( ULONG )PsGetCurrentProcessId() )
+        {
+            IoStatus->Status = STATUS_PRIVILEGE_NOT_HELD;
+            break;
+        }
+
+        if( InputBuffer == NULLPTR || InputBufferLength < sizeof( BOOLEAN ) )
+        {
+            IoStatus->Status = STATUS_INVALID_PARAMETER;
+            break;
+        }
+
+        IoStatus->Status = STATUS_SUCCESS;
+
+    } while( false );
+
+    return TRUE;
+}
+
+BOOLEAN DevIOCntlSetDriverStatus( PVOID InputBuffer, ULONG InputBufferLength, PVOID OutputBuffer, ULONG OutputBufferLength, PIO_STATUS_BLOCK IoStatus )
+{
+    do
+    {
+        UNREFERENCED_PARAMETER( InputBuffer );
+        UNREFERENCED_PARAMETER( InputBufferLength );
+        UNREFERENCED_PARAMETER( OutputBuffer );
+        UNREFERENCED_PARAMETER( OutputBufferLength );
+
         if( FeatureContext.CntlProcessId != (ULONG)PsGetCurrentProcessId() )
         {
             IoStatus->Status = STATUS_PRIVILEGE_NOT_HELD;
@@ -127,10 +236,15 @@ BOOLEAN DevIOCntlSetDriverStatus( PFILE_OBJECT FileObject, BOOLEAN Wait, PVOID I
     return TRUE;
 }
 
-BOOLEAN DevIOCntlGetDriverStatus( PFILE_OBJECT FileObject, BOOLEAN Wait, PVOID InputBuffer, ULONG InputBufferLength, PVOID OutputBuffer, ULONG OutputBufferLength, ULONG IoControlCode, PIO_STATUS_BLOCK IoStatus, PDEVICE_OBJECT DeviceObject )
+BOOLEAN DevIOCntlGetDriverStatus( PVOID InputBuffer, ULONG InputBufferLength, PVOID OutputBuffer, ULONG OutputBufferLength, PIO_STATUS_BLOCK IoStatus )
 {
     do
     {
+        UNREFERENCED_PARAMETER( InputBuffer );
+        UNREFERENCED_PARAMETER( InputBufferLength );
+        UNREFERENCED_PARAMETER( OutputBuffer );
+        UNREFERENCED_PARAMETER( OutputBufferLength );
+
         if( FeatureContext.CntlProcessId != ( ULONG )PsGetCurrentProcessId() )
         {
             IoStatus->Status = STATUS_PRIVILEGE_NOT_HELD;
@@ -151,10 +265,15 @@ BOOLEAN DevIOCntlGetDriverStatus( PFILE_OBJECT FileObject, BOOLEAN Wait, PVOID I
     return TRUE;
 }
 
-BOOLEAN DevIOCntlSetStubCode( PFILE_OBJECT FileObject, BOOLEAN Wait, PVOID InputBuffer, ULONG InputBufferLength, PVOID OutputBuffer, ULONG OutputBufferLength, ULONG IoControlCode, PIO_STATUS_BLOCK IoStatus, PDEVICE_OBJECT DeviceObject )
+BOOLEAN DevIOCntlSetStubCode( PVOID InputBuffer, ULONG InputBufferLength, PVOID OutputBuffer, ULONG OutputBufferLength, PIO_STATUS_BLOCK IoStatus )
 {
     do
     {
+        UNREFERENCED_PARAMETER( InputBuffer );
+        UNREFERENCED_PARAMETER( InputBufferLength );
+        UNREFERENCED_PARAMETER( OutputBuffer );
+        UNREFERENCED_PARAMETER( OutputBufferLength );
+
         if( FeatureContext.CntlProcessId != ( ULONG )PsGetCurrentProcessId() )
         {
             IoStatus->Status = STATUS_PRIVILEGE_NOT_HELD;
@@ -182,10 +301,15 @@ BOOLEAN DevIOCntlSetStubCode( PFILE_OBJECT FileObject, BOOLEAN Wait, PVOID Input
     return TRUE;
 }
 
-BOOLEAN DevIOCntlGetStubCode( PFILE_OBJECT FileObject, BOOLEAN Wait, PVOID InputBuffer, ULONG InputBufferLength, PVOID OutputBuffer, ULONG OutputBufferLength, ULONG IoControlCode, PIO_STATUS_BLOCK IoStatus, PDEVICE_OBJECT DeviceObject )
+BOOLEAN DevIOCntlGetStubCode( PVOID InputBuffer, ULONG InputBufferLength, PVOID OutputBuffer, ULONG OutputBufferLength, PIO_STATUS_BLOCK IoStatus )
 {
     do
     {
+        UNREFERENCED_PARAMETER( InputBuffer );
+        UNREFERENCED_PARAMETER( InputBufferLength );
+        UNREFERENCED_PARAMETER( OutputBuffer );
+        UNREFERENCED_PARAMETER( OutputBufferLength );
+
         if( FeatureContext.CntlProcessId != ( ULONG )PsGetCurrentProcessId() )
         {
             IoStatus->Status = STATUS_PRIVILEGE_NOT_HELD;
@@ -221,10 +345,15 @@ BOOLEAN DevIOCntlGetStubCode( PFILE_OBJECT FileObject, BOOLEAN Wait, PVOID Input
     return TRUE;
 }
 
-BOOLEAN DevIOCntlAddGlobalPolicy( PFILE_OBJECT FileObject, BOOLEAN Wait, PVOID InputBuffer, ULONG InputBufferLength, PVOID OutputBuffer, ULONG OutputBufferLength, ULONG IoControlCode, PIO_STATUS_BLOCK IoStatus, PDEVICE_OBJECT DeviceObject )
+BOOLEAN DevIOCntlAddGlobalPolicy( PVOID InputBuffer, ULONG InputBufferLength, PVOID OutputBuffer, ULONG OutputBufferLength, PIO_STATUS_BLOCK IoStatus )
 {
     do
     {
+        UNREFERENCED_PARAMETER( InputBuffer );
+        UNREFERENCED_PARAMETER( InputBufferLength );
+        UNREFERENCED_PARAMETER( OutputBuffer );
+        UNREFERENCED_PARAMETER( OutputBufferLength );
+
         if( FeatureContext.CntlProcessId != ( ULONG )PsGetCurrentProcessId() )
         {
             IoStatus->Status = STATUS_PRIVILEGE_NOT_HELD;
@@ -265,10 +394,15 @@ BOOLEAN DevIOCntlAddGlobalPolicy( PFILE_OBJECT FileObject, BOOLEAN Wait, PVOID I
     return TRUE;
 }
 
-BOOLEAN DevIOCntlDelGlobalPolicy( PFILE_OBJECT FileObject, BOOLEAN Wait, PVOID InputBuffer, ULONG InputBufferLength, PVOID OutputBuffer, ULONG OutputBufferLength, ULONG IoControlCode, PIO_STATUS_BLOCK IoStatus, PDEVICE_OBJECT DeviceObject )
+BOOLEAN DevIOCntlDelGlobalPolicy( PVOID InputBuffer, ULONG InputBufferLength, PVOID OutputBuffer, ULONG OutputBufferLength, PIO_STATUS_BLOCK IoStatus )
 {
     do
     {
+        UNREFERENCED_PARAMETER( InputBuffer );
+        UNREFERENCED_PARAMETER( InputBufferLength );
+        UNREFERENCED_PARAMETER( OutputBuffer );
+        UNREFERENCED_PARAMETER( OutputBufferLength );
+
         if( FeatureContext.CntlProcessId != ( ULONG )PsGetCurrentProcessId() )
         {
             IoStatus->Status = STATUS_PRIVILEGE_NOT_HELD;
@@ -285,6 +419,7 @@ BOOLEAN DevIOCntlDelGlobalPolicy( PFILE_OBJECT FileObject, BOOLEAN Wait, PVOID I
         WCHAR* wszFilterMask = NULLPTR;
         WCHAR* wszBuffer = ( WCHAR* )InputBuffer;
         bool isInclude = nsUtils::stoul( wszBuffer, &wszFilterMask, 10 ) > 0;
+        UNREFERENCED_PARAMETER( isInclude );
 
         if( *wszFilterMask != L'|' )
         {
@@ -309,34 +444,55 @@ BOOLEAN DevIOCntlDelGlobalPolicy( PFILE_OBJECT FileObject, BOOLEAN Wait, PVOID I
     return TRUE;
 }
 
-BOOLEAN DevIOCntlGetGlobalPolicyCnt( PFILE_OBJECT FileObject, BOOLEAN Wait, PVOID InputBuffer, ULONG InputBufferLength, PVOID OutputBuffer, ULONG OutputBufferLength, ULONG IoControlCode, PIO_STATUS_BLOCK IoStatus, PDEVICE_OBJECT DeviceObject )
+BOOLEAN DevIOCntlGetGlobalPolicyCnt( PVOID InputBuffer, ULONG InputBufferLength, PVOID OutputBuffer, ULONG OutputBufferLength, PIO_STATUS_BLOCK IoStatus )
 {
     do
     {
+        UNREFERENCED_PARAMETER( InputBuffer );
+        UNREFERENCED_PARAMETER( InputBufferLength );
+        UNREFERENCED_PARAMETER( OutputBuffer );
+        UNREFERENCED_PARAMETER( OutputBufferLength );
+
         if( FeatureContext.CntlProcessId != ( ULONG )PsGetCurrentProcessId() )
         {
             IoStatus->Status = STATUS_PRIVILEGE_NOT_HELD;
             break;
         }
 
-        if( InputBufferLength == 0 || InputBuffer == NULL )
+        if( InputBufferLength != sizeof(BOOLEAN) || InputBuffer == NULL )
         {
             IoStatus->Status = STATUS_INVALID_PARAMETER;
             IoStatus->Information = 0;
             break;
         }
 
-        // TODO:
+        if( OutputBufferLength != sizeof(ULONG) || OutputBuffer == NULLPTR )
+        {
+            IoStatus->Status = STATUS_BUFFER_TOO_SMALL;
+            IoStatus->Information = sizeof( ULONG );
+            break;
+        }
+
+        bool IsInclude = *( BOOLEAN* )InputBuffer != 0;
+        RtlZeroMemory( OutputBuffer, OutputBufferLength );
+        *( ULONG* )OutputBuffer = GlobalFilter_Count( IsInclude );
+
+        IoStatus->Status = STATUS_SUCCESS;
 
     } while( false );
 
     return TRUE;
 }
 
-BOOLEAN DevIOCntlRstGlobalPolicy( PFILE_OBJECT FileObject, BOOLEAN Wait, PVOID InputBuffer, ULONG InputBufferLength, PVOID OutputBuffer, ULONG OutputBufferLength, ULONG IoControlCode, PIO_STATUS_BLOCK IoStatus, PDEVICE_OBJECT DeviceObject )
+BOOLEAN DevIOCntlRstGlobalPolicy( PVOID InputBuffer, ULONG InputBufferLength, PVOID OutputBuffer, ULONG OutputBufferLength, PIO_STATUS_BLOCK IoStatus )
 {
     do
     {
+        UNREFERENCED_PARAMETER( InputBuffer );
+        UNREFERENCED_PARAMETER( InputBufferLength );
+        UNREFERENCED_PARAMETER( OutputBuffer );
+        UNREFERENCED_PARAMETER( OutputBufferLength );
+
         if( FeatureContext.CntlProcessId != ( ULONG )PsGetCurrentProcessId() )
         {
             IoStatus->Status = STATUS_PRIVILEGE_NOT_HELD;
@@ -350,10 +506,56 @@ BOOLEAN DevIOCntlRstGlobalPolicy( PFILE_OBJECT FileObject, BOOLEAN Wait, PVOID I
     return TRUE;
 }
 
+BOOLEAN DevIOCntlGetGlobalPolicy( PVOID InputBuffer, ULONG InputBufferLength, PVOID OutputBuffer, ULONG OutputBufferLength, PIO_STATUS_BLOCK IoStatus )
+{
+    do
+    {
+        UNREFERENCED_PARAMETER( InputBuffer );
+        UNREFERENCED_PARAMETER( InputBufferLength );
+        UNREFERENCED_PARAMETER( OutputBuffer );
+        UNREFERENCED_PARAMETER( OutputBufferLength );
+
+        if( FeatureContext.CntlProcessId != ( ULONG )PsGetCurrentProcessId() )
+        {
+            IoStatus->Status = STATUS_PRIVILEGE_NOT_HELD;
+            break;
+        }
+
+        if( InputBufferLength != sizeof( BOOLEAN ) || InputBuffer == NULL )
+        {
+            IoStatus->Status = STATUS_INVALID_PARAMETER;
+            IoStatus->Information = 0;
+            break;
+        }
+
+        bool IsInclude = *( BOOLEAN* )InputBuffer != 0;
+        ULONG Count = GlobalFilter_Count( IsInclude );
+
+        if( ( OutputBufferLength != ( sizeof( USER_GLOBAL_FILTER ) * Count ) ) || 
+            ( OutputBuffer == NULLPTR ) )
+        {
+            IoStatus->Status = STATUS_BUFFER_TOO_SMALL;
+            IoStatus->Information = sizeof( USER_GLOBAL_FILTER ) * Count;
+            break;
+        }
+
+        RtlZeroMemory( OutputBuffer, OutputBufferLength );
+        IoStatus->Status = GlobalFilter_Copy( OutputBuffer, OutputBufferLength, IsInclude );
+
+    } while( false );
+
+    return TRUE;
+}
+
 BOOLEAN DevIOCntlAddProcessPolicy( PVOID InputBuffer, ULONG InputBufferLength, PVOID OutputBuffer, ULONG OutputBufferLength, PIO_STATUS_BLOCK IoStatus )
 {
     do
     {
+        UNREFERENCED_PARAMETER( InputBuffer );
+        UNREFERENCED_PARAMETER( InputBufferLength );
+        UNREFERENCED_PARAMETER( OutputBuffer );
+        UNREFERENCED_PARAMETER( OutputBufferLength );
+
         if( FeatureContext.CntlProcessId != ( ULONG )PsGetCurrentProcessId() )
         {
             IoStatus->Status = STATUS_PRIVILEGE_NOT_HELD;
@@ -391,6 +593,11 @@ BOOLEAN DevIOCntlDelProcessPolicyID( PVOID InputBuffer, ULONG InputBufferLength,
 {
     do
     {
+        UNREFERENCED_PARAMETER( InputBuffer );
+        UNREFERENCED_PARAMETER( InputBufferLength );
+        UNREFERENCED_PARAMETER( OutputBuffer );
+        UNREFERENCED_PARAMETER( OutputBufferLength );
+
         if( FeatureContext.CntlProcessId != ( ULONG )PsGetCurrentProcessId() )
         {
             IoStatus->Status = STATUS_PRIVILEGE_NOT_HELD;
@@ -415,6 +622,11 @@ BOOLEAN DevIOCntlDelProcessPolicyPID( PVOID InputBuffer, ULONG InputBufferLength
 {
     do
     {
+        UNREFERENCED_PARAMETER( InputBuffer );
+        UNREFERENCED_PARAMETER( InputBufferLength );
+        UNREFERENCED_PARAMETER( OutputBuffer );
+        UNREFERENCED_PARAMETER( OutputBufferLength );
+
         if( FeatureContext.CntlProcessId != ( ULONG )PsGetCurrentProcessId() )
         {
             IoStatus->Status = STATUS_PRIVILEGE_NOT_HELD;
@@ -439,6 +651,11 @@ BOOLEAN DevIOCntlDelProcessPolicyMask( PVOID InputBuffer, ULONG InputBufferLengt
 {
     do
     {
+        UNREFERENCED_PARAMETER( InputBuffer );
+        UNREFERENCED_PARAMETER( InputBufferLength );
+        UNREFERENCED_PARAMETER( OutputBuffer );
+        UNREFERENCED_PARAMETER( OutputBufferLength );
+
         if( FeatureContext.CntlProcessId != ( ULONG )PsGetCurrentProcessId() )
         {
             IoStatus->Status = STATUS_PRIVILEGE_NOT_HELD;
@@ -463,6 +680,11 @@ BOOLEAN DevIOCntlAddProcessPolicyItem( PVOID InputBuffer, ULONG InputBufferLengt
 {
     do
     {
+        UNREFERENCED_PARAMETER( InputBuffer );
+        UNREFERENCED_PARAMETER( InputBufferLength );
+        UNREFERENCED_PARAMETER( OutputBuffer );
+        UNREFERENCED_PARAMETER( OutputBufferLength );
+
         if( FeatureContext.CntlProcessId != ( ULONG )PsGetCurrentProcessId() )
         {
             IoStatus->Status = STATUS_PRIVILEGE_NOT_HELD;
@@ -501,6 +723,11 @@ BOOLEAN DevIOCntlDelProcessPolicyItem( PVOID InputBuffer, ULONG InputBufferLengt
 {
     do
     {
+        UNREFERENCED_PARAMETER( InputBuffer );
+        UNREFERENCED_PARAMETER( InputBufferLength );
+        UNREFERENCED_PARAMETER( OutputBuffer );
+        UNREFERENCED_PARAMETER( OutputBufferLength );
+
         if( FeatureContext.CntlProcessId != ( ULONG )PsGetCurrentProcessId() )
         {
             IoStatus->Status = STATUS_PRIVILEGE_NOT_HELD;
@@ -535,6 +762,11 @@ BOOLEAN DevIOCntlRstProcessPolicy( PVOID InputBuffer, ULONG InputBufferLength, P
 {
     do
     {
+        UNREFERENCED_PARAMETER( InputBuffer );
+        UNREFERENCED_PARAMETER( InputBufferLength );
+        UNREFERENCED_PARAMETER( OutputBuffer );
+        UNREFERENCED_PARAMETER( OutputBufferLength );
+
         if( FeatureContext.CntlProcessId != ( ULONG )PsGetCurrentProcessId() )
         {
             IoStatus->Status = STATUS_PRIVILEGE_NOT_HELD;
@@ -555,10 +787,15 @@ BOOLEAN DevIOCntlRstProcessPolicy( PVOID InputBuffer, ULONG InputBufferLength, P
     return TRUE;
 }
 
-BOOLEAN DevIOCntlFileGetType( PFILE_OBJECT FileObject, BOOLEAN Wait, PVOID InputBuffer, ULONG InputBufferLength, PVOID OutputBuffer, ULONG OutputBufferLength, ULONG IoControlCode, PIO_STATUS_BLOCK IoStatus, PDEVICE_OBJECT DeviceObject )
+BOOLEAN DevIOCntlFileGetType( PVOID InputBuffer, ULONG InputBufferLength, PVOID OutputBuffer, ULONG OutputBufferLength, PIO_STATUS_BLOCK IoStatus )
 {
     do
     {
+        UNREFERENCED_PARAMETER( InputBuffer );
+        UNREFERENCED_PARAMETER( InputBufferLength );
+        UNREFERENCED_PARAMETER( OutputBuffer );
+        UNREFERENCED_PARAMETER( OutputBufferLength );
+
         if( InputBuffer == NULLPTR || InputBufferLength == 0 )
         {
             IoStatus->Status = STATUS_INVALID_PARAMETER;
@@ -583,28 +820,153 @@ BOOLEAN DevIOCntlFileGetType( PFILE_OBJECT FileObject, BOOLEAN Wait, PVOID Input
     return TRUE;
 }
 
-BOOLEAN DevIOCntlFileSetSolutionData( PFILE_OBJECT FileObject, BOOLEAN Wait, PVOID InputBuffer, ULONG InputBufferLength, PVOID OutputBuffer, ULONG OutputBufferLength, ULONG IoControlCode, PIO_STATUS_BLOCK IoStatus, PDEVICE_OBJECT DeviceObject )
+BOOLEAN DevIOCntlFileSetSolutionData( PVOID InputBuffer, ULONG InputBufferLength, PVOID OutputBuffer, ULONG OutputBufferLength, PIO_STATUS_BLOCK IoStatus )
 {
     do
     {
+        UNREFERENCED_PARAMETER( InputBuffer );
+        UNREFERENCED_PARAMETER( InputBufferLength );
+        UNREFERENCED_PARAMETER( OutputBuffer );
+        UNREFERENCED_PARAMETER( OutputBufferLength );
+
         if( FeatureContext.CntlProcessId != ( ULONG )PsGetCurrentProcessId() )
         {
             IoStatus->Status = STATUS_PRIVILEGE_NOT_HELD;
             break;
         }
 
-        // TODO:
+        if( InputBuffer == NULLPTR || InputBufferLength <= sizeof( USER_FILE_SOLUTION_DATA ) )
+        {
+            IoStatus->Status = STATUS_INVALID_PARAMETER;
+            break;
+        }
+
+        auto Buffer = ( USER_FILE_SOLUTION_DATA* )InputBuffer;
+        if( Buffer->SizeOfStruct != InputBufferLength )
+        {
+            IoStatus->Status = STATUS_INVALID_PARAMETER;
+            break;
+        }
+
+        auto SrcFileFullPath = ( WCHAR* )Add2Ptr( Buffer, Buffer->OffsetOfFileName );
+        auto SolutionMetaData = Add2Ptr( Buffer, Buffer->OffsetOfSolutionData );
+
+        IoStatus->Status = WriteSolutionMetaData( SrcFileFullPath, SolutionMetaData, Buffer->LengthOfSolutionData );
 
     } while( false );
+
     return TRUE;
 }
 
-BOOLEAN DevIOCntlFileGetSolutionData( PFILE_OBJECT FileObject, BOOLEAN Wait, PVOID InputBuffer, ULONG InputBufferLength, PVOID OutputBuffer, ULONG OutputBufferLength, ULONG IoControlCode, PIO_STATUS_BLOCK IoStatus, PDEVICE_OBJECT DeviceObject )
+BOOLEAN DevIOCntlFileGetSolutionData( PVOID InputBuffer, ULONG InputBufferLength, PVOID OutputBuffer, ULONG OutputBufferLength, PIO_STATUS_BLOCK IoStatus )
 {
     do
     {
+        UNREFERENCED_PARAMETER( InputBuffer );
+        UNREFERENCED_PARAMETER( InputBufferLength );
+        UNREFERENCED_PARAMETER( OutputBuffer );
+        UNREFERENCED_PARAMETER( OutputBufferLength );
 
-        // TODO:
+        if( FeatureContext.CntlProcessId != ( ULONG )PsGetCurrentProcessId() )
+        {
+            IoStatus->Status = STATUS_PRIVILEGE_NOT_HELD;
+            break;
+        }
+
+        if( InputBuffer == NULLPTR || InputBufferLength == 0 )
+        {
+            IoStatus->Status = STATUS_INVALID_PARAMETER;
+            IoStatus->Information = 0;
+            break;
+        }
+
+        if( OutputBuffer == NULLPTR || OutputBufferLength == 0 )
+        {
+            IoStatus->Status = STATUS_BUFFER_TOO_SMALL;
+            IoStatus->Information = 0;  // TODO: 전역 솔루션 정보 크기로 대체
+            break;
+        }
+
+        METADATA_DRIVER MetaDataInfo;
+        GetFileMetaDataInfo( ( WCHAR* )InputBuffer, &MetaDataInfo,
+                             &OutputBuffer, &OutputBufferLength );
+
+        IoStatus->Status = STATUS_SUCCESS;
+
+    } while( false );
+
+    return TRUE;
+}
+
+BOOLEAN DevIOCntlFileEncrypt( PVOID InputBuffer, ULONG InputBufferLength, PVOID OutputBuffer, ULONG OutputBufferLength, PIO_STATUS_BLOCK IoStatus )
+{
+    do
+    {
+        UNREFERENCED_PARAMETER( InputBuffer );
+        UNREFERENCED_PARAMETER( InputBufferLength );
+        UNREFERENCED_PARAMETER( OutputBuffer );
+        UNREFERENCED_PARAMETER( OutputBufferLength );
+
+        if( FeatureContext.CntlProcessId != ( ULONG )PsGetCurrentProcessId() )
+        {
+            IoStatus->Status = STATUS_PRIVILEGE_NOT_HELD;
+            break;
+        }
+
+        if( InputBuffer == NULLPTR || InputBufferLength <= sizeof( USER_FILE_ENCRYPT ) )
+        {
+            IoStatus->Status = STATUS_INVALID_PARAMETER;
+            IoStatus->Information = 0;
+            break;
+        }
+
+        IoStatus->Status = CipherFile( ( USER_FILE_ENCRYPT* )InputBuffer );
+
+    } while( false );
+
+    return TRUE;
+}
+
+BOOLEAN DevIOCntlFileDecrypt( PVOID InputBuffer, ULONG InputBufferLength, PVOID OutputBuffer, ULONG OutputBufferLength, PIO_STATUS_BLOCK IoStatus )
+{
+    do
+    {
+        UNREFERENCED_PARAMETER( InputBuffer );
+        UNREFERENCED_PARAMETER( InputBufferLength );
+        UNREFERENCED_PARAMETER( OutputBuffer );
+        UNREFERENCED_PARAMETER( OutputBufferLength );
+
+        if( FeatureContext.CntlProcessId != ( ULONG )PsGetCurrentProcessId() )
+        {
+            IoStatus->Status = STATUS_PRIVILEGE_NOT_HELD;
+            break;
+        }
+
+        if( InputBuffer == NULLPTR || InputBufferLength <= sizeof( USER_FILE_ENCRYPT ) )
+        {
+            IoStatus->Status = STATUS_INVALID_PARAMETER;
+            IoStatus->Information = 0;
+            break;
+        }
+
+        auto opt = ( USER_FILE_ENCRYPT* )InputBuffer;
+        if( opt->SizeOfStruct != InputBufferLength )
+        {
+            IoStatus->Status = STATUS_INVALID_PARAMETER;
+            IoStatus->Information = 0;
+            break;
+        }
+
+        PVOID SolutionMetaData = NULLPTR;
+        ULONG SolutionMetaDataSize = 0;
+
+        if( opt->LengthOfSolutionData > 0 && opt->OffsetOfSolutionData > 0 )
+        {
+            SolutionMetaData = Add2Ptr( opt, opt->OffsetOfSolutionData );
+            SolutionMetaDataSize = opt->LengthOfSolutionData;
+        }
+
+        IoStatus->Status = DecipherFile( opt, SolutionMetaData, &SolutionMetaDataSize );
 
     } while( false );
 

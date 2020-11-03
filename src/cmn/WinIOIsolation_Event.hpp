@@ -41,7 +41,7 @@ typedef struct _ENCRYPT_CONFIG
 
 } ENCRYPT_CONFIG;
 
-typedef struct
+typedef struct _DRIVER_CONFIG
 {
     ULONG                                   SizeOfStruct;
     // 이벤트 전송 후 대기 시간(ms)
@@ -70,6 +70,21 @@ typedef struct _USER_FILE_SOLUTION_DATA
     ULONG                                   OffsetOfSolutionData;
     
 } USER_FILE_SOLUTION_DATA, *PUSER_SOLUTION_DATA;
+
+typedef struct _USER_FILE_ENCRYPT
+{
+    ULONG                                   SizeOfStruct;
+
+    ENCRYPT_CONFIG                          EncryptConfig;
+
+    ULONG                                   LengthOfSrcFileFullPath;
+    ULONG                                   OffsetOfSrcFileFullPath;
+    ULONG                                   LengthOfDstFileFullPath;
+    ULONG                                   OffsetOfDstFileFullPath;
+    ULONG                                   LengthOfSolutionData;
+    ULONG                                   OffsetOfSolutionData;
+    
+} USER_FILE_ENCRYPT, *PUSER_FILE_ENCRYPT;
 
 typedef enum _MSG_CATEGORY
 {
@@ -133,6 +148,13 @@ typedef enum
     PROCESS_APPLY_CHILD_PROCESS = 0x8
 
 } PROCESS_FILTER_TYPE;
+
+typedef struct _USER_GLOBAL_FILTER
+{
+    WCHAR                                   FilterMask[ MAX_PATH ];
+    BOOLEAN                                 IsInclude;
+
+} USER_GLOBAL_FILTER, *PUSER_GLOBAL_FILTER;
 
 typedef struct _USER_PROCESS_FILTER
 {

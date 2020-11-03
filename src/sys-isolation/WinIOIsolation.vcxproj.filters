@@ -273,6 +273,9 @@
     <ClInclude Include="..\cmn\fltCmnLibs_ring_buffer.hpp">
       <Filter>common files</Filter>
     </ClInclude>
+    <ClInclude Include="cipher\Cipher_Krnl.hpp">
+      <Filter>Features\Encryption</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="WinIOIsolation.cpp">
@@ -426,6 +429,9 @@
       <Filter>Features\Encryption</Filter>
     </ClCompile>
     <ClCompile Include="..\cmn\Cipher_AES.cpp">
+      <Filter>Features\Encryption</Filter>
+    </ClCompile>
+    <ClCompile Include="cipher\Cipher_Krnl.cpp">
       <Filter>Features\Encryption</Filter>
     </ClCompile>
   </ItemGroup>

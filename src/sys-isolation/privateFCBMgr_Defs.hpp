@@ -4,6 +4,7 @@
 #include "fltBase.hpp"
 #include "W32API.hpp"
 
+#include "driverMgmt.hpp"
 #include "utilities/bufferMgr_Defs.hpp"
 #include "utilities/contextMgr_Defs.hpp"
 

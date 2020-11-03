@@ -51,7 +51,6 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
     FLT_PREOP_CALLBACK_STATUS                   FltStatus = FLT_PREOP_SUCCESS_NO_CALLBACK;
     IRP_CONTEXT*                                IrpContext = NULLPTR;
     CREATE_ARGS                                 Args;
-    auto&                                       IoStatus = Data->IoStatus;
 
     __try
     {
@@ -552,7 +551,7 @@ NTSTATUS CreateFileNonExistFCB( IRP_CONTEXT* IrpContext )
             }
             else
             {
-                const auto& context = GlobalContext.EncryptContext[ Result.EncryptConfig.Method - 1 ];
+                const auto& context = FeatureContext.EncryptContext[ Result.EncryptConfig.Method - 1 ];
                 Args->EncryptContext.KeySize = context.CipherID;
                 RtlCopyMemory( Args->EncryptContext.EncryptionKey, context.EncryptionKey, context.KeySize );
                 Args->EncryptContext.IVSize = context.IVSize;
