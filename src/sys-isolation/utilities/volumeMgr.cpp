@@ -222,16 +222,16 @@ NTSTATUS VolumeMgr_Remove( const WCHAR* DeviceVolumeName )
     return Status;
 }
 
-void VolumeMgr_Replace( WCHAR* Path, ULONG BufferSize )
+void VolumeMgr_Replace( WCHAR* Path, ULONG* BufferSize, bool IsUpdateBufferSize /* = false */ )
 {
     auto VolumeNameMgr = VolumeNameMgr_Ref();
 
     do
     {
         ASSERT( Path != NULLPTR );
-        ASSERT( BufferSize > 0 );
+        ASSERT( *BufferSize > 0 );
 
-        if( Path == NULLPTR || BufferSize == 0 )
+        if( Path == NULLPTR || *BufferSize == 0 )
             break;
 
         auto Head = &VolumeNameMgr->ListHead;
@@ -245,7 +245,12 @@ void VolumeMgr_Replace( WCHAR* Path, ULONG BufferSize )
 
             Path[ 0 ] = Item->Letter;
             Path[ 1 ] = L':';
-            RtlMoveMemory( &Path[ 2 ], &Path[ Item->VolumeNameCch ], BufferSize - ( Item->VolumeNameCch * sizeof( WCHAR ) ) );
+            auto Length = nsUtils::strlength( &Path[ Item->VolumeNameCch ] ) + 2;
+            RtlMoveMemory( &Path[ 2 ], &Path[ Item->VolumeNameCch ], *BufferSize - ( Item->VolumeNameCch * sizeof( WCHAR ) ) );
+            Path[ Length ] = L'\0';
+
+            if( IsUpdateBufferSize == true )
+                *BufferSize = Length * sizeof( WCHAR ) + sizeof( WCHAR );
 
             break;
         }

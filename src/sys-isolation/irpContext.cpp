@@ -200,7 +200,7 @@ PIRP_CONTEXT CreateIrpContext( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_
                         }
 
                         RtlStringCbCopyNW( IrpContext->DstFileFullPath.Buffer, IrpContext->DstFileFullPath.BufferSize, DestinationFileName->Name.Buffer, DestinationFileName->Name.Length );
-                        VolumeMgr_Replace( IrpContext->DstFileFullPath.Buffer, IrpContext->DstFileFullPath.BufferSize );
+                        VolumeMgr_Replace( IrpContext->DstFileFullPath.Buffer, &IrpContext->DstFileFullPath.BufferSize );
 
                     } break;
 
@@ -238,7 +238,7 @@ PIRP_CONTEXT CreateIrpContext( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_
                         }
 
                         RtlStringCbCopyNW( IrpContext->DstFileFullPath.Buffer, IrpContext->DstFileFullPath.BufferSize, DestinationFileName->Name.Buffer, DestinationFileName->Name.Length );
-                        VolumeMgr_Replace( IrpContext->DstFileFullPath.Buffer, IrpContext->DstFileFullPath.BufferSize );
+                        VolumeMgr_Replace( IrpContext->DstFileFullPath.Buffer, &IrpContext->DstFileFullPath.BufferSize );
 
                     } break;
                 } // switch FileInformationClass

@@ -528,15 +528,17 @@ NTSTATUS InsertProcessInfo( __in ULONG uParentProcessId, ULONG uProcessId )
 
             if( procInfo->ProcessFileFullPathUni != NULLPTR )
             {
-                VolumeMgr_Replace( procInfo->ProcessFileFullPathUni->Buffer, procInfo->ProcessFileFullPathUni->Length );
+                ULONG Length = procInfo->ProcessFileFullPathUni->Length;
+                VolumeMgr_Replace( procInfo->ProcessFileFullPathUni->Buffer, &Length, true );
+                procInfo->ProcessFileFullPathUni->Length = ( USHORT )Length;
 
-                KdPrint( ( "[WinIOSol] [ProcNameMgr] %s Lv1. Proc=%06d,%wZ\n"
-                           , __FUNCTION__, uProcessId, procInfo->ProcessFileFullPathUni
+                KdPrint( ( "[WinIOSol] [ProcNameMgr] %s Lv1. Proc=%06d,%ws\n"
+                           , __FUNCTION__, uProcessId, procInfo->ProcessFileFullPathUni->Buffer
                            ) );
             }
             else if( procInfo->ProcessFileFullPath.Buffer != NULLPTR )
             {
-                VolumeMgr_Replace( procInfo->ProcessFileFullPath.Buffer, procInfo->ProcessFileFullPath.BufferSize );
+                VolumeMgr_Replace( procInfo->ProcessFileFullPath.Buffer, &procInfo->ProcessFileFullPath.BufferSize );
 
                 KdPrint( ( "[WinIOSol] [ProcNameMgr] %s Lv2. Proc=%06d,%ws\n"
                            , __FUNCTION__, uProcessId, procInfo->ProcessFileFullPath.Buffer

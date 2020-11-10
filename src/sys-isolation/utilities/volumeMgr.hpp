@@ -20,7 +20,7 @@ NTSTATUS UninitializeVolumeNameMgr();
 NTSTATUS VolumeMgr_Add( __in const WCHAR* DeviceVolumeName, __in WCHAR DriveLetter, __in CTX_INSTANCE_CONTEXT* InstanceContext );
 NTSTATUS VolumeMgr_Remove( __in const WCHAR* DeviceVolumeName );
 
-VOID VolumeMgr_Replace( __inout_bcount_z( BufferSize ) WCHAR* Path, __in ULONG BufferSize );
+VOID VolumeMgr_Replace( __inout_bcount_z( BufferSize ) WCHAR* Path, __in ULONG* BufferSize, bool IsUpdateBufferSize = false );
 
 /**
  * @brief 
