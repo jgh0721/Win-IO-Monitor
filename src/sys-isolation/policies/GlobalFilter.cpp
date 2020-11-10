@@ -63,7 +63,7 @@ GLOBAL_FILTER* GlobalFilter_Clone()
             InsertTailList( &NewFilter->IncludeListHead, &NewItem->ListEntry );
         }
 
-        Head = &NewFilter->ExcludeListHead;
+        Head = &OldFilter->ExcludeListHead;
         for( auto Current = Head->Flink; Current != Head; Current = Current->Flink )
         {
             auto Item = CONTAINING_RECORD( Current, GLOBAL_FILTER_ENTRY, ListEntry );
