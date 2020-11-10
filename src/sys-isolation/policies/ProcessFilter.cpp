@@ -426,7 +426,7 @@ NTSTATUS ProcessFilter_RemoveEntry( UUID* ParentId, UUID* EntryId, __in BOOLEAN 
     return Status;
 }
 
-NTSTATUS ProcessFilter_Match( ULONG ProcessId, TyGenericBuffer<WCHAR>* ProcessFilePath, HANDLE* ProcessFilter, PROCESS_FILTER_ENTRY** MatchItem )
+NTSTATUS ProcessFilter_Match( ULONG ProcessId, TyGenericBuffer<WCHAR>* ProcessFilePath, bool IsProcessNotify, HANDLE* ProcessFilter, PROCESS_FILTER_ENTRY** MatchItem )
 {
     NTSTATUS Status = STATUS_NOT_FOUND;
     auto PFilter = ProcessFilter_Ref();
@@ -463,6 +463,12 @@ NTSTATUS ProcessFilter_Match( ULONG ProcessId, TyGenericBuffer<WCHAR>* ProcessFi
         for( auto Current = Head->Flink; Current != Head; Current = Current->Flink )
         {
             auto Item = CONTAINING_RECORD( Current, PROCESS_FILTER_ENTRY, ListEntry );
+
+            if( IsProcessNotify == true && Item->ProcessFilter == 0 )
+                continue;
+
+            if( IsProcessNotify == false && Item->ProcessFilter != 0 )
+                continue;
 
             if( ( (ProcessId != 0) && (ProcessId == Item->ProcessId) ) ||
                 (  nsUtils::WildcardMatch_straight( ProcessFilePath->Buffer, Item->ProcessFilterMask ) == true )

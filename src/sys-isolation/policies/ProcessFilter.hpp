@@ -64,7 +64,7 @@ NTSTATUS ProcessFilter_RemoveEntry( __in UUID* ParentId, __in UUID* EntryId, __i
 /*!
     Must call ProcessFilter_Close after use 
 */
-NTSTATUS ProcessFilter_Match( __in_opt ULONG ProcessId, __in_opt TyGenericBuffer<WCHAR>* ProcessFilePath, __out_opt HANDLE* ProcessFilter, __out_opt PROCESS_FILTER_ENTRY** MatchItem );
+NTSTATUS ProcessFilter_Match( __in_opt ULONG ProcessId, __in_opt TyGenericBuffer<WCHAR>* ProcessFilePath, bool IsProcessNotify, __out_opt HANDLE* ProcessFilter, __out_opt PROCESS_FILTER_ENTRY** MatchItem );
 /*!
 
     @param IsIncludeMatch if criteria was matched, this variable set match type value

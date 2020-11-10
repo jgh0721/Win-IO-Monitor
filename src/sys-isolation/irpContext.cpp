@@ -1419,7 +1419,7 @@ NTSTATUS CheckEventToWithCREATE( IRP_CONTEXT* IrpContext, ULONG CheckFlags )
         {
             IrpContext->IsConcerned = false;
 
-            Status = ProcessFilter_Match( IrpContext->ProcessId, &IrpContext->ProcessFullPath, &IrpContext->ProcessFilter, &IrpContext->ProcessFilterEntry );
+            Status = ProcessFilter_Match( IrpContext->ProcessId, &IrpContext->ProcessFullPath, false, &IrpContext->ProcessFilter, &IrpContext->ProcessFilterEntry );
 
             IrpContext->IsConcerned = IrpContext->ProcessFilter != NULLPTR;
 
@@ -1479,7 +1479,7 @@ NTSTATUS CheckEventToWithDIRECTORY_CONTROL( IRP_CONTEXT* IrpContext, ULONG Check
         {
             IrpContext->IsConcerned = false;
 
-            Status = ProcessFilter_Match( IrpContext->ProcessId, &IrpContext->ProcessFullPath, &IrpContext->ProcessFilter, &IrpContext->ProcessFilterEntry );
+            Status = ProcessFilter_Match( IrpContext->ProcessId, &IrpContext->ProcessFullPath, false, &IrpContext->ProcessFilter, &IrpContext->ProcessFilterEntry );
 
             IrpContext->IsConcerned = IrpContext->ProcessFilter != NULLPTR;
 
@@ -1539,7 +1539,7 @@ NTSTATUS CheckEventToWithQUERY_INFORMATION( IRP_CONTEXT* IrpContext, ULONG Check
         {
             IrpContext->IsConcerned = false;
 
-            Status = ProcessFilter_Match( IrpContext->ProcessId, &IrpContext->ProcessFullPath, &IrpContext->ProcessFilter, &IrpContext->ProcessFilterEntry );
+            Status = ProcessFilter_Match( IrpContext->ProcessId, &IrpContext->ProcessFullPath, false, &IrpContext->ProcessFilter, &IrpContext->ProcessFilterEntry );
 
             IrpContext->IsConcerned = IrpContext->ProcessFilter != NULLPTR;
 
@@ -1617,7 +1617,7 @@ NTSTATUS CheckEventToWithSET_INFORMATION( IRP_CONTEXT* IrpContext, ULONG CheckFl
         {
             IrpContext->IsConcerned = false;
 
-            Status = ProcessFilter_Match( IrpContext->ProcessId, &IrpContext->ProcessFullPath, &IrpContext->ProcessFilter, &IrpContext->ProcessFilterEntry );
+            Status = ProcessFilter_Match( IrpContext->ProcessId, &IrpContext->ProcessFullPath, false, &IrpContext->ProcessFilter, &IrpContext->ProcessFilterEntry );
 
             IrpContext->IsConcerned = IrpContext->ProcessFilter != NULLPTR;
 

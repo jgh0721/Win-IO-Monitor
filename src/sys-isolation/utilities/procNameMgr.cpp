@@ -394,7 +394,7 @@ void CreateProcessNotifyRoutine( HANDLE ParentId, HANDLE ProcessId, BOOLEAN Crea
             InsertProcessInfo( ( ULONG )ParentId, ( ULONG )ProcessId );
 
             SearchProcessInfo( ( ULONG )ProcessId, &ProcessFileFullPath, &ProcessName );
-            if( ProcessFilter_Match( ( ULONG )ProcessId, &ProcessFileFullPath, &ProcessFilter, &ProcessFilterItem ) != STATUS_SUCCESS )
+            if( ProcessFilter_Match( ( ULONG )ProcessId, &ProcessFileFullPath, true, &ProcessFilter, &ProcessFilterItem ) != STATUS_SUCCESS )
                 break;
 
             if( !FlagOn( ProcessFilterItem->ProcessFilter, PROCESS_NOTIFY_CREATION_TERMINATION ) )
@@ -405,7 +405,7 @@ void CreateProcessNotifyRoutine( HANDLE ParentId, HANDLE ProcessId, BOOLEAN Crea
         else
         {
             SearchProcessInfo( ( ULONG )ProcessId, &ProcessFileFullPath, &ProcessName );
-            if( ProcessFilter_Match( ( ULONG )ProcessId, &ProcessFileFullPath, &ProcessFilter, &ProcessFilterItem ) == STATUS_SUCCESS )
+            if( ProcessFilter_Match( ( ULONG )ProcessId, &ProcessFileFullPath, true, &ProcessFilter, &ProcessFilterItem ) == STATUS_SUCCESS )
             {
                 if( FlagOn( ProcessFilterItem->ProcessFilter, PROCESS_NOTIFY_CREATION_TERMINATION ) )
                 {
