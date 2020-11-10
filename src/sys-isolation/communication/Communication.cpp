@@ -141,9 +141,9 @@ NTSTATUS NotifyFSEventToClient( FS_NOTIFY_ITEM* NotifyEventItem )
         if( GlobalContext.Filter == NULLPTR || ClientPort == NULLPTR )
             break;
 
-        ULONG uReplySize = MSG_REPLY_PACKET_SIZE;
         Reply = AllocateBuffer<MSG_REPLY_PACKET>( BUFFER_MSG_REPLY );
-        
+        ULONG uReplySize = Reply.BufferSize;
+
         Status = FltSendMessage( GlobalContext.Filter, &ClientPort,
                                  NotifyEventItem->SendPacket.Buffer, 
                                  NotifyEventItem->SendPacket.Buffer->MessageSize,
@@ -229,6 +229,10 @@ NTSTATUS CheckEventFileCreateTo( IRP_CONTEXT* IrpContext )
         unsigned int CchProcessFullPath = nsUtils::strlength( IrpContext->ProcessFullPath.Buffer ) + 1;
         unsigned int CchSrcFileFullpath = nsUtils::strlength( IrpContext->SrcFileFullPath.Buffer ) + 1;
 
+        SendPacketSize += CchProcessFullPath * sizeof( WCHAR );
+        SendPacketSize += CchSrcFileFullpath * sizeof( WCHAR );
+
+        Packet = AllocateBuffer<MSG_SEND_PACKET>( BUFFER_MSG_SEND, SendPacketSize );
         if( Packet.Buffer == NULLPTR || IrpContext->Result.Buffer == NULLPTR )
         {
             Status = STATUS_INSUFFICIENT_RESOURCES;
@@ -329,6 +333,10 @@ NTSTATUS CheckEventFileCleanup( IRP_CONTEXT* IrpContext )
         unsigned int CchProcessFullPath = nsUtils::strlength( IrpContext->ProcessFullPath.Buffer ) + 1;
         unsigned int CchSrcFileFullpath = nsUtils::strlength( IrpContext->SrcFileFullPath.Buffer ) + 1;
 
+        SendPacketSize += CchProcessFullPath * sizeof( WCHAR );
+        SendPacketSize += CchSrcFileFullpath * sizeof( WCHAR );
+
+        Packet = AllocateBuffer<MSG_SEND_PACKET>( BUFFER_MSG_SEND, SendPacketSize );
         if( Packet.Buffer == NULLPTR || IrpContext->Result.Buffer == NULLPTR )
         {
             Status = STATUS_INSUFFICIENT_RESOURCES;
@@ -415,6 +423,10 @@ NTSTATUS CheckEventFileClose( IRP_CONTEXT* IrpContext )
         unsigned int CchProcessFullPath = nsUtils::strlength( IrpContext->ProcessFullPath.Buffer ) + 1;
         unsigned int CchSrcFileFullpath = nsUtils::strlength( IrpContext->SrcFileFullPath.Buffer ) + 1;
 
+        SendPacketSize += CchProcessFullPath * sizeof( WCHAR );
+        SendPacketSize += CchSrcFileFullpath * sizeof( WCHAR );
+
+        Packet = AllocateBuffer<MSG_SEND_PACKET>( BUFFER_MSG_SEND, SendPacketSize );
         if( Packet.Buffer == NULLPTR || IrpContext->Result.Buffer == NULLPTR )
         {
             Status = STATUS_INSUFFICIENT_RESOURCES;
@@ -486,6 +498,12 @@ NTSTATUS NotifyEventFileRenameTo( IRP_CONTEXT* IrpContext )
         unsigned int CchSrcFileFullpath = nsUtils::strlength( IrpContext->SrcFileFullPath.Buffer ) + 1;
         unsigned int CchDstFileFullpath = nsUtils::strlength( IrpContext->DstFileFullPath.Buffer ) + 1;
 
+        SendPacketSize += CchProcessFullPath * sizeof( WCHAR );
+        SendPacketSize += CchSrcFileFullpath * sizeof( WCHAR );
+        SendPacketSize += CchDstFileFullpath * sizeof( WCHAR );
+
+        Packet = AllocateBuffer<MSG_SEND_PACKET>( BUFFER_MSG_SEND, SendPacketSize );
+
         if( Packet.Buffer == NULLPTR )
         {
             Status = STATUS_INSUFFICIENT_RESOURCES;
@@ -547,6 +565,11 @@ NTSTATUS NotifyEventFileDeleteTo( IRP_CONTEXT* IrpContext )
         unsigned int SendPacketSize = MSG_SEND_PACKET_SIZE;
         unsigned int CchProcessFullPath = nsUtils::strlength( IrpContext->ProcessFullPath.Buffer ) + 1;
         unsigned int CchSrcFileFullpath = nsUtils::strlength( IrpContext->SrcFileFullPath.Buffer ) + 1;
+
+        SendPacketSize += CchProcessFullPath * sizeof( WCHAR );
+        SendPacketSize += CchSrcFileFullpath * sizeof( WCHAR );
+
+        Packet = AllocateBuffer<MSG_SEND_PACKET>( BUFFER_MSG_SEND, SendPacketSize );
 
         if( Packet.Buffer == NULLPTR )
         {
@@ -610,9 +633,12 @@ NTSTATUS CheckEventProcCreateTo( ULONG ProcessId, ULONG ParentProcessId, TyGener
             __leave;
         }
 
-        unsigned int SendPacketSize = MSG_SEND_PACKET_SIZE;
+        unsigned int SendPacketSize = sizeof( MSG_SEND_PACKET );
         unsigned int CchProcessFullPath = nsUtils::strlength( ProcessFileFullPath->Buffer ) + 1;
 
+        SendPacketSize += CchProcessFullPath * sizeof( WCHAR );
+
+        Packet = AllocateBuffer<MSG_SEND_PACKET>( BUFFER_MSG_SEND, SendPacketSize );
         if( Packet.Buffer == NULLPTR || Reply.Buffer == NULLPTR )
         {
             Status = STATUS_INSUFFICIENT_RESOURCES;
@@ -687,9 +713,12 @@ NTSTATUS CheckEventProcTerminateTo( ULONG ProcessId, ULONG ParentProcessId, TyGe
             __leave;
         }
 
-        unsigned int SendPacketSize = MSG_SEND_PACKET_SIZE;
+        unsigned int SendPacketSize = sizeof( MSG_SEND_PACKET );
         unsigned int CchProcessFullPath = nsUtils::strlength( ProcessFileFullPath->Buffer ) + 1;
 
+        SendPacketSize += CchProcessFullPath * sizeof( WCHAR );
+
+        Packet = AllocateBuffer<MSG_SEND_PACKET>( BUFFER_MSG_SEND, SendPacketSize );
         if( Packet.Buffer == NULLPTR || Reply.Buffer == NULLPTR )
         {
             Status = STATUS_INSUFFICIENT_RESOURCES;
