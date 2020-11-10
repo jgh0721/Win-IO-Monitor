@@ -2269,17 +2269,17 @@ namespace nsUtils
 
     WCHAR* ReverseFindW( __in_z WCHAR* wszString, WCHAR ch, int iCchLength /* = -1 */ )
 	{
-		size_t length = iCchLength == -1 ? strlength( wszString ) : iCchLength;
+        LONGLONG length = iCchLength == -1 ? ( LONGLONG )strlength( wszString ) : ( LONGLONG )iCchLength;
 
-		for( size_t i = length; i >= 0; i-- )
-		{
-			if( wszString[ i ] == ch )
-			{
-				return &wszString[ i ];
-			}
-		}
+        for( LONGLONG i = length - 1; i >= 0; i-- )
+        {
+            if( wszString[ i ] == ch )
+            {
+                return &wszString[ i ];
+            }
+        }
 
-		return NULL;
+        return NULL;
 	}
 
 	WCHAR* ForwardFindW( __in_z WCHAR* wszString, WCHAR ch )
