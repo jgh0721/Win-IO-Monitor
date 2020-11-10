@@ -62,6 +62,9 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
         ///////////////////////////////////////////////////////////////////////
         /// Validate Input
 
+        if( FeatureContext.IsRunning <= 0 )
+            __leave;
+
         if( BooleanFlagOn( Data->Iopb->OperationFlags, SL_OPEN_PAGING_FILE ) )
             __leave;
 
@@ -77,6 +80,10 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCreate( PFLT_CALLBACK_DATA Data, PCFLT
         Args.DeleteOnClose = FlagOn( Args.CreateOptions, FILE_DELETE_ON_CLOSE ) > 0;
         Args.RequiringOplock = FlagOn( Args.CreateOptions, FILE_OPEN_REQUIRING_OPLOCK ) > 0;
         RtlZeroMemory( &Args.MetaDataInfo, METADATA_DRIVER_SIZE );
+
+        // 실행을 위한 파일 열기는 항상 허용
+        if( FlagOn( Args.CreateDesiredAccess, FILE_EXECUTE ) )
+            __leave;
 
         if( BooleanFlagOn( Args.CreateOptions, FILE_DIRECTORY_FILE ) )
             __leave;
