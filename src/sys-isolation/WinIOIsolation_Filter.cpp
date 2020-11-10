@@ -279,7 +279,7 @@ NTSTATUS InitializeMiniFilterPort( CTX_GLOBAL_DATA* GlobalContext )
         InitializeObjectAttributes( &OA, &PortName, OBJ_KERNEL_HANDLE | OBJ_CASE_INSENSITIVE, NULL, SD );
         
         Status = FltCreateCommunicationPort( GlobalContext->Filter, &GlobalContext->ServerPort, 
-                                             &OA, GlobalContext->ServerPort,
+                                             &OA, (PVOID)1,
                                              ClientConnectNotify,
                                              ClientDisconnectNotify,
                                              ClientMessageNotify,
@@ -296,7 +296,7 @@ NTSTATUS InitializeMiniFilterPort( CTX_GLOBAL_DATA* GlobalContext )
         InitializeObjectAttributes( &OA, &PortName, OBJ_KERNEL_HANDLE | OBJ_CASE_INSENSITIVE, NULL, SD );
 
         Status = FltCreateCommunicationPort( GlobalContext->Filter, &GlobalContext->ServerProcPort,
-                                             &OA, GlobalContext->ServerProcPort,
+                                             &OA, (PVOID)2,
                                              ClientConnectNotify,
                                              ClientDisconnectNotify,
                                              ClientMessageNotify,
@@ -338,7 +338,7 @@ NTSTATUS FLTAPI MiniFilterUnload( FLT_FILTER_UNLOAD_FLAGS Flags )
 NTSTATUS FLTAPI ClientConnectNotify( PFLT_PORT ClientPort, PVOID ServerPortCookie, PVOID ConnectionContext,
                               ULONG SizeOfContext, PVOID* ConnectionPortCookie )
 {
-    if( ServerPortCookie == GlobalContext.ServerPort )
+    if( ServerPortCookie == (PVOID)1 )
     {
         // 최초에 접속한 클라이언트를 주 제어 프로세스로 인정한다
         if( FeatureContext.CntlProcessId != 0 && FeatureContext.CntlProcessId != (ULONG)PsGetCurrentProcessId() )
@@ -359,7 +359,7 @@ NTSTATUS FLTAPI ClientConnectNotify( PFLT_PORT ClientPort, PVOID ServerPortCooki
             FeatureContext.CntlProcessId = ( ULONG )PsGetCurrentProcessId();
     }
 
-    if( ServerPortCookie == GlobalContext.ServerProcPort )
+    if( ServerPortCookie == (PVOID)2 )
     {
         *ConnectionPortCookie = ( PVOID )-1;
     }
