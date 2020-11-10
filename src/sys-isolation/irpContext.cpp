@@ -1407,6 +1407,9 @@ NTSTATUS CheckEventToWithCREATE( IRP_CONTEXT* IrpContext, ULONG CheckFlags )
             {
                 IrpContext->IsConcerned = true;
             }
+
+            if( Status != STATUS_NO_DATA_DETECTED && IrpContext->IsConcerned == false )
+                break;
         }
 
         if( IrpContext->ProcessId <= 4 )
@@ -1464,6 +1467,9 @@ NTSTATUS CheckEventToWithDIRECTORY_CONTROL( IRP_CONTEXT* IrpContext, ULONG Check
             {
                 IrpContext->IsConcerned = true;
             }
+
+            if( Status != STATUS_NO_DATA_DETECTED && IrpContext->IsConcerned == false )
+                break;
         }
 
         if( IrpContext->ProcessId <= 4 )
@@ -1521,6 +1527,9 @@ NTSTATUS CheckEventToWithQUERY_INFORMATION( IRP_CONTEXT* IrpContext, ULONG Check
             {
                 IrpContext->IsConcerned = true;
             }
+
+            if( Status != STATUS_NO_DATA_DETECTED && IrpContext->IsConcerned == false )
+                break;
         }
 
         if( IrpContext->ProcessId <= 4 )
@@ -1596,6 +1605,9 @@ NTSTATUS CheckEventToWithSET_INFORMATION( IRP_CONTEXT* IrpContext, ULONG CheckFl
                     IrpContext->IsConcerned = true;
                 }
             }
+
+            if( Status != STATUS_NO_DATA_DETECTED && IrpContext->IsConcerned == false )
+                break;
         }
 
         if( IrpContext->ProcessId <= 4 )
