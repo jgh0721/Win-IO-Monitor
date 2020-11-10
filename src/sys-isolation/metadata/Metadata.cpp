@@ -256,11 +256,8 @@ METADATA_TYPE GetFileMetaDataInfo( __in IRP_CONTEXT* IrpContext, __in PFILE_OBJE
 
 METADATA_TYPE GetFileMetaDataInfo( const wchar_t* SrcFileFullPath, METADATA_DRIVER* MetaDataInfo, PVOID* SolutionMetaData, ULONG* SolutionMetaDataSize )
 {
-    TyGenericBuffer<WCHAR>  DeviceNamePath;
     IRP_CONTEXT*            IrpContext = NULLPTR;
-    CTX_INSTANCE_CONTEXT*   InstanceContext = NULLPTR;
     METADATA_TYPE           MetaDataType = METADATA_UNK_TYPE;
-    PFLT_RELATED_OBJECTS    FltObjects = NULLPTR;
 
     HANDLE                  FileHandle = NULL;
     FILE_OBJECT*            FileObject = NULLPTR;
@@ -298,10 +295,6 @@ METADATA_TYPE GetFileMetaDataInfo( const wchar_t* SrcFileFullPath, METADATA_DRIV
             break;
         }
 
-        FltObjects = ( PFLT_RELATED_OBJECTS )ExAllocatePool( NonPagedPool, sizeof( FLT_RELATED_OBJECTS ) );
-        RtlCopyMemory( FltObjects->Instance, InstanceContext->Instance, sizeof( PVOID ) );
-        IrpContext->FltObjects = FltObjects;
-
         IrpContext->SrcFileFullPath = AllocateBuffer<WCHAR>( BUFFER_FILENAME,
                                                              ( nsUtils::strlength( SrcFileFullPath ) + IrpContext->InstanceContext->DeviceNameCch + 1 ) * sizeof( WCHAR ) );
 
@@ -327,9 +320,6 @@ METADATA_TYPE GetFileMetaDataInfo( const wchar_t* SrcFileFullPath, METADATA_DRIV
 
     if( FileHandle != NULL )
         FltClose( FileHandle );
-
-    if( FltObjects != NULLPTR )
-        ExFreePool( FltObjects );
 
     CloseIrpContext( IrpContext );
     return MetaDataType;
