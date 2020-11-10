@@ -348,7 +348,7 @@ NTSTATUS ProcessFilter_Remove( ULONG ProcessId, const WCHAR* ProcessNameMask )
             auto Item = CONTAINING_RECORD( Current, PROCESS_FILTER_ENTRY, ListEntry );
 
             if( ( ( ProcessId != 0 ) && ( ProcessId == Item->ProcessId ) ) ||
-                ( _wcsicmp( ProcessNameMask, Item->ProcessFilterMask ) == 0 ) )
+                ( ( ProcessNameMask != NULLPTR ) && ( _wcsicmp( ProcessNameMask, Item->ProcessFilterMask ) == 0 ) ) )
             {
                 RemoveEntryList( &Item->ListEntry );
                 ProcessFilterEntry_Release( Item );
