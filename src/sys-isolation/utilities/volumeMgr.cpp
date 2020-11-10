@@ -58,6 +58,7 @@ VOLUME_INFO* VolumeNameMgr_Clone()
             RtlStringCchCopyW( NewItem->VolumeNameBuffer, 128, Item->VolumeNameBuffer );
             NewItem->VolumeNameCch = nsUtils::strlength( NewItem->VolumeNameBuffer );
             NewItem->Letter = Item->Letter;
+            NewItem->InstanceContext = Item->InstanceContext;
 
             InsertTailList( &NewVolumeNameMgr->ListHead, &NewItem->ListEntry );
         }
@@ -182,6 +183,8 @@ NTSTATUS VolumeMgr_Add( const WCHAR* DeviceVolumeName, WCHAR DriveLetter, CTX_IN
         Item->Letter = DriveLetter;
         Item->VolumeNameCch = nsUtils::strlength( Item->VolumeNameBuffer );
         Item->InstanceContext = InstanceContext;
+        InsertTailList( &VolumeNameMgr->ListHead, &Item->ListEntry );
+        InterlockedExchangePointer( &GlobalContext.VolumeNameMgr, VolumeNameMgr );
 
         Status = STATUS_SUCCESS;
 
