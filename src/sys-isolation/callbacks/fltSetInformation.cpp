@@ -136,6 +136,12 @@ FLT_POSTOP_CALLBACK_STATUS FLTAPI FilterPostSetInformation( PFLT_CALLBACK_DATA D
 
     do
     {
+        if( IrpContext != NULLPTR )
+        {
+            IrpContext->Data = Data;
+            IrpContext->FltObjects = FltObjects;
+        }
+
         if( !NT_SUCCESS( Data->IoStatus.Status ) )
             break;
 

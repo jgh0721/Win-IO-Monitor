@@ -92,7 +92,7 @@ PIRP_CONTEXT CreateIrpContext( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_
                 CtxGetContext( FltObjects, FltObjects->FileObject, FLT_STREAM_CONTEXT, (PFLT_CONTEXT*)&IrpContext->StreamContext );
         }
 
-        if( InstanceContext != NULLPTR )
+        if( InstanceContext == NULLPTR )
         {
             Status = CtxGetContext( FltObjects, NULLPTR, FLT_INSTANCE_CONTEXT, ( PFLT_CONTEXT* )&InstanceContext );
             if( !NT_SUCCESS( Status ) || InstanceContext == NULLPTR )

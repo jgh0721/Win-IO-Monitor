@@ -232,6 +232,12 @@ FLT_POSTOP_CALLBACK_STATUS FLTAPI FilterPostCleanup( PFLT_CALLBACK_DATA Data, PC
 
     do
     {
+        if( IrpContext != NULLPTR )
+        {
+            IrpContext->Data = Data;
+            IrpContext->FltObjects = FltObjects;
+        }
+
         if( !NT_SUCCESS( Data->IoStatus.Status ) )
             break;
 
