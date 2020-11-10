@@ -54,7 +54,9 @@ PROCESS_FILTER* ProcessFilter_Clone()
                 break;
 
             RtlZeroMemory( NewItem, sizeof( PROCESS_FILTER_ENTRY ) );
+            NewItem->Id = OldItem->Id;
             NewItem->ProcessId = OldItem->ProcessId;
+            NewItem->ProcessFilter = OldItem->ProcessFilter;
             RtlStringCchCopyW( NewItem->ProcessFilterMask, MAX_PATH, OldItem->ProcessFilterMask );
 
             InitializeListHead( &NewItem->IncludeListHead );
@@ -71,6 +73,10 @@ PROCESS_FILTER* ProcessFilter_Clone()
                     break;
 
                 RtlZeroMemory( NewMask, sizeof( PROCESS_FILTER_MASK_ENTRY ) );
+
+                NewMask->FilterType = OldMask->FilterType;
+                NewMask->FilterCategory = OldMask->FilterCategory;
+
                 RtlStringCchCopyW( NewMask->FilterMask, MAX_PATH, OldMask->FilterMask );
                 InsertTailList( &NewItem->IncludeListHead, &NewMask->ListEntry );
             }
@@ -84,6 +90,10 @@ PROCESS_FILTER* ProcessFilter_Clone()
                     break;
 
                 RtlZeroMemory( NewMask, sizeof( PROCESS_FILTER_MASK_ENTRY ) );
+
+                NewMask->FilterType = OldMask->FilterType;
+                NewMask->FilterCategory = OldMask->FilterCategory;
+
                 RtlStringCchCopyW( NewMask->FilterMask, MAX_PATH, OldMask->FilterMask );
                 InsertTailList( &NewItem->ExcludeListHead, &NewMask->ListEntry );
             }
