@@ -45,4 +45,11 @@ WCHAR* ExtractFileFullPathWOVolume( __in CTX_INSTANCE_CONTEXT* InstanceContext, 
 WCHAR* ExtractFileFullPathWOVolume( __in CTX_INSTANCE_CONTEXT* InstanceContext, __in WCHAR* FileFullPath );
 
 
+TyGenericBuffer<WCHAR> ExtractFileFullPath( __in PFLT_CALLBACK_DATA Data, __in CTX_INSTANCE_CONTEXT* InstanceContext );
+
+TyGenericBuffer<WCHAR> ExtractDstFileFullPath( __in PFLT_INSTANCE Instance, __in PFILE_OBJECT FileObject, __in HANDLE RootDirectory,
+                                               __in PWSTR FileName, __in ULONG FileNameLength );
+
+CTX_RENLINK_CONTEXT RetrieveRenameLinkContext( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_OBJECTS FltObjects );
+
 #endif // HDR_DRIVER_UTILITIES

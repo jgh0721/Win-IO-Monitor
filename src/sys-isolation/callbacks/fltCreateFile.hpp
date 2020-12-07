@@ -25,6 +25,11 @@ FilterPostCreate( __inout PFLT_CALLBACK_DATA    Data,
 
 EXTERN_C_END
 
+// ULONG = TyEnCompleteState 조합
+ULONG CommonPreCreate( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_OBJECTS FltObjects, __inout_opt PVOID* CompletionContext,
+                       __out PIRP_CONTEXT* IrpContext );
+
+
 /*!
     Disposition         Action If File Exists               Action If File Does Not Exist
     -------------------------------------------------------------------------------------
@@ -61,10 +66,10 @@ enum TyEnFileStatus
 
 typedef struct _CREATE_ARGS
 {
+    FILE_OBJECT*            FileObject;         // IRP 를 통해 전달받은 상위 FileObject
     LARGE_INTEGER           FileSize;
     LARGE_INTEGER           FileAllocationSize;
     ULONG                   FileStatus;         // TyEnFileStatus
-    FILE_OBJECT*            FileObject;         // IRP 를 통해 전달받은 상위 FileObject
 
     ULONG                   CreateOptions;
     ULONG                   CreateDisposition;
@@ -72,6 +77,7 @@ typedef struct _CREATE_ARGS
     TyGenericBuffer<WCHAR>  CreateFileName;     // FltCreateFileEx 를 호출하기 위한 디바이스이름\경로\이름
     UNICODE_STRING          CreateFileNameUS;
     OBJECT_ATTRIBUTES       CreateObjectAttributes;
+    PIO_SECURITY_CONTEXT    CreateSecurityContext;
     bool                    DeleteOnClose;
     bool                    RequiringOplock;
     

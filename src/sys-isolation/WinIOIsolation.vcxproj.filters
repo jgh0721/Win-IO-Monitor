@@ -49,6 +49,9 @@
     <Filter Include="Features\Communication">
       <UniqueIdentifier>{89277226-e41a-48b0-a684-b93a1a312a7e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="callbacks\cacheControl">
+      <UniqueIdentifier>{9d1e6d09-10a3-46a1-9d8a-5569921295fe}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="fltBase.hpp">
@@ -168,19 +171,10 @@
     <ClInclude Include="callbacks\fltNetworkQueryOpen.hpp">
       <Filter>callbacks</Filter>
     </ClInclude>
-    <ClInclude Include="callbacks\cacheManagerCallbacks.hpp">
-      <Filter>callbacks</Filter>
-    </ClInclude>
     <ClInclude Include="..\cmn\W32API_NTSTATUS.hpp">
       <Filter>common files</Filter>
     </ClInclude>
-    <ClInclude Include="callbacks\fltSectionSynchronization.hpp">
-      <Filter>callbacks</Filter>
-    </ClInclude>
     <ClInclude Include="callbacks\fltQueryVolumeInformation.hpp">
-      <Filter>callbacks</Filter>
-    </ClInclude>
-    <ClInclude Include="callbacks\fltCcFlush.hpp">
       <Filter>callbacks</Filter>
     </ClInclude>
     <ClInclude Include="callbacks\fltFileSystemControl.hpp">
@@ -194,9 +188,6 @@
     </ClInclude>
     <ClInclude Include="..\cmn\W32API_DBGHelper.hpp">
       <Filter>common files</Filter>
-    </ClInclude>
-    <ClInclude Include="callbacks\fltModWrite.hpp">
-      <Filter>callbacks</Filter>
     </ClInclude>
     <ClInclude Include="callbacks\fltQuerySecurityInformation.hpp">
       <Filter>callbacks</Filter>
@@ -275,6 +266,34 @@
     </ClInclude>
     <ClInclude Include="cipher\Cipher_Krnl.hpp">
       <Filter>Features\Encryption</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cmn\W32API_NTSTATUS_Impl.ipp" />
+    <ClInclude Include="..\cmn\iMonFSD_Names.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="callbacks\cacheControl\cacheManagerCallbacks.hpp">
+      <Filter>callbacks\cacheControl</Filter>
+    </ClInclude>
+    <ClInclude Include="callbacks\cacheControl\fltCcFlush.hpp">
+      <Filter>callbacks\cacheControl</Filter>
+    </ClInclude>
+    <ClInclude Include="callbacks\cacheControl\fltModWrite.hpp">
+      <Filter>callbacks\cacheControl</Filter>
+    </ClInclude>
+    <ClInclude Include="callbacks\cacheControl\fltSectionSynchronization.hpp">
+      <Filter>callbacks\cacheControl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cmn\W32API_Formatter.hpp">
+      <Filter>common files</Filter>
+    </ClInclude>
+    <ClInclude Include="callbacks\fltSetVolumeInformation.hpp">
+      <Filter>callbacks</Filter>
+    </ClInclude>
+    <ClInclude Include="cache\fileMetaDataInfoCache_Defs.hpp">
+      <Filter>cache</Filter>
+    </ClInclude>
+    <ClInclude Include="cache\fileMetaDataInfoCache.hpp">
+      <Filter>cache</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -362,16 +381,7 @@
     <ClCompile Include="callbacks\fltNetworkQueryOpen.cpp">
       <Filter>callbacks</Filter>
     </ClCompile>
-    <ClCompile Include="callbacks\cacheManagerCallbacks.cpp">
-      <Filter>callbacks</Filter>
-    </ClCompile>
-    <ClCompile Include="callbacks\fltSectionSynchronization.cpp">
-      <Filter>callbacks</Filter>
-    </ClCompile>
     <ClCompile Include="callbacks\fltQueryVolumeInformation.cpp">
-      <Filter>callbacks</Filter>
-    </ClCompile>
-    <ClCompile Include="callbacks\fltCcFlush.cpp">
       <Filter>callbacks</Filter>
     </ClCompile>
     <ClCompile Include="callbacks\fltFileSystemControl.cpp">
@@ -385,9 +395,6 @@
     </ClCompile>
     <ClCompile Include="..\cmn\W32API_DBGHelper.cpp">
       <Filter>common files</Filter>
-    </ClCompile>
-    <ClCompile Include="callbacks\fltModWrite.cpp">
-      <Filter>callbacks</Filter>
     </ClCompile>
     <ClCompile Include="callbacks\fltQuerySecurityInformation.cpp">
       <Filter>callbacks</Filter>
@@ -433,6 +440,24 @@
     </ClCompile>
     <ClCompile Include="cipher\Cipher_Krnl.cpp">
       <Filter>Features\Encryption</Filter>
+    </ClCompile>
+    <ClCompile Include="callbacks\cacheControl\cacheManagerCallbacks.cpp">
+      <Filter>callbacks\cacheControl</Filter>
+    </ClCompile>
+    <ClCompile Include="callbacks\cacheControl\fltCcFlush.cpp">
+      <Filter>callbacks\cacheControl</Filter>
+    </ClCompile>
+    <ClCompile Include="callbacks\cacheControl\fltModWrite.cpp">
+      <Filter>callbacks\cacheControl</Filter>
+    </ClCompile>
+    <ClCompile Include="callbacks\cacheControl\fltSectionSynchronization.cpp">
+      <Filter>callbacks\cacheControl</Filter>
+    </ClCompile>
+    <ClCompile Include="callbacks\fltSetVolumeInformation.cpp">
+      <Filter>callbacks</Filter>
+    </ClCompile>
+    <ClCompile Include="cache\fileMetaDataInfoCache.cpp">
+      <Filter>cache</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -25,15 +25,21 @@ EXTERN_C_END
 
 ///////////////////////////////////////////////////////////////////////////////
 
+// ULONG = TyEnCompleteState 조합
+ULONG CommonPreSetInformation( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_OBJECTS FltObjects, __inout_opt PVOID* CompletionContext,
+                               __out PIRP_CONTEXT* IrpContext );
+
 NTSTATUS ProcessSetFileAllocationInformation( __in IRP_CONTEXT* IrpContext );
 NTSTATUS ProcessSetFileEndOfFileInformation( __in IRP_CONTEXT* IrpContext );
 NTSTATUS ProcessSetFileValidDataLengthInformation( __in IRP_CONTEXT* IrpContext );
 NTSTATUS ProcessSetFilePositionInformation( __in IRP_CONTEXT* IrpContext );
-NTSTATUS ProcessSetFileRenameInformation( __in IRP_CONTEXT* IrpContext );
-NTSTATUS ProcessSetFileRenameInformationEx( __in IRP_CONTEXT* IrpContext );
+NTSTATUS ProcessSetFileUnifiedRenameInformation( __in IRP_CONTEXT* IrpContext );
 NTSTATUS ProcessSetFileDispositionInformation( __in IRP_CONTEXT* IrpContext );
 NTSTATUS ProcessSetFileDispositionInformationEx( __in IRP_CONTEXT* IrpContext );
 
 NTSTATUS ProcessSetFileInformation( __in IRP_CONTEXT* IrpContext );
+
+// @param DstFileFullPath 에는 사용자가 전달한 변경하려는 이름을 전달한다( 드라이버에 의해 실제 변경된 이름이 아님 )
+void PostProcessFileRename( __in IRP_CONTEXT* IrpContext, __in TyGenericBuffer<WCHAR>* DstFileFullPath );
 
 #endif // HDR_ISOLATION_SET_INFORMATION

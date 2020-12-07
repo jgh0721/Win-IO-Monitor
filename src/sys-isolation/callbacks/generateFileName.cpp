@@ -145,7 +145,7 @@ NTSTATUS FLTAPI FilterNormalizeNameComponentEx( PFLT_INSTANCE Instance, PFILE_OB
                                                 PVOID* NormalizationContext )
 {
     NTSTATUS status = STATUS_SUCCESS;
-    HANDLE parentDirHandle = NULL;
+    HANDLE parentDirHandle = NULLPTR;
     OBJECT_ATTRIBUTES parentDirAttributes;
     BOOLEAN isDestinationFile;
     BOOLEAN isCaseSensitive;
@@ -250,7 +250,7 @@ NTSTATUS FLTAPI FilterNormalizeNameComponentEx( PFLT_INSTANCE Instance, PFILE_OB
     }
     __finally
     {
-        if( parentDirHandle != NULL )
+        if( parentDirHandle != NULLPTR )
         {
             FltClose( parentDirHandle );
         }

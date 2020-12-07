@@ -104,10 +104,7 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreQueryInformation( PFLT_CALLBACK_DATA D
                                                               Data->Iopb->Parameters.QueryFileInformation.FileInformationClass, &ReturnLength );
 
                 AssignCmnResult( IrpContext, IrpContext->Status );
-                if( NT_SUCCESS( IrpContext->Status ) )
-                {
-                    AssignCmnResultInfo( IrpContext, ReturnLength );
-                }
+                AssignCmnResultInfo( IrpContext, ReturnLength );
 
             } break;
         }
@@ -154,7 +151,6 @@ FLT_POSTOP_CALLBACK_STATUS FLTAPI FilterPostQueryInformation( PFLT_CALLBACK_DATA
 NTSTATUS ProcessFileBasicInformation( IRP_CONTEXT* IrpContext )
 {
     NTSTATUS Status = STATUS_SUCCESS;
-    ULONG_PTR Information = 0;
     ULONG LengthReturned = 0;
 
     auto InputBuffer = IrpContext->Data->Iopb->Parameters.QueryFileInformation.InfoBuffer;
@@ -163,8 +159,8 @@ NTSTATUS ProcessFileBasicInformation( IRP_CONTEXT* IrpContext )
     __try
     {
         FILE_BASIC_INFORMATION fbi;
-
         RtlZeroMemory( &fbi, sizeof( fbi ) );
+
         Status = FltQueryInformationFile( IrpContext->FltObjects->Instance,
                                           IrpContext->Fcb->LowerFileObject,
                                           &fbi,
@@ -182,13 +178,12 @@ NTSTATUS ProcessFileBasicInformation( IRP_CONTEXT* IrpContext )
             __leave;
         }
 
-        RtlCopyMemory( InputBuffer, &fbi, LengthReturned );
-        Information = LengthReturned;
+        RtlCopyMemory( InputBuffer, &fbi, Length );
     }
     __finally
     {
         AssignCmnResult( IrpContext, Status );
-        AssignCmnResultInfo( IrpContext, Information );
+        AssignCmnResultInfo( IrpContext, LengthReturned );
     }
 
     return Status;
@@ -197,7 +192,6 @@ NTSTATUS ProcessFileBasicInformation( IRP_CONTEXT* IrpContext )
 NTSTATUS ProcessFileStandardInformation( IRP_CONTEXT* IrpContext )
 {
     NTSTATUS Status = STATUS_SUCCESS;
-    ULONG_PTR Information = 0;
     ULONG LengthReturned = 0;
 
     PVOID InputBuffer = IrpContext->Data->Iopb->Parameters.QueryFileInformation.InfoBuffer;
@@ -212,6 +206,7 @@ NTSTATUS ProcessFileStandardInformation( IRP_CONTEXT* IrpContext )
         }
 
         FILE_STANDARD_INFORMATION FileStdInfo;
+        RtlZeroMemory( &FileStdInfo, sizeof( FileStdInfo ) );
 
         Status = FltQueryInformationFile( IrpContext->FltObjects->Instance, 
                                           IrpContext->Fcb->LowerFileObject,
@@ -235,13 +230,12 @@ NTSTATUS ProcessFileStandardInformation( IRP_CONTEXT* IrpContext )
             FileStdInfo.AllocationSize = IrpContext->Fcb->AdvFcbHeader.AllocationSize;
         }
 
-        RtlCopyMemory( InputBuffer, &FileStdInfo, sizeof( FILE_STANDARD_INFORMATION ) );
-        Information = LengthReturned;
+        RtlCopyMemory( InputBuffer, &FileStdInfo, Length );
     }
     __finally
     {
         AssignCmnResult( IrpContext, Status );
-        AssignCmnResultInfo( IrpContext, Information );
+        AssignCmnResultInfo( IrpContext, LengthReturned );
     }
 
     return Status;
@@ -250,7 +244,6 @@ NTSTATUS ProcessFileStandardInformation( IRP_CONTEXT* IrpContext )
 NTSTATUS ProcessFileInternalInformation( IRP_CONTEXT* IrpContext )
 {
     NTSTATUS Status = STATUS_SUCCESS;
-    ULONG_PTR Information = 0;
     ULONG LengthReturned = 0;
 
     PVOID InputBuffer = IrpContext->Data->Iopb->Parameters.QueryFileInformation.InfoBuffer;
@@ -277,13 +270,11 @@ NTSTATUS ProcessFileInternalInformation( IRP_CONTEXT* IrpContext )
 
             __leave;
         }
-
-        Information = LengthReturned;
     }
     __finally
     {
         AssignCmnResult( IrpContext, Status );
-        AssignCmnResultInfo( IrpContext, Information );
+        AssignCmnResultInfo( IrpContext, LengthReturned );
     }
 
     return Status;
@@ -292,7 +283,6 @@ NTSTATUS ProcessFileInternalInformation( IRP_CONTEXT* IrpContext )
 NTSTATUS ProcessFileEaInformation( IRP_CONTEXT* IrpContext )
 {
     NTSTATUS Status = STATUS_SUCCESS;
-    ULONG_PTR Information = 0;
     ULONG LengthReturned = 0;
 
     PVOID InputBuffer = IrpContext->Data->Iopb->Parameters.QueryFileInformation.InfoBuffer;
@@ -319,13 +309,11 @@ NTSTATUS ProcessFileEaInformation( IRP_CONTEXT* IrpContext )
 
             __leave;
         }
-
-        Information = LengthReturned;
     }
     __finally
     {
         AssignCmnResult( IrpContext, Status );
-        AssignCmnResultInfo( IrpContext, Information );
+        AssignCmnResultInfo( IrpContext, LengthReturned );
     }
 
     return Status;
@@ -417,36 +405,40 @@ NTSTATUS ProcessFileAllInformation( IRP_CONTEXT* IrpContext )
 {
     NTSTATUS Status = STATUS_SUCCESS;
     ULONG_PTR Information = 0;
-    ULONG LengthReturned = 0;
 
     auto InputBuffer = (PFILE_ALL_INFORMATION)IrpContext->Data->Iopb->Parameters.QueryFileInformation.InfoBuffer;
     ULONG Length = IrpContext->Data->Iopb->Parameters.QueryFileInformation.Length;
+
+    auto Fcb = IrpContext->Fcb;
+    auto Ccb = IrpContext->Ccb;
+
+    ULONG LengthReturned = 0;
+    auto RequiredSize = sizeof( FILE_ALL_INFORMATION );
     PFILE_ALL_INFORMATION FileAllInformationBuffer = NULLPTR;
+    // NOTE: FILE_ALL_INFORMATION 에는 WCHAR 1개가 이미 할당되어있다. 또한, 커널 드라이버는 NULL 문자를 사용하지 않는다 
+    if( Fcb->FileFullPathWOVolume != NULLPTR && nsUtils::strlength( Fcb->FileFullPathWOVolume ) > 1 )
+        RequiredSize += ( nsUtils::strlength( Fcb->FileFullPathWOVolume ) * sizeof( WCHAR ) );
 
     __try
     {
-        auto Fcb = IrpContext->Fcb;
-        auto Ccb = ( CCB* )IrpContext->FltObjects->FileObject->FsContext2;
-        SIZE_T poolSize = sizeof( FILE_ALL_INFORMATION ) + ( nsUtils::strlength( Fcb->FileFullPath.Buffer ) * sizeof( WCHAR ) );
-
         if( Length == 0 )
         {
             Status = STATUS_INFO_LENGTH_MISMATCH;
-            Information = poolSize;
+            Information = RequiredSize;
             __leave;
         }
 
-        FileAllInformationBuffer = ( PFILE_ALL_INFORMATION )ExAllocatePoolWithTag( PagedPool, poolSize, POOL_MAIN_TAG );
-
-        if( FileAllInformationBuffer == NULL )
+        FileAllInformationBuffer = ( PFILE_ALL_INFORMATION )ExAllocatePoolWithTag( PagedPool, RequiredSize, POOL_MAIN_TAG );
+        if( FileAllInformationBuffer == NULLPTR )
         {
             Status = STATUS_INSUFFICIENT_RESOURCES;
             __leave;
         }
 
-        RtlZeroMemory( FileAllInformationBuffer, poolSize );
+        // NOTE: IO 관리자가 직접 채운 버퍼를 손상시키지 않기 위해 별도의 버퍼를 할당하여 정보를 획득한다. 
+        RtlZeroMemory( FileAllInformationBuffer, RequiredSize );
         Status = FltQueryInformationFile( IrpContext->FltObjects->Instance, Ccb->LowerFileObject,
-                                          FileAllInformationBuffer, poolSize,
+                                          FileAllInformationBuffer, RequiredSize,
                                           FileAllInformation, &LengthReturned );
 
         if( !NT_SUCCESS( Status ) )
@@ -457,75 +449,102 @@ NTSTATUS ProcessFileAllInformation( IRP_CONTEXT* IrpContext )
                        , Status, ntkernel_error_category::find_ntstatus( Status )->message
                        , IrpContext->InstanceContext->DeviceNameBuffer
                        , IrpContext->SrcFileFullPath.Buffer
-                        ) );
+                       ) );
             __leave;
         }
 
         // pre-post processing
         // based on http://fsfilters.blogspot.com/2011/11/filters-and-irpmjqueryinformation.html
         // based on FastFAT
-        ULONG AtLeastSize = 0;
-        ULONG RequiredLength = sizeof( FILE_ALL_INFORMATION ) + FileAllInformationBuffer->NameInformation.FileNameLength - sizeof( WCHAR );
+        /*!
+            typedef struct _FILE_ALL_INFORMATION {
+                FILE_BASIC_INFORMATION BasicInformation;
+                FILE_STANDARD_INFORMATION StandardInformation;
+                FILE_INTERNAL_INFORMATION InternalInformation;
+                FILE_EA_INFORMATION EaInformation;
+                FILE_ACCESS_INFORMATION AccessInformation;
+                FILE_POSITION_INFORMATION PositionInformation;
+                FILE_MODE_INFORMATION ModeInformation;
+                FILE_ALIGNMENT_INFORMATION AlignmentInformation;
+                FILE_NAME_INFORMATION NameInformation;
+            } FILE_ALL_INFORMATION, *PFILE_ALL_INFORMATION;
+        */
+        ULONG CopiedBytes = 0;
 
-        AtLeastSize += sizeof( FILE_BASIC_INFORMATION );
-        if( Length >= AtLeastSize )
+        CopiedBytes += sizeof( FILE_BASIC_INFORMATION );
+        if( Length >= CopiedBytes && LengthReturned >= CopiedBytes )
             RtlCopyMemory( &InputBuffer->BasicInformation, &FileAllInformationBuffer->BasicInformation, sizeof( FILE_BASIC_INFORMATION ) );
 
-        AtLeastSize += sizeof( FILE_STANDARD_INFORMATION );
-        if( Length >= AtLeastSize )
+        CopiedBytes += sizeof( FILE_STANDARD_INFORMATION );
+        if( Length >= CopiedBytes && LengthReturned >= CopiedBytes )
         {
             RtlCopyMemory( &InputBuffer->StandardInformation, &FileAllInformationBuffer->StandardInformation, sizeof( FILE_STANDARD_INFORMATION ) );
 
             if( ( IrpContext->ProcessFilter != NULLPTR ) &&
                 BooleanFlagOn( IrpContext->Fcb->Flags, FCB_STATE_METADATA_ASSOC ) )
             {
-                InputBuffer->StandardInformation.EndOfFile = IrpContext->Fcb->AdvFcbHeader.FileSize;
+                InputBuffer->StandardInformation.EndOfFile      = IrpContext->Fcb->AdvFcbHeader.FileSize;
                 InputBuffer->StandardInformation.AllocationSize = IrpContext->Fcb->AdvFcbHeader.AllocationSize;
             }
         }
 
-        AtLeastSize += sizeof( FILE_INTERNAL_INFORMATION );
-        if( Length >= AtLeastSize )
+        CopiedBytes += sizeof( FILE_INTERNAL_INFORMATION );
+        if( Length >= CopiedBytes && LengthReturned >= CopiedBytes )
             RtlCopyMemory( &InputBuffer->InternalInformation, &FileAllInformationBuffer->InternalInformation, sizeof( FILE_INTERNAL_INFORMATION ) );
 
-        AtLeastSize += sizeof( FILE_EA_INFORMATION );
-        if( Length >= AtLeastSize )
+        CopiedBytes += sizeof( FILE_EA_INFORMATION );
+        if( Length >= CopiedBytes && LengthReturned >= CopiedBytes )
             RtlCopyMemory( &InputBuffer->EaInformation, &FileAllInformationBuffer->EaInformation, sizeof( FILE_EA_INFORMATION ) );
 
         // this information was processed by IO Manager before call my callback
-        AtLeastSize += sizeof( FILE_ACCESS_INFORMATION );
+        CopiedBytes += sizeof( FILE_ACCESS_INFORMATION );
 
-        AtLeastSize += sizeof( FILE_POSITION_INFORMATION );
-        if( Length >= AtLeastSize )
+        CopiedBytes += sizeof( FILE_POSITION_INFORMATION );
+        if( Length >= CopiedBytes && LengthReturned >= CopiedBytes )
             InputBuffer->PositionInformation.CurrentByteOffset = IrpContext->FltObjects->FileObject->CurrentByteOffset;
 
         // this information was processed by IO Manager before call my callback
-        AtLeastSize += sizeof( FILE_MODE_INFORMATION );
+        CopiedBytes += sizeof( FILE_MODE_INFORMATION );
 
         // this information was processed by IO Manager before call my callback
-        AtLeastSize += sizeof( FILE_ALIGNMENT_INFORMATION );
+        CopiedBytes += sizeof( FILE_ALIGNMENT_INFORMATION );
 
-        if( Length >= ( AtLeastSize + sizeof( FILE_NAME_INFORMATION ) ) )
+        if( Length >= ( CopiedBytes + sizeof( FILE_NAME_INFORMATION) ) )
         {
-            auto RemainSize = Length - AtLeastSize;
-            RtlCopyMemory( &InputBuffer->NameInformation, &FileAllInformationBuffer->NameInformation, RemainSize );
+            CopiedBytes += sizeof( FILE_NAME_INFORMATION ) - sizeof( WCHAR );
+            // NOTE: 항상 파일이름을 모두 가져왔을 때의 길이를 넣는다
+            InputBuffer->NameInformation.FileNameLength = nsUtils::strlength( Fcb->FileFullPathWOVolume ) * sizeof( WCHAR );
 
-            if( RemainSize < InputBuffer->NameInformation.FileNameLength + sizeof( ULONG ) )
-                InputBuffer->NameInformation.FileNameLength = RemainSize - sizeof( ULONG );
+            auto RemainSize = Length - CopiedBytes;
+            RtlCopyMemory( &InputBuffer->NameInformation.FileName, &FileAllInformationBuffer->NameInformation.FileName, RemainSize );
 
+            // NOTE: 파일이름이 제대로 모두 복사되었을 때에만 이름을 조정한다
             if( ( IrpContext->ProcessFilter != NULLPTR ) &&
                 BooleanFlagOn( IrpContext->Fcb->Flags, FCB_STATE_METADATA_ASSOC ) )
             {
-                CorrectFileName( IrpContext, IrpContext->Fcb->MetaDataInfo, InputBuffer->NameInformation.FileName, InputBuffer->NameInformation.FileNameLength );
+                if( RemainSize >= InputBuffer->NameInformation.FileNameLength )
+                {
+                    auto src = InputBuffer->NameInformation.FileNameLength;
+
+                    CorrectFileName( IrpContext, IrpContext->Fcb->MetaDataInfo,
+                                     InputBuffer->NameInformation.FileName, InputBuffer->NameInformation.FileNameLength );
+
+                    LengthReturned -= src - InputBuffer->NameInformation.FileNameLength;
+                }
             }
         }
 
-        if( Length >= RequiredLength )
+        if( Length >= RequiredSize )
             Status = STATUS_SUCCESS;
         else
             Status = STATUS_BUFFER_OVERFLOW;
 
-        Information = Length;
+        // NOTE: 간혹가다 정신없는 녀석들이 초기 할당 버퍼를 터무니없이 크게 요청하는 경우가 있다( 예), 버퍼크기 65536 등 )
+        // NOTE: 이곳에서는 실제 반환되는 크기를 정확히 전달해야한다
+        if( Length > LengthReturned )
+            Information = LengthReturned;
+        else
+            Information = Length;
     }
     __finally
     {
@@ -542,7 +561,6 @@ NTSTATUS ProcessFileAllInformation( IRP_CONTEXT* IrpContext )
 NTSTATUS ProcessFileStreamInformation( IRP_CONTEXT* IrpContext )
 {
     NTSTATUS Status = STATUS_SUCCESS;
-    ULONG_PTR Information = 0;
     ULONG LengthReturned = 0;
 
     PVOID InputBuffer = IrpContext->Data->Iopb->Parameters.QueryFileInformation.InfoBuffer;
@@ -591,7 +609,7 @@ NTSTATUS ProcessFileStreamInformation( IRP_CONTEXT* IrpContext )
             Offset = InfoBuffer->NextEntryOffset;
 
             if( (InfoBuffer->StreamNameLength == 0) || 
-                ( (InfoBuffer->StreamNameLength == (_countof( NTFS_DEFAULT_STREAM) * sizeof(WCHAR))) && 
+                ( (InfoBuffer->StreamNameLength == (_countof( NTFS_DEFAULT_STREAM ) * sizeof(WCHAR) - sizeof(WCHAR) )) && 
                   (RtlCompareMemory( InfoBuffer->StreamName, NTFS_DEFAULT_STREAM, InfoBuffer->StreamNameLength ) == InfoBuffer->StreamNameLength ) ) )
             {
                 if( ( IrpContext->ProcessFilter != NULLPTR ) &&
@@ -604,7 +622,7 @@ NTSTATUS ProcessFileStreamInformation( IRP_CONTEXT* IrpContext )
             else
             {
                 // 추가 스트림 목록
-                if( InfoBuffer->StreamNameLength >= (_countof( NTFS_ALTERNATE_STREAM ) * sizeof(WCHAR)) )
+                if( InfoBuffer->StreamNameLength >= (_countof( NTFS_ALTERNATE_STREAM ) * sizeof(WCHAR) - sizeof(WCHAR) ) )
                 {
                     if( nsUtils::EndsWithW( InfoBuffer->StreamName, NTFS_ALTERNATE_STREAM ) != NULLPTR )
                     {
@@ -622,7 +640,7 @@ NTSTATUS ProcessFileStreamInformation( IRP_CONTEXT* IrpContext )
     __finally
     {
         AssignCmnResult( IrpContext, Status );
-        AssignCmnResultInfo( IrpContext, Information );
+        AssignCmnResultInfo( IrpContext, LengthReturned );
     }
 
     return Status;
@@ -631,7 +649,6 @@ NTSTATUS ProcessFileStreamInformation( IRP_CONTEXT* IrpContext )
 NTSTATUS ProcessFileCompressionInformation( IRP_CONTEXT* IrpContext )
 {
     NTSTATUS Status = STATUS_SUCCESS;
-    ULONG_PTR Information = 0;
     ULONG LengthReturned = 0;
 
     PVOID InputBuffer = IrpContext->Data->Iopb->Parameters.QueryFileInformation.InfoBuffer;
@@ -658,13 +675,11 @@ NTSTATUS ProcessFileCompressionInformation( IRP_CONTEXT* IrpContext )
 
             __leave;
         }
-
-        Information = LengthReturned;
     }
     __finally
     {
         AssignCmnResult( IrpContext, Status );
-        AssignCmnResultInfo( IrpContext, Information );
+        AssignCmnResultInfo( IrpContext, LengthReturned );
     }
 
     return Status;
@@ -673,7 +688,6 @@ NTSTATUS ProcessFileCompressionInformation( IRP_CONTEXT* IrpContext )
 NTSTATUS ProcessFileNetworkOpenInformation( IRP_CONTEXT* IrpContext )
 {
     NTSTATUS Status = STATUS_SUCCESS;
-    ULONG_PTR Information = 0;
     ULONG LengthReturned = 0;
 
     PVOID InputBuffer = IrpContext->Data->Iopb->Parameters.QueryFileInformation.InfoBuffer;
@@ -693,7 +707,7 @@ NTSTATUS ProcessFileNetworkOpenInformation( IRP_CONTEXT* IrpContext )
                                           &networkOpenInfo, sizeof( FILE_NETWORK_OPEN_INFORMATION ),
                                           FileNetworkOpenInformation, &LengthReturned );
 
-        if( !NT_SUCCESS( Status ) )
+        if( !NT_SUCCESS( Status ) && Status != STATUS_BUFFER_OVERFLOW )
         {
             KdPrint( ( "[WinIOSol] EvtID=%09d %s %s Line=%d Status=0x%08x,%s Src=%ws\n",
                        IrpContext->EvtID, __FUNCTION__, "FltQueryInformationFile FAILED", __LINE__
@@ -711,12 +725,11 @@ NTSTATUS ProcessFileNetworkOpenInformation( IRP_CONTEXT* IrpContext )
         }
 
         RtlCopyMemory( InputBuffer, &networkOpenInfo, Length );
-        Information = LengthReturned;
     }
     __finally
     {
         AssignCmnResult( IrpContext, Status );
-        AssignCmnResultInfo( IrpContext, Information );
+        AssignCmnResultInfo( IrpContext, LengthReturned );
     }
 
     return Status;
@@ -725,7 +738,6 @@ NTSTATUS ProcessFileNetworkOpenInformation( IRP_CONTEXT* IrpContext )
 NTSTATUS ProcessFileAttributeTagInformation( IRP_CONTEXT* IrpContext )
 {
     NTSTATUS Status = STATUS_SUCCESS;
-    ULONG_PTR Information = 0;
     ULONG LengthReturned = 0;
 
     PVOID InputBuffer = IrpContext->Data->Iopb->Parameters.QueryFileInformation.InfoBuffer;
@@ -752,13 +764,11 @@ NTSTATUS ProcessFileAttributeTagInformation( IRP_CONTEXT* IrpContext )
 
             __leave;
         }
-
-        Information = LengthReturned;
     }
     __finally
     {
         AssignCmnResult( IrpContext, Status );
-        AssignCmnResultInfo( IrpContext, Information );
+        AssignCmnResultInfo( IrpContext, LengthReturned );
     }
 
     return Status;
@@ -767,7 +777,6 @@ NTSTATUS ProcessFileAttributeTagInformation( IRP_CONTEXT* IrpContext )
 NTSTATUS ProcessFileHardLinkInformation( IRP_CONTEXT* IrpContext )
 {
     NTSTATUS Status = STATUS_SUCCESS;
-    ULONG_PTR Information = 0;
     ULONG LengthReturned = 0;
 
     PVOID InputBuffer = IrpContext->Data->Iopb->Parameters.QueryFileInformation.InfoBuffer;
@@ -795,12 +804,12 @@ NTSTATUS ProcessFileHardLinkInformation( IRP_CONTEXT* IrpContext )
             __leave;
         }
 
-        Information = LengthReturned;
+        // TODO: 향후 반환된 구조체를 조사하여 파일이름을 변경해서 전달해야한다( 하드링크 지원 )
     }
     __finally
     {
         AssignCmnResult( IrpContext, Status );
-        AssignCmnResultInfo( IrpContext, Information );
+        AssignCmnResultInfo( IrpContext, LengthReturned );
     }
 
     return Status;
@@ -809,7 +818,6 @@ NTSTATUS ProcessFileHardLinkInformation( IRP_CONTEXT* IrpContext )
 NTSTATUS ProcessFileNormalizedNameInformation( IRP_CONTEXT* IrpContext )
 {
     NTSTATUS Status = STATUS_SUCCESS;
-    ULONG_PTR Information = 0;
     ULONG LengthReturned = 0;
 
     PVOID InputBuffer = IrpContext->Data->Iopb->Parameters.QueryFileInformation.InfoBuffer;
@@ -837,12 +845,18 @@ NTSTATUS ProcessFileNormalizedNameInformation( IRP_CONTEXT* IrpContext )
             __leave;
         }
 
-        Information = LengthReturned;
+        if( ( IrpContext->ProcessFilter != NULLPTR ) &&
+            BooleanFlagOn( IrpContext->Fcb->Flags, FCB_STATE_METADATA_ASSOC ) )
+        {
+            auto nameInfo = ( PFILE_NAME_INFORMATION )InputBuffer;
+
+            CorrectFileName( IrpContext, IrpContext->Fcb->MetaDataInfo, nameInfo->FileName, nameInfo->FileNameLength );
+        }
     }
     __finally
     {
         AssignCmnResult( IrpContext, Status );
-        AssignCmnResultInfo( IrpContext, Information );
+        AssignCmnResultInfo( IrpContext, LengthReturned );
     }
 
     return Status;
@@ -851,7 +865,6 @@ NTSTATUS ProcessFileNormalizedNameInformation( IRP_CONTEXT* IrpContext )
 NTSTATUS ProcessFileStandardLinkInformation( IRP_CONTEXT* IrpContext )
 {
     NTSTATUS Status = STATUS_SUCCESS;
-    ULONG_PTR Information = 0;
     ULONG LengthReturned = 0;
 
     PVOID InputBuffer = IrpContext->Data->Iopb->Parameters.QueryFileInformation.InfoBuffer;
@@ -878,13 +891,11 @@ NTSTATUS ProcessFileStandardLinkInformation( IRP_CONTEXT* IrpContext )
 
             __leave;
         }
-
-        Information = LengthReturned;
     }
     __finally
     {
         AssignCmnResult( IrpContext, Status );
-        AssignCmnResultInfo( IrpContext, Information );
+        AssignCmnResultInfo( IrpContext, LengthReturned );
     }
 
     return Status;

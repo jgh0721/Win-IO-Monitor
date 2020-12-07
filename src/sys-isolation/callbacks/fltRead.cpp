@@ -70,7 +70,7 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreRead( PFLT_CALLBACK_DATA Data, PCFLT_R
             __leave;
         }
 
-        if( IrpContext->Fcb->LowerFileObject != NULLPTR && IrpContext->Fcb->LowerFileHandle == INVALID_HANDLE_VALUE )
+        if( IrpContext->Fcb->LowerFileObject != NULLPTR && IrpContext->Fcb->LowerFileHandle == NULLPTR )
         {
             IrpContext->Fcb->LowerFileObject = IrpContext->Ccb->LowerFileObject;
             IrpContext->Fcb->LowerFileHandle = IrpContext->Ccb->LowerFileHandle;

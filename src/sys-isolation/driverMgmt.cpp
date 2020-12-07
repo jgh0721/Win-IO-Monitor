@@ -17,6 +17,8 @@ NTSTATUS InitializeFeatureMgr()
     {
         RtlZeroMemory( &FeatureContext, sizeof( FEATURE_CONTEXT ) );
 
+        SetTimeOutMs( 5000 );
+
         IF_FAILED_BREAK( Status, InitializeMetaDataMgr() );
         IF_FAILED_BREAK( Status, InitializeNotifyEventWorker() );
         

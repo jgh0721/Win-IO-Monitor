@@ -10,8 +10,29 @@
 #   pragma execution_character_set( "utf-8" )
 #endif
 
+/*!
+    kernel Debug Print
+
+    IHVDRIVER, DPFLTR_IHVDRIVER_ID
+
+
+
+    On WinDBG,
+        Kd_IHVDRIVER_Mask
+
+        dd Kd_IHVDRIVER_Mask
+        ed Kd_IHVDRIVER_Mask 0xFFFFFFFF
+
+    On Registry
+        HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Debug Print Filter
+            
+*/
+
 namespace nsW32API
 {
+    void InitializeDebugHelper();
+    void UninitializeDebugHelper();
+
     /*!
         In FLT_CALLBACK_DATA->FLT_IO_PARAMETER_BLOCK->IrpFlags
     */

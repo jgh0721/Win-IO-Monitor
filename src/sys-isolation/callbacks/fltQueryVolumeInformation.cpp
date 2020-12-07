@@ -75,6 +75,13 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreQueryVolumeInformation( PFLT_CALLBACK_
             //} break;
             default: {
                 auto Fcb = ( FCB* )FltObjects->FileObject->FsContext;
+                auto Ccb = ( CCB* )FltObjects->FileObject->FsContext2;
+
+                if( Ccb->LowerFileObject == NULLPTR )
+                {
+                    AssignCmnResult( IrpContext, STATUS_FILE_DELETED );
+                    break;
+                }
 
                 auto InputBuffer = IrpContext->Data->Iopb->Parameters.QueryVolumeInformation.VolumeBuffer;
                 auto Length = IrpContext->Data->Iopb->Parameters.QueryVolumeInformation.Length;
@@ -85,7 +92,7 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreQueryVolumeInformation( PFLT_CALLBACK_
                                                                        , InputBuffer, Length, FsInformationClass
                                                                        , &LengthReturned );
                 if( NT_SUCCESS( Data->IoStatus.Status ) )
-                    Data->IoStatus.Status = LengthReturned;
+                    Data->IoStatus.Information = LengthReturned;
 
             } break;
         }

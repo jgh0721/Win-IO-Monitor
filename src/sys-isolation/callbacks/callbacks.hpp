@@ -7,7 +7,10 @@
 
 #include "fltInstance.hpp"
 #include "generateFileName.hpp"
-#include "cacheManagerCallbacks.hpp"
+#include "cacheControl/cacheManagerCallbacks.hpp"
+#include "cacheControl/fltSectionSynchronization.hpp"
+#include "cacheControl/fltModWrite.hpp"
+#include "cacheControl/fltCcFlush.hpp"
 
 #include "fltCreateFile.hpp"
 #include "fltRead.hpp"
@@ -21,10 +24,8 @@
 #include "fltQuerySecurityInformation.hpp"
 #include "fltSetSecurityInformation.hpp"
 #include "fltNetworkQueryOpen.hpp"
-#include "fltSectionSynchronization.hpp"
-#include "fltModWrite.hpp"
-#include "fltCcFlush.hpp"
 #include "fltQueryVolumeInformation.hpp"
+#include "fltSetVolumeInformation.hpp"
 #include "fltEa.hpp"
 #include "fltCleanup.hpp"
 #include "fltClose.hpp"
@@ -113,4 +114,15 @@ EXTERN_C_END
  *  https://community.osr.com/discussion/290835/minifilter-not-able-to-block-paging-io-for-very-small-files
  *  http://bugsfixed.blogspot.com/2017/02/fltfloperationregistrationskippagingio.html
  */
+
+/*!
+    IoSetCompletionRoutine 를 사용할 때, 전달하는 완료루틴
+
+    Context 로 KEVENT 의 포인터를 넘겨받은 후, EVENT 를 신호상태로 변경한다
+    항상 STATUS_MORE_PROCESSING_REQUIRED 를 반환한다
+*/
+NTSTATUS EventSyncMoreProcessingComplete( __in PDEVICE_OBJECT DeviceObject,
+                                          __in PIRP Irp,
+                                          __in PVOID Context );
+
 #endif // HDR_CALLBACKS

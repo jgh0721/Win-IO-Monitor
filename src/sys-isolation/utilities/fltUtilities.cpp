@@ -82,7 +82,7 @@ PVOID FltMapUserBuffer( PFLT_CALLBACK_DATA Data )
 NTSTATUS FltCreateFileOwn( IRP_CONTEXT* IrpContext, const WCHAR* FileFullPath, HANDLE* FileHandle, FILE_OBJECT** FileObject, IO_STATUS_BLOCK* IoStatus, ACCESS_MASK DesiredAccess,  ULONG FileAttributes, ULONG ShareAccess, ULONG CreateDisposition, ULONG CreateOptions, ULONG Flags )
 {
     NTSTATUS Status = STATUS_SUCCESS;
-    HANDLE FileHandleOwn = NULL;
+    HANDLE FileHandleOwn = NULLPTR;
     FILE_OBJECT* FileObjectOwn = NULLPTR;
     TyGenericBuffer<WCHAR> SrcFileFullPath;
     PFLT_INSTANCE Instance = NULLPTR;
@@ -96,7 +96,7 @@ NTSTATUS FltCreateFileOwn( IRP_CONTEXT* IrpContext, const WCHAR* FileFullPath, H
         }
 
         if( ARGUMENT_PRESENT( FileHandle ) )
-            *FileHandle = NULL;
+            *FileHandle = NULLPTR;
 
         if( ARGUMENT_PRESENT( FileObject ) )
             *FileObject = NULLPTR;
@@ -129,7 +129,7 @@ NTSTATUS FltCreateFileOwn( IRP_CONTEXT* IrpContext, const WCHAR* FileFullPath, H
             else if( FileFullPath[1] == L':' && FileFullPath[2] == L'\\' )
             {
                 // 드라이브 문자에서 INSTANCE_CONTEXT 를 획득한 후 INSTANCE 를 가져온다
-                auto InstanceContext = VolumeMgr_SearchContext( FileFullPath[ 1 ] );
+                auto InstanceContext = VolumeMgr_SearchContext( FileFullPath[ 0 ] );
                 if( InstanceContext == NULLPTR )
                 {
                     Status = STATUS_NO_SUCH_DEVICE;
@@ -161,11 +161,11 @@ NTSTATUS FltCreateFileOwn( IRP_CONTEXT* IrpContext, const WCHAR* FileFullPath, H
             if( NT_SUCCESS( Status ) )
                 *FileHandle = FileHandleOwn;
             else
-                *FileHandle = NULL;
+                *FileHandle = NULLPTR;
         }
         else
         {
-            if( FileHandleOwn != NULL )
+            if( FileHandleOwn != NULLPTR )
                 FltClose( FileHandleOwn );
             FileHandleOwn = NULLPTR;
         }
@@ -216,4 +216,136 @@ WCHAR* ExtractFileFullPathWOVolume( CTX_INSTANCE_CONTEXT* InstanceContext, WCHAR
         FileFullPathWOVolume = FileFullPath;
 
     return FileFullPathWOVolume;
+}
+
+TyGenericBuffer<WCHAR> ExtractFileFullPath( PFLT_CALLBACK_DATA Data, __in CTX_INSTANCE_CONTEXT* InstanceContext )
+{
+    TyGenericBuffer<WCHAR> FileFullPath;
+    PFLT_FILE_NAME_INFORMATION fni = NULLPTR;
+
+    do
+    {
+        // FltGetFileNameInformation return volume path not driver letter
+        auto Ret = FltGetFileNameInformation( Data, FLT_FILE_NAME_OPENED | FLT_FILE_NAME_QUERY_DEFAULT, &fni );
+
+        if( !NT_SUCCESS( Ret ) )
+            break;
+
+        FileFullPath = AllocateBuffer<WCHAR>( BUFFER_FILENAME, fni->Name.MaximumLength );
+        if( InstanceContext->DriveLetter != L'\0' )
+        {
+            FileFullPath.Buffer[ 0 ] = InstanceContext->DriveLetter;
+            FileFullPath.Buffer[ 1 ] = L':';
+
+            RtlStringCbCatNW( &FileFullPath.Buffer[ 2 ], FileFullPath.BufferSize - ( 2 * sizeof( WCHAR ) ),
+                              &fni->Name.Buffer[ InstanceContext->DeviceNameCch ], 
+                              fni->Name.Length - ( InstanceContext->DeviceNameCch * sizeof( WCHAR ) ) );
+        }
+
+    } while( false );
+
+    if( fni != NULLPTR )
+        FltReleaseFileNameInformation( fni );
+
+    return FileFullPath;
+}
+
+TyGenericBuffer<WCHAR> ExtractDstFileFullPath( PFLT_INSTANCE Instance, PFILE_OBJECT FileObject, HANDLE RootDirectory,
+                                               PWSTR FileName, ULONG FileNameLength )
+{
+    TyGenericBuffer<WCHAR> FileFullPath;
+    PFLT_FILE_NAME_INFORMATION fni = NULLPTR;
+
+    do
+    {
+        NTSTATUS Status = FltGetDestinationFileNameInformation( Instance, FileObject, RootDirectory,
+                                                                FileName, FileNameLength,
+                                                                FLT_FILE_NAME_NORMALIZED | FLT_FILE_NAME_QUERY_DEFAULT,
+                                                                &fni );
+
+        if( NT_SUCCESS( Status ) )
+        {
+            FileFullPath = AllocateBuffer<WCHAR>( BUFFER_FILENAME, fni->Name.Length + sizeof( WCHAR ) +
+                                                  ( CONTAINOR_SUFFIX_MAX * sizeof( WCHAR ) ) );
+
+            if( FileFullPath.Buffer == NULLPTR )
+            {
+                Status = STATUS_INSUFFICIENT_RESOURCES;
+                break;
+            }
+
+            RtlStringCbCopyNW( FileFullPath.Buffer, FileFullPath.BufferSize, fni->Name.Buffer, fni->Name.Length );
+        }
+        else
+        {
+            if( FileName != NULLPTR && FileNameLength > 0 && RootDirectory == NULLPTR )
+            {
+                FileFullPath = AllocateBuffer<WCHAR>( BUFFER_FILENAME, FileNameLength );
+
+                if( FileFullPath.Buffer == NULLPTR )
+                {
+                    Status = STATUS_INSUFFICIENT_RESOURCES;
+                    break;
+                }
+
+                int base = 0;
+                if( FileName[ 0 ] == L'\\' && FileName[ 1 ] == L'?' && FileName[ 2 ] == L'?' && FileName[ 3 ] == L'\\' )
+                    base = 4;
+
+                RtlStringCbCopyNW( FileFullPath.Buffer, FileFullPath.BufferSize, &FileName[base], FileNameLength );
+            }
+        }
+
+        VolumeMgr_Replace( FileFullPath.Buffer, &FileFullPath.BufferSize );
+
+    } while( false );
+
+    if( fni != NULLPTR )
+        FltReleaseFileNameInformation( fni );
+
+    return FileFullPath;
+}
+
+CTX_RENLINK_CONTEXT RetrieveRenameLinkContext( PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects )
+{
+    CTX_RENLINK_CONTEXT CtxRenLinkContext;
+    RtlZeroMemory( &CtxRenLinkContext, sizeof( CTX_RENLINK_CONTEXT ) );
+
+    do
+    {
+        if( Data->Iopb->MajorFunction != IRP_MJ_SET_INFORMATION )
+            break;
+
+        CtxRenLinkContext.Length                    = Data->Iopb->Parameters.SetFileInformation.Length;
+        CtxRenLinkContext.FileInformationClass      = Data->Iopb->Parameters.SetFileInformation.FileInformationClass;
+
+        // NOTE: FILE_RENAME_INFORMATION 과 FILE_LINK_INFORMATION 은 구조체가 같다
+        switch( CtxRenLinkContext.FileInformationClass )
+        {
+            case nsW32API::FileRenameInformation:
+            case nsW32API::FileLinkInformation: {
+                auto InfoBuffer = (FILE_RENAME_INFORMATION*)Data->Iopb->Parameters.SetFileInformation.InfoBuffer;
+
+                CtxRenLinkContext.Flags             = InfoBuffer->ReplaceIfExists != FALSE ? FILE_RENAME_REPLACE_IF_EXISTS : 0;
+                CtxRenLinkContext.RootDirectory     = InfoBuffer->RootDirectory;
+                CtxRenLinkContext.FileNameLength    = InfoBuffer->FileNameLength;
+                CtxRenLinkContext.FileName          = InfoBuffer->FileName;
+
+            } break;
+
+            case nsW32API::FileRenameInformationEx:
+            case nsW32API::FileLinkInformationEx: {
+                auto InfoBuffer = ( nsW32API::FILE_RENAME_INFORMATION_EX* )Data->Iopb->Parameters.SetFileInformation.InfoBuffer;
+
+                CtxRenLinkContext.Flags             = InfoBuffer->Flags;
+                CtxRenLinkContext.RootDirectory     = InfoBuffer->RootDirectory;
+                CtxRenLinkContext.FileNameLength    = InfoBuffer->FileNameLength;
+                CtxRenLinkContext.FileName          = InfoBuffer->FileName;
+
+            } break;
+        }
+        
+    } while( false );
+
+    return CtxRenLinkContext;
 }

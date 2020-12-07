@@ -3,6 +3,10 @@
 
 #if defined(USE_ON_KERNEL)
 #include "fltBase.hpp"
+#else
+#include "iMonFSD_API.hpp"
+#include <cassert>
+#include <assert.h>
 #endif
 
 #if defined(_MSC_VER)

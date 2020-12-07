@@ -54,13 +54,13 @@ NTSTATUS    NotifyEventFileDeleteTo( __in IRP_CONTEXT* IrpContext );
 ///////////////////////////////////////////////////////////////////////////////
 /// MSG_PROC_TYPE
 
-NTSTATUS    CheckEventProcCreateTo( __in ULONG ProcessId, __in ULONG ParentProcessId, __in TyGenericBuffer<WCHAR>* ProcessFileFullPath, __in_z const wchar_t* ProcessFileName );
+NTSTATUS    CheckEventProcCreateTo( __in ULONG ProcessId, __in ULONG ParentProcessId, __in TyGenericBuffer<WCHAR>* ProcessFileFullPath, __in_z const wchar_t* ProcessFileName, __out TyGenericBuffer<MSG_REPLY_PACKET>* Reply );
 NTSTATUS    CheckEventProcTerminateTo( __in ULONG ProcessId, __in ULONG ParentProcessId, __in TyGenericBuffer<WCHAR>* ProcessFileFullPath, __in_z const wchar_t* ProcessFileName );
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Utilities
 
-PFLT_PORT   GetClientPort( __in IRP_CONTEXT* IrpContext );
-PFLT_PORT   GetClientPort( __in LONG Seed );
+PFLT_PORT   GetClientPort( __in IRP_CONTEXT* IrpContext, bool IsProcPort = false );
+PFLT_PORT   GetClientPort( __in LONG Seed, bool IsProcPort = false );
 
 #endif // HDR_ISOLATION_COMMUNICATION

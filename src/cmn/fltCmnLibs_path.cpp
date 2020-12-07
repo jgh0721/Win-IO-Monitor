@@ -157,49 +157,53 @@ namespace nsUtils
 			if( tyGenericBuffer.Buffer == NULLPTR )
 				break;
 
-			//if( InstanceContext != NULL && InstanceContext->VolumeProperties.DeviceType == FILE_DEVICE_NETWORK_FILE_SYSTEM )
-			//{
-			//	size_t base = 0;
-			//	if( InstanceContext->DriveLetter != L'\0' )
-			//	{
-			//		base = 2;
-			//	}
-			//	else if( InstanceContext->DriveLetter == L'\0' && InstanceContext->DeviceNameBuffer )
-			//	{
-			//		base = wcslen( InstanceContext->DeviceNameBuffer );
-			//	}
+			if( InstanceContext != NULL && InstanceContext->VolumeProperties.DeviceType == FILE_DEVICE_NETWORK_FILE_SYSTEM )
+			{
+				size_t base = 0;
+				if( InstanceContext->DriveLetter != L'\0' )
+				{
+					base = 2;
+				}
+				else if( InstanceContext->DriveLetter == L'\0' && InstanceContext->DeviceNameBuffer )
+				{
+					base = wcslen( InstanceContext->DeviceNameBuffer );
+				}
 
-			//	//\;Y:000000000000ecb4\192.168.1.108\cifs_test_share_rw\dd\1.txt
-			//	//\;hgfs\;Z:0000000000016d1a\vmware-host\Shared Folders\test_share_rw\test.txt
-			//	if( ( tyGenericBuffer.uBufferSize >= 2 * sizeof( WCHAR ) ) &&
-			//		( tyGenericBuffer.buffer[ base + 1 ] == L';' ) )
-			//	{
-			//		WCHAR* p = ForwardFindW( &tyGenericBuffer.buffer[ base + 1 ], L'\\' );
-			//		if( p != NULL )
-			//		{
-			//			if( p[ 1 ] == L';' )
-			//			{
-			//				p = ForwardFindW( p + 1, L'\\' );
+				//\;Y:000000000000ecb4\192.168.1.108\cifs_test_share_rw\dd\1.txt
+				//\;hgfs\;Z:0000000000016d1a\vmware-host\Shared Folders\test_share_rw\test.txt
+				if( ( tyGenericBuffer.BufferSize >= 2 * sizeof( WCHAR ) ) &&
+					( tyGenericBuffer.Buffer[ base + 1 ] == L';' ) )
+				{
+					WCHAR* p = ForwardFindW( &tyGenericBuffer.Buffer[ base + 1 ], L'\\' );
+					if( p != NULL )
+					{
+						if( p[ 1 ] == L';' )
+						{
+							p = ForwardFindW( p + 1, L'\\' );
 
-			//				if( p )
-			//				{
-			//					// NULL 문자를 포함하여 이동
-			//					RtlMoveMemory( tyGenericBuffer.buffer, p, ( wcslen( p ) + 1 ) * sizeof( WCHAR ) );
-			//				}
-			//				else
-			//				{
-			//					// TODO: 생각하지 못 한 조합의 경로 문자열이다.
-			//					KdPrint( ( "[iMonFSD] %s|Unexpected Path=%ws\n", __FUNCTION__, tyGenericBuffer.buffer ) );
-			//				}
-			//			}
-			//			else
-			//			{
-			//				// NULL 문자를 포함하여 이동
-			//				RtlMoveMemory( tyGenericBuffer.buffer, p, ( wcslen( p ) + 1 ) * sizeof( WCHAR ) );
-			//			}
-			//		}
-			//	}
-			//}
+							if( p )
+							{
+								// NULL 문자를 포함하여 이동
+								RtlMoveMemory( tyGenericBuffer.Buffer, p, ( wcslen( p ) + 1 ) * sizeof( WCHAR ) );
+							}
+							else
+							{
+								// TODO: 생각하지 못 한 조합의 경로 문자열이다.
+								KdPrint( ( "[WinIOSol] %s|Unexpected Path=%ws\n", __FUNCTION__, tyGenericBuffer.Buffer ) );
+							}
+						}
+						else
+						{
+							// NULL 문자를 포함하여 이동
+							RtlMoveMemory( tyGenericBuffer.Buffer, p, ( wcslen( p ) + 1 ) * sizeof( WCHAR ) );
+						}
+					}
+					else
+					{
+						RtlZeroMemory( tyGenericBuffer.Buffer, tyGenericBuffer.BufferSize );
+					}
+				}
+			}
 
 		} while( false );
 

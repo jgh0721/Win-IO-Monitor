@@ -2,6 +2,7 @@
 
 
 #include "irpContext.hpp"
+#include "privateFCBMgr.hpp"
 #include "utilities/contextMgr.hpp"
 #include "communication/Communication.hpp"
 
@@ -95,7 +96,6 @@ void SolNotifyDelete( IRP_CONTEXT* IrpContext, BOOLEAN IsFile, CTX_TRANSACTION_C
 
             if( IrpContext->IsConcerned == true && FeatureContext.IsRunning > 0 )
                 SolAddTransDeleteNotify( IrpContext, TransactionContext, IsFile );
-
         }
     }
     else
@@ -216,7 +216,7 @@ NTSTATUS SolDetectDeleteByFileId( IRP_CONTEXT* IrpContext )
 {
     NTSTATUS Status;
     UNICODE_STRING fileIdString;
-    HANDLE FileHandle = NULL;
+    HANDLE FileHandle = NULLPTR;
     OBJECT_ATTRIBUTES objectAttributes;
     IO_STATUS_BLOCK ioStatus;
     IO_DRIVER_CREATE_CONTEXT driverCreateContext;
@@ -270,7 +270,7 @@ NTSTATUS SolDetectDeleteByFileId( IRP_CONTEXT* IrpContext )
 
     } while( false );
 
-    if( FileHandle != NULL )
+    if( FileHandle != NULLPTR )
         FltClose( FileHandle );
 
     SolFreeUnicodeString( &fileIdString );

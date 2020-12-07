@@ -33,15 +33,21 @@
     <ClInclude Include="..\cmn\W32API_Base.hpp" />
     <ClInclude Include="..\cmn\W32API_DBGHelper.hpp" />
     <ClInclude Include="..\cmn\W32API_FltMgr.hpp" />
+    <ClInclude Include="..\cmn\W32API_Formatter.hpp" />
     <ClInclude Include="..\cmn\W32API_LibMgr.hpp" />
     <ClInclude Include="..\cmn\W32API_NtOsKrnl.hpp" />
     <ClInclude Include="..\cmn\W32API_NTSTATUS.hpp" />
+    <ClInclude Include="..\cmn\W32API_NTSTATUS_Impl.ipp" />
     <ClInclude Include="..\cmn\WinIOIsolation_API.hpp" />
     <ClInclude Include="..\cmn\WinIOIsolation_Event.hpp" />
     <ClInclude Include="..\cmn\WinIOIsolation_IOCTL.hpp" />
-    <ClInclude Include="callbacks\cacheManagerCallbacks.hpp" />
+    <ClInclude Include="cache\fileMetaDataInfoCache.hpp" />
+    <ClInclude Include="cache\fileMetaDataInfoCache_Defs.hpp" />
+    <ClInclude Include="callbacks\cacheControl\cacheManagerCallbacks.hpp" />
+    <ClInclude Include="callbacks\cacheControl\fltCcFlush.hpp" />
+    <ClInclude Include="callbacks\cacheControl\fltModWrite.hpp" />
+    <ClInclude Include="callbacks\cacheControl\fltSectionSynchronization.hpp" />
     <ClInclude Include="callbacks\callbacks.hpp" />
-    <ClInclude Include="callbacks\fltCcFlush.hpp" />
     <ClInclude Include="callbacks\fltCleanup.hpp" />
     <ClInclude Include="callbacks\fltClose.hpp" />
     <ClInclude Include="callbacks\fltCreateFile.hpp" />
@@ -51,15 +57,14 @@
     <ClInclude Include="callbacks\fltFlushBuffers.hpp" />
     <ClInclude Include="callbacks\fltInstance.hpp" />
     <ClInclude Include="callbacks\fltLockControl.hpp" />
-    <ClInclude Include="callbacks\fltModWrite.hpp" />
     <ClInclude Include="callbacks\fltNetworkQueryOpen.hpp" />
     <ClInclude Include="callbacks\fltQueryInformation.hpp" />
     <ClInclude Include="callbacks\fltQuerySecurityInformation.hpp" />
     <ClInclude Include="callbacks\fltQueryVolumeInformation.hpp" />
     <ClInclude Include="callbacks\fltRead.hpp" />
-    <ClInclude Include="callbacks\fltSectionSynchronization.hpp" />
     <ClInclude Include="callbacks\fltSetInformation.hpp" />
     <ClInclude Include="callbacks\fltSetSecurityInformation.hpp" />
+    <ClInclude Include="callbacks\fltSetVolumeInformation.hpp" />
     <ClInclude Include="callbacks\fltWrite.hpp" />
     <ClInclude Include="callbacks\generateFileName.hpp" />
     <ClInclude Include="cipher\Cipher_Krnl.hpp" />
@@ -105,9 +110,12 @@
     <ClCompile Include="..\cmn\fltCmnLibs_string.cpp" />
     <ClCompile Include="..\cmn\W32API.cpp" />
     <ClCompile Include="..\cmn\W32API_DBGHelper.cpp" />
-    <ClCompile Include="callbacks\cacheManagerCallbacks.cpp" />
+    <ClCompile Include="cache\fileMetaDataInfoCache.cpp" />
+    <ClCompile Include="callbacks\cacheControl\cacheManagerCallbacks.cpp" />
+    <ClCompile Include="callbacks\cacheControl\fltCcFlush.cpp" />
+    <ClCompile Include="callbacks\cacheControl\fltModWrite.cpp" />
+    <ClCompile Include="callbacks\cacheControl\fltSectionSynchronization.cpp" />
     <ClCompile Include="callbacks\callbacks.cpp" />
-    <ClCompile Include="callbacks\fltCcFlush.cpp" />
     <ClCompile Include="callbacks\fltCleanup.cpp" />
     <ClCompile Include="callbacks\fltClose.cpp" />
     <ClCompile Include="callbacks\fltCreateFile.cpp" />
@@ -117,15 +125,14 @@
     <ClCompile Include="callbacks\fltFlushBuffers.cpp" />
     <ClCompile Include="callbacks\fltInstance.cpp" />
     <ClCompile Include="callbacks\fltLockControl.cpp" />
-    <ClCompile Include="callbacks\fltModWrite.cpp" />
     <ClCompile Include="callbacks\fltNetworkQueryOpen.cpp" />
     <ClCompile Include="callbacks\fltQueryInformation.cpp" />
     <ClCompile Include="callbacks\fltQuerySecurityInformation.cpp" />
     <ClCompile Include="callbacks\fltQueryVolumeInformation.cpp" />
     <ClCompile Include="callbacks\fltRead.cpp" />
-    <ClCompile Include="callbacks\fltSectionSynchronization.cpp" />
     <ClCompile Include="callbacks\fltSetInformation.cpp" />
     <ClCompile Include="callbacks\fltSetSecurityInformation.cpp" />
+    <ClCompile Include="callbacks\fltSetVolumeInformation.cpp" />
     <ClCompile Include="callbacks\fltWrite.cpp" />
     <ClCompile Include="callbacks\generateFileName.cpp" />
     <ClCompile Include="cipher\Cipher_Krnl.cpp" />
@@ -235,9 +242,11 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <IncludePath>$(WindowsSdk_71A_IncludePath);</IncludePath>
+    <TargetName>$(ProjectName)d</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>$(WindowsSdk_71A_IncludePath);</IncludePath>
+    <TargetName>$(ProjectName)d</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <IncludePath>$(WindowsSdk_71A_IncludePath);</IncludePath>
@@ -252,7 +261,7 @@
     </CustomBuildStep>
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>C:\WinDDK\7600.16385.1\inc\api;C:\WinDDK\7600.16385.1\inc\ddk;C:\WinDDK\7600.16385.1\inc\crt;$(ProjectDir);$(SolutionDir)cmn</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\WinDDK\7600.16385.1\inc\api;C:\WinDDK\7600.16385.1\inc\ddk;C:\WinDDK\7600.16385.1\inc\crt;$(ProjectDir);$(SolutionDir)cmn;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>USE_ON_KERNEL;DBG;_X86_;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <WarningLevel>Level4</WarningLevel>
@@ -280,7 +289,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>C:\WinDDK\7600.16385.1\inc\api;C:\WinDDK\7600.16385.1\inc\ddk;C:\WinDDK\7600.16385.1\inc\crt;$(ProjectDir);$(SolutionDir)cmn</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\WinDDK\7600.16385.1\inc\api;C:\WinDDK\7600.16385.1\inc\ddk;C:\WinDDK\7600.16385.1\inc\crt;$(ProjectDir);$(SolutionDir)cmn;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>USE_ON_KERNEL;DBG;_AMD64_;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AssemblerOutput>AssemblyAndSourceCode</AssemblerOutput>
       <WarningLevel>Level3</WarningLevel>
@@ -311,7 +320,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
       <Optimization>Full</Optimization>
-      <AdditionalIncludeDirectories>C:\WinDDK\7600.16385.1\inc\api;C:\WinDDK\7600.16385.1\inc\ddk;C:\WinDDK\7600.16385.1\inc\crt;$(ProjectDir);$(SolutionDir)cmn</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\WinDDK\7600.16385.1\inc\api;C:\WinDDK\7600.16385.1\inc\ddk;C:\WinDDK\7600.16385.1\inc\crt;$(ProjectDir);$(SolutionDir)cmn;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>USE_ON_KERNEL;NDEBUG;_X86_;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <WarningLevel>Level4</WarningLevel>
@@ -341,7 +350,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <Optimization>Full</Optimization>
-      <AdditionalIncludeDirectories>C:\WinDDK\7600.16385.1\inc\api;C:\WinDDK\7600.16385.1\inc\ddk;C:\WinDDK\7600.16385.1\inc\crt;$(ProjectDir);$(SolutionDir)cmn</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\WinDDK\7600.16385.1\inc\api;C:\WinDDK\7600.16385.1\inc\ddk;C:\WinDDK\7600.16385.1\inc\crt;$(ProjectDir);$(SolutionDir)cmn;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>USE_ON_KERNEL;NDEBUG;_AMD64_;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WarningLevel>Level2</WarningLevel>
       <TreatWarningAsError>true</TreatWarningAsError>

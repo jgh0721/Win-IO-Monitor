@@ -2269,21 +2269,42 @@ namespace nsUtils
 
     WCHAR* ReverseFindW( __in_z WCHAR* wszString, WCHAR ch, int iCchLength /* = -1 */ )
 	{
-        LONGLONG length = iCchLength == -1 ? ( LONGLONG )strlength( wszString ) : ( LONGLONG )iCchLength;
+        if( wszString == NULL )
+            return NULL;
 
-        for( LONGLONG i = length - 1; i >= 0; i-- )
+        size_t length = iCchLength >= 0 ? iCchLength : strlength( wszString );
+
+		for( int i = length - 1; i >= 0; i-- )
+		{
+			if( wszString[ i ] == ch )
+			{
+				return &wszString[ i ];
+			}
+		}
+
+		return NULL;
+	}
+
+    size_t ReverseFindPos( const WCHAR* wszString, WCHAR ch, int iCchLength /* = -1 */ )
+    {
+        size_t length = iCchLength >= 0 ? iCchLength : strlength( wszString );
+
+        for( int i = length - 1; i >= 0; i-- )
         {
             if( wszString[ i ] == ch )
             {
-                return &wszString[ i ];
+                return i;
             }
         }
 
-        return NULL;
-	}
+        return (size_t)-1;
+    }
 
-	WCHAR* ForwardFindW( __in_z WCHAR* wszString, WCHAR ch )
+    WCHAR* ForwardFindW( __in_z WCHAR* wszString, WCHAR ch )
 	{
+        if( wszString == NULL )
+            return NULL;
+
 		size_t length = strlength( wszString );
 
 		for( size_t i = 0; i < length; i++ )
@@ -2296,6 +2317,21 @@ namespace nsUtils
 
 		return NULL;
 	}
+
+    size_t ForwardFindPos( const WCHAR* wszString, WCHAR ch, __in_opt int iCchLength /* = -1 */ )
+    {
+        size_t length = iCchLength >= 0 ? iCchLength : strlength( wszString );
+
+        for( size_t i = 0; i < length; i++ )
+        {
+            if( wszString[ i ] == ch )
+            {
+                return i;
+            }
+        }
+
+        return (size_t)-1;
+    }
 
     WCHAR* UpperWString( WCHAR* wszString )
     {
@@ -2429,5 +2465,73 @@ namespace nsUtils
 
 		return !*pszMatch;
 	}
-    
+    __inline char* format_arg_list( const char* fmt, va_list args )
+    {
+        if( !fmt ) return "";
+        int length = 512;
+        char* buffer = NULLPTR;
+
+        NTSTATUS Status = STATUS_BUFFER_OVERFLOW;
+
+        while( Status == STATUS_BUFFER_OVERFLOW )
+        {
+            if( buffer )
+            {
+                ExFreePool( buffer );
+                buffer = NULLPTR;
+            }
+
+            buffer = ( char* )ExAllocatePoolWithTag( NonPagedPool, ( length + 1 ) * sizeof( char ), 'ftTG' );
+            memset( buffer, 0, ( length + 1 ) * sizeof( char ) );
+            Status = RtlStringCchVPrintfExA( buffer, length + 1, NULLPTR, NULLPTR,
+                                             STRSAFE_IGNORE_NULLS | STRSAFE_NULL_ON_FAILURE, fmt, args );
+            length *= 2;
+        }
+
+        return buffer;
+    }
+
+    __inline wchar_t* format_arg_list( const wchar_t* fmt, va_list args )
+    {
+        if( !fmt ) return L"";
+        int length = 512;
+        wchar_t* buffer = NULLPTR;
+        NTSTATUS Status = STATUS_BUFFER_OVERFLOW;
+
+	    while( Status == STATUS_BUFFER_OVERFLOW  )
+        {
+            if( buffer )
+            {
+                ExFreePool( buffer );
+                buffer = NULLPTR;
+            }
+
+            buffer = ( wchar_t* )ExAllocatePoolWithTag( NonPagedPool, ( length + 1 ) * sizeof( wchar_t ), 'ftTG' );
+            memset( buffer, 0, ( length + 1 ) * sizeof( wchar_t ) );
+            Status = RtlStringCchVPrintfExW( buffer, length + 1, NULLPTR, NULLPTR,
+                                             STRSAFE_IGNORE_NULLS | STRSAFE_NULL_ON_FAILURE, fmt, args );
+            length *= 2;
+        }
+
+        return buffer;
+    }
+
+    char* format( const char* fmt, ... )
+    {
+        va_list args;
+        va_start( args, fmt );
+        char* s = format_arg_list( fmt, args );
+        va_end( args );
+        return s;
+    }
+
+    wchar_t* format( const wchar_t* fmt, ... )
+    {
+        va_list args;
+        va_start( args, fmt );
+        wchar_t* s = format_arg_list( fmt, args );
+        va_end( args );
+        return s;
+    }
+
 } // nsUtils

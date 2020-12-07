@@ -29,10 +29,15 @@ NTSTATUS CipherFile( USER_FILE_ENCRYPT* opt )
     IO_STATUS_BLOCK iobs;
     TyGenericBuffer<BYTE> Buffer;
     ULONG LengthReturned = 0;
-    METADATA_DRIVER* MetaDataInfo = NULLPTR;
-
+    PVOID StubCode = NULLPTR;
+    ULONG StubCodeSize = 0;
+    
     __try
     {
+        Status = RetrieveStubCode( opt, &StubCode, &StubCodeSize );
+        if( !NT_SUCCESS( Status ) )
+            __leave;
+
         IrpContext = ( PIRP_CONTEXT )ExAllocateFromNPagedLookasideList( &GlobalContext.IrpContextLookasideList );
         if( IrpContext == NULLPTR )
         {
@@ -47,7 +52,7 @@ NTSTATUS CipherFile( USER_FILE_ENCRYPT* opt )
         SrcInstanceContext = VolumeMgr_SearchContext( SrcFileFullPath );
         DstInstanceContext = VolumeMgr_SearchContext( DstFileFullPath );
 
-        if( IrpContext->InstanceContext == NULLPTR || DstInstanceContext == NULLPTR )
+        if( SrcInstanceContext == NULLPTR || DstInstanceContext == NULLPTR )
             __leave;
 
         IrpContext->InstanceContext = SrcInstanceContext;
@@ -108,56 +113,18 @@ NTSTATUS CipherFile( USER_FILE_ENCRYPT* opt )
         LARGE_INTEGER WriteOffset = { 0, 0 };
         ULONG BytesRead = 0, BytesWritten = 0;
 
-        MetaDataInfo = AllocateMetaDataInfo();
-        if( MetaDataInfo == NULLPTR )
-        {
-            Status = STATUS_INSUFFICIENT_RESOURCES;
-            __leave;
-        }
+        auto Type = ( METADATA_ENCRYPT_METHOD )opt->EncryptConfig.Method;
+        Status = WriteAIOMetaData( IrpContext->EvtID, DstInstanceContext->Instance, DstFileObject,
+                                   opt->EncryptConfig.Method, SrcFileStdInfo.EndOfFile.QuadPart,
+                                   StubCode, StubCodeSize, opt->ContainorSuffix,
+                                   opt->OffsetOfSolutionData > 0 ? Add2Ptr( opt, opt->OffsetOfSolutionData ) : NULLPTR, opt->LengthOfSolutionData
+        );
 
-        InitializeMetaDataInfo( MetaDataInfo );
-
-        MetaDataInfo->MetaData.Type = METADATA_NOR_TYPE;
-        MetaDataInfo->MetaData.EncryptMethod = (METADATA_ENCRYPT_METHOD)opt->EncryptConfig.Method;
-
-        MetaDataInfo->MetaData.SolutionMetaDataSize = opt->LengthOfSolutionData;
-        MetaDataInfo->MetaData.ContentSize = SrcFileStdInfo.EndOfFile.QuadPart;
-
-        Status = FltWriteFile( DstInstanceContext->Instance, DstFileObject,
-                               &WriteOffset, METADATA_DRIVER_SIZE, MetaDataInfo,
-                               FLTFL_IO_OPERATION_NON_CACHED | FLTFL_IO_OPERATION_DO_NOT_UPDATE_BYTE_OFFSET, 
-                               &BytesWritten, NULLPTR, NULLPTR );
         if( !NT_SUCCESS( Status ) )
-        {
-            KdPrint( ( "[WinIOSol] >> EvtID=%09d %s %s Status=0x%08x,%s Name=%ws\n"
-                       , IrpContext->EvtID, __FUNCTION__, "FltWriteFile Failed"
-                       , Status, ntkernel_error_category::find_ntstatus( Status )->message
-                       , DstFileFullPath
-                       ) );
             __leave;
-        }
 
-        FileSize.QuadPart += METADATA_DRIVER_SIZE;
-        WriteOffset.QuadPart += METADATA_DRIVER_SIZE;
-        if( opt->LengthOfSolutionData > 0 && opt->OffsetOfSolutionData > 0 )
-        {
-            Status = FltWriteFile( DstInstanceContext->Instance, DstFileObject,
-                                   &WriteOffset, opt->LengthOfSolutionData, Add2Ptr( opt, opt->OffsetOfSolutionData ),
-                                   FLTFL_IO_OPERATION_NON_CACHED | FLTFL_IO_OPERATION_DO_NOT_UPDATE_BYTE_OFFSET,
-                                   &BytesWritten, NULLPTR, NULLPTR );
-            if( !NT_SUCCESS( Status ) )
-            {
-                KdPrint( ( "[WinIOSol] >> EvtID=%09d %s %s Status=0x%08x,%s Name=%ws\n"
-                           , IrpContext->EvtID, __FUNCTION__, "FltWriteFile Failed"
-                           , Status, ntkernel_error_category::find_ntstatus( Status )->message
-                           , DstFileFullPath
-                           ) );
-                __leave;
-            }
-
-            FileSize.QuadPart += opt->LengthOfSolutionData;
-            WriteOffset.QuadPart += opt->LengthOfSolutionData;
-        }
+        FileSize.QuadPart += StubCodeSize + METADATA_DRIVER_SIZE + opt->LengthOfSolutionData;
+        WriteOffset.QuadPart += StubCodeSize + METADATA_DRIVER_SIZE + opt->LengthOfSolutionData;
 
         ULONG ChunkCount = (ULONG)( SrcFileStdInfo.EndOfFile.QuadPart / UNIT_SIZE );
         ULONG RemainBytes = (ULONG)( SrcFileStdInfo.EndOfFile.QuadPart % UNIT_SIZE );
@@ -182,7 +149,7 @@ NTSTATUS CipherFile( USER_FILE_ENCRYPT* opt )
                 __leave;
             }
 
-            if( MetaDataInfo->MetaData.EncryptMethod != METADATA_ENC_NONE )
+            if( Type != METADATA_ENC_NONE )
             {
                 EncryptBuffer( ( CIPHER_ID )opt->EncryptConfig.Method,
                                ReadOffset.QuadPart,
@@ -227,7 +194,7 @@ NTSTATUS CipherFile( USER_FILE_ENCRYPT* opt )
                 __leave;
             }
 
-            if( MetaDataInfo->MetaData.EncryptMethod != METADATA_ENC_NONE )
+            if( Type != METADATA_ENC_NONE )
             {
                 EncryptBuffer( ( CIPHER_ID )opt->EncryptConfig.Method,
                                ReadOffset.QuadPart,
@@ -271,7 +238,6 @@ NTSTATUS CipherFile( USER_FILE_ENCRYPT* opt )
         if( IrpContext != NULLPTR )
             IrpContext->InstanceContext = NULLPTR;
 
-        UninitializeMetaDataInfo( MetaDataInfo );
         DeallocateBuffer( &Buffer );
 
         if( SrcFileHandle != NULL )
@@ -327,7 +293,7 @@ NTSTATUS DecipherFile( USER_FILE_ENCRYPT* opt, PVOID SolutionMetaData, ULONG* So
         SrcInstanceContext = VolumeMgr_SearchContext( SrcFileFullPath );
         DstInstanceContext = VolumeMgr_SearchContext( DstFileFullPath );
 
-        if( IrpContext->InstanceContext == NULLPTR || DstInstanceContext == NULLPTR )
+        if( SrcInstanceContext == NULLPTR || DstInstanceContext == NULLPTR )
             __leave;
 
         IrpContext->InstanceContext = SrcInstanceContext;
@@ -537,4 +503,32 @@ NTSTATUS DecipherFile( USER_FILE_ENCRYPT* opt, PVOID SolutionMetaData, ULONG* So
     }
 
     return Status;
+}
+
+NTSTATUS RetrieveStubCode( USER_FILE_ENCRYPT* opt, PVOID* StubCode, ULONG* StubCodeSize )
+{
+    if( opt->IsUseStubCodeX64 )
+    {
+        *StubCode = GetStubCodeX64();
+        *StubCodeSize = GetStubCodeX64Size();
+    }
+
+    if( opt->IsUseStubCodeX86 )
+    {
+        *StubCode = GetStubCodeX86();
+        *StubCodeSize = GetStubCodeX86Size();
+    }
+
+    if( opt->IsUseStubCodeX86 != FALSE || opt->IsUseStubCodeX64 != FALSE )
+    {
+        if( *StubCode == NULLPTR || *StubCodeSize == 0 )
+        {
+            return STATUS_INVALID_PARAMETER;
+        }
+
+        if( wcslen( opt->ContainorSuffix ) == 0 )
+            return STATUS_INVALID_PARAMETER;
+    }
+
+    return STATUS_SUCCESS;
 }

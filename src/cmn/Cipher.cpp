@@ -9,7 +9,11 @@
 
 void EncryptBuffer( CIPHER_ID CipherId, LONGLONG Offset, PVOID Buffer, ULONG BufferSize, PVOID Key, ULONG KeyLength, PVOID IV, ULONG IVLength )
 {
+#if defined(USE_ON_KERNEL)
 	ASSERT( CipherId <= CIPHER_MAX );
+#else
+	assert( CipherId <= CIPHER_MAX );
+#endif
 
 	switch( CipherId )
 	{
@@ -27,7 +31,11 @@ void EncryptBuffer( CIPHER_ID CipherId, LONGLONG Offset, PVOID Buffer, ULONG Buf
 
 void DecryptBuffer( CIPHER_ID CipherId, LONGLONG Offset, PVOID Buffer, ULONG BufferSize, PVOID Key, ULONG KeyLength, PVOID IV, ULONG IVLength )
 {
+#if defined(USE_ON_KERNEL)
 	ASSERT( CipherId <= CIPHER_MAX );
+#else
+	assert( CipherId <= CIPHER_MAX );
+#endif
 
 	switch( CipherId )
 	{

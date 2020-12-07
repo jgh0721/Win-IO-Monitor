@@ -4,8 +4,42 @@
 #   pragma execution_character_set( "utf-8" )
 #endif
 
+struct _GlobalDebugContext
+{
+    BOOLEAN                                         IsUseDBG;
+
+    NPAGED_LOOKASIDE_LIST                           DebugTextLookAside;
+    
+} GlobalDebugContext;
+
 namespace nsW32API
 {
+    namespace nsDetail
+    {
+#define POOL_DEBUG_TEXT_TAG      'dbTG'
+        const int DEBUG_TEXT_LOOK_ASIDE_SIZE = 1024;
+
+        struct LOG_MSG
+        {
+            BOOLEAN                                 IsUseLookAside;
+            CHAR                                    Text[1];
+        };
+        
+    }
+
+    void InitializeDebugHelper()
+    {
+        RtlZeroMemory( &GlobalDebugContext, sizeof( GlobalDebugContext ) );
+
+        ExInitializeNPagedLookasideList( &GlobalDebugContext.DebugTextLookAside, NULL, NULL, 0, 
+                                         nsDetail::DEBUG_TEXT_LOOK_ASIDE_SIZE, POOL_DEBUG_TEXT_TAG, 0 );
+    }
+
+    void UninitializeDebugHelper()
+    {
+        ExDeleteNPagedLookasideList( &GlobalDebugContext.DebugTextLookAside );
+    }
+
     void FormatIrpFlags( char* PrintBuffer, ULONG BufferSize, ULONG IrpFlags )
     {
         if( PrintBuffer == NULLPTR || BufferSize == 0 ) return;

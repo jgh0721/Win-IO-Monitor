@@ -396,11 +396,33 @@ void CreateProcessNotifyRoutine( HANDLE ParentId, HANDLE ProcessId, BOOLEAN Crea
             SearchProcessInfo( ( ULONG )ProcessId, &ProcessFileFullPath, &ProcessName );
             if( ProcessFilter_Match( ( ULONG )ProcessId, &ProcessFileFullPath, true, &ProcessFilter, &ProcessFilterItem ) != STATUS_SUCCESS )
                 break;
-
+            
             if( !FlagOn( ProcessFilterItem->ProcessFilter, PROCESS_NOTIFY_CREATION_TERMINATION ) )
                 break;
-            
-            CheckEventProcCreateTo( ( ULONG )ProcessId, (ULONG)ParentId, &ProcessFileFullPath, ProcessName );
+
+            TyGenericBuffer<MSG_REPLY_PACKET> Reply;
+            CheckEventProcCreateTo( ( ULONG )ProcessId, (ULONG)ParentId, &ProcessFileFullPath, ProcessName, &Reply );
+
+            if( Reply.Buffer == NULLPTR )
+                break;
+
+            if( Reply.Buffer->Result == MSG_JUDGE_REJECT )
+            {
+                PEPROCESS Process = NULLPTR;
+                if( NT_SUCCESS( PsLookupProcessByProcessId( ( HANDLE )ProcessId, &Process ) ) )
+                {
+                    HANDLE hProcess = GetProcessHandleFromEPROCESS( Process );
+                    if( hProcess != NULL )
+                    {
+                        ZwTerminateProcess( hProcess, STATUS_SUCCESS );
+                        ZwClose( hProcess );
+                    }
+
+                    ObDereferenceObject( Process );
+                }
+            }
+
+            DeallocateBuffer( &Reply );
         }
         else
         {
@@ -515,6 +537,12 @@ NTSTATUS InsertProcessInfo( __in ULONG uParentProcessId, ULONG uProcessId )
 
         } while( false );
 
+        if( procInfo->Process != NULLPTR )
+        {
+            ObDereferenceObject( procInfo->Process );
+            procInfo->Process = NULLPTR;
+        }
+
         if( procInfo->ProcessFileFullPathUni != NULLPTR || procInfo->ProcessFileFullPath.Buffer != NULLPTR )
         {
             if( procInfo->ProcessFileFullPath.Buffer != NULLPTR )
@@ -530,19 +558,11 @@ NTSTATUS InsertProcessInfo( __in ULONG uParentProcessId, ULONG uProcessId )
             {
                 ULONG Length = procInfo->ProcessFileFullPathUni->Length;
                 VolumeMgr_Replace( procInfo->ProcessFileFullPathUni->Buffer, &Length, true );
-                procInfo->ProcessFileFullPathUni->Length = ( USHORT )Length;
-
-                KdPrint( ( "[WinIOSol] [ProcNameMgr] %s Lv1. Proc=%06d,%ws\n"
-                           , __FUNCTION__, uProcessId, procInfo->ProcessFileFullPathUni->Buffer
-                           ) );
+                procInfo->ProcessFileFullPathUni->Length = (USHORT) Length;
             }
             else if( procInfo->ProcessFileFullPath.Buffer != NULLPTR )
             {
                 VolumeMgr_Replace( procInfo->ProcessFileFullPath.Buffer, &procInfo->ProcessFileFullPath.BufferSize );
-
-                KdPrint( ( "[WinIOSol] [ProcNameMgr] %s Lv2. Proc=%06d,%ws\n"
-                           , __FUNCTION__, uProcessId, procInfo->ProcessFileFullPath.Buffer
-                           ) );
             }
 
             Status = STATUS_SUCCESS;

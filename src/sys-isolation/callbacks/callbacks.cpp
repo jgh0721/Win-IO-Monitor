@@ -14,6 +14,20 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreOperationPassThrough( PFLT_CALLBACK_DA
     return FLT_PREOP_SUCCESS_NO_CALLBACK;
 }
 
+NTSTATUS EventSyncMoreProcessingComplete( PDEVICE_OBJECT DeviceObject, PIRP Irp, PVOID Context )
+{
+    UNREFERENCED_PARAMETER( DeviceObject );
+    UNREFERENCED_PARAMETER( Irp );
+
+    if( Context != NULLPTR )
+    {
+        auto Event = ( PKEVENT )Context;
+        KeSetEvent( Event, 0, FALSE );
+    }
+
+    return STATUS_MORE_PROCESSING_REQUIRED;
+}
+
 FLT_POSTOP_CALLBACK_STATUS FLTAPI FilterPostOperationPassThrough( PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects,
                                                                   PVOID CompletionContext, FLT_POST_OPERATION_FLAGS Flags )
 {

@@ -33,16 +33,13 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreFileSystemControl( PFLT_CALLBACK_DATA 
 
         auto FsControlCode = Data->Iopb->Parameters.FileSystemControl.Common.FsControlCode;
 
+        bool IsProcessed = false;
+
         switch( Data->Iopb->MinorFunction )
         {
             case IRP_MN_USER_FS_REQUEST: {
                 switch( FsControlCode )
                 {
-                    case FSCTL_MOVE_FILE: {} break;
-                    case FSCTL_CREATE_OR_GET_OBJECT_ID: {} break;
-                    case FSCTL_READ_FILE_USN_DATA: {} break;
-                    case FSCTL_GET_RETRIEVAL_POINTERS: {} break;
-
                     case FSCTL_REQUEST_OPLOCK:          // Windows 7 ~ 
                     case FSCTL_REQUEST_OPLOCK_LEVEL_1: 
                     case FSCTL_REQUEST_OPLOCK_LEVEL_2: 
@@ -126,56 +123,57 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreFileSystemControl( PFLT_CALLBACK_DATA 
 
                         IrpContext->Fcb->AdvFcbHeader.IsFastIoPossible = (UCHAR)CheckIsFastIOPossible( IrpContext->Fcb );
 
+                        IsProcessed = true;
                         AssignCmnResult( IrpContext, Data->IoStatus.Status );
                         AssignCmnFltResult( IrpContext, FltStatus );
 
                     } break;
                 }
             } break;
-            default: {
-
-                auto Ccb = ( CCB* )FileObject->FsContext2;
-
-                if( Ccb->LowerFileObject == NULLPTR )
-                {
-                    AssignCmnResult( IrpContext, STATUS_FILE_DELETED );
-                    AssignCmnFltResult( IrpContext, FLT_PREOP_COMPLETE );
-                    __leave;
-                }
-
-                Status = FltAllocateCallbackData( FltObjects->Instance, IrpContext->Ccb->LowerFileObject, &NewCallbackData );
-
-                if( !NT_SUCCESS( Status ) )
-                {
-                    KdPrint( ( "[WinIOSol] >> EvtID=%09d %s %s Status=0x%08x,%s\n",
-                               IrpContext->EvtID, __FUNCTION__
-                               , "FltAllocateCallbackData FAILED"
-                               , Status, ntkernel_error_category::find_ntstatus( Status )->message
-                               ) );
-
-                    AssignCmnResult( IrpContext, Status );
-                    AssignCmnFltResult( IrpContext, FLT_PREOP_COMPLETE );
-                    __leave;
-                }
-
-                RtlCopyMemory( NewCallbackData->Iopb, Data->Iopb, sizeof( FLT_IO_PARAMETER_BLOCK ) );
-                NewCallbackData->Iopb->TargetFileObject = IrpContext->Ccb->LowerFileObject;
-                FltPerformSynchronousIo( NewCallbackData );
-
-                AssignCmnResult( IrpContext, NewCallbackData->IoStatus.Status );
-                AssignCmnResultInfo( IrpContext, NewCallbackData->IoStatus.Information );
-
-                if( IrpContext->Status == STATUS_PENDING )
-                {
-                    AssignCmnFltResult( IrpContext, FLT_PREOP_PENDING );
-                }
-                else
-                {
-                    AssignCmnFltResult( IrpContext, FLT_PREOP_COMPLETE );
-                }
-
-            } break;
         } // switch
+
+        if( IsProcessed == false )
+        {
+            auto Ccb = ( CCB* )FileObject->FsContext2;
+
+            if( Ccb->LowerFileObject == NULLPTR )
+            {
+                AssignCmnResult( IrpContext, STATUS_FILE_DELETED );
+                AssignCmnFltResult( IrpContext, FLT_PREOP_COMPLETE );
+                __leave;
+            }
+
+            Status = FltAllocateCallbackData( FltObjects->Instance, IrpContext->Ccb->LowerFileObject, &NewCallbackData );
+
+            if( !NT_SUCCESS( Status ) )
+            {
+                KdPrint( ( "[WinIOSol] >> EvtID=%09d %s %s Status=0x%08x,%s\n",
+                           IrpContext->EvtID, __FUNCTION__
+                           , "FltAllocateCallbackData FAILED"
+                           , Status, ntkernel_error_category::find_ntstatus( Status )->message
+                           ) );
+
+                AssignCmnResult( IrpContext, Status );
+                AssignCmnFltResult( IrpContext, FLT_PREOP_COMPLETE );
+                __leave;
+            }
+
+            RtlCopyMemory( NewCallbackData->Iopb, Data->Iopb, sizeof( FLT_IO_PARAMETER_BLOCK ) );
+            NewCallbackData->Iopb->TargetFileObject = IrpContext->Ccb->LowerFileObject;
+            FltPerformSynchronousIo( NewCallbackData );
+
+            AssignCmnResult( IrpContext, NewCallbackData->IoStatus.Status );
+            AssignCmnResultInfo( IrpContext, NewCallbackData->IoStatus.Information );
+
+            if( IrpContext->Status == STATUS_PENDING )
+            {
+                AssignCmnFltResult( IrpContext, FLT_PREOP_PENDING );
+            }
+            else
+            {
+                AssignCmnFltResult( IrpContext, FLT_PREOP_COMPLETE );
+            }
+        }
     }
     __finally
     {

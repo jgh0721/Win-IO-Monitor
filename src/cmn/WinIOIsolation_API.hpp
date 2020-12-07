@@ -91,27 +91,35 @@ public:
     /*!
         @param FileType TyEnFileType
     */
-    DWORD                               GetFileType( __in const wchar_t* wszFileFullPath, __out ULONG* FileType );
+    static DWORD                        GetFileType( __in const wchar_t* wszFileFullPath, __out ULONG* FileType );
     DWORD                               SetFileSolutionMetaData( __in const wchar_t* wszFileFullPath, __inout PVOID Buffer, __inout ULONG* BufferSize );
-    DWORD                               GetFileSolutionMetaData( __in const wchar_t* wszFileFullPath, __inout PVOID Buffer, __inout ULONG* BufferSize );
+    static DWORD                        GetFileSolutionMetaData( __in const wchar_t* wszFileFullPath, __inout PVOID Buffer, __inout ULONG* BufferSize );
     /*!
         드라이버에 요청하지 않고, API 에서 직접 파일을 확인
     */
-    DWORD                               GetFileTypeSelf( __in const wchar_t* wszFileFullPath, __out ULONG* FileType );
-    DWORD                               SetFileSolutionMetaDataSelf( __in const wchar_t* wszFileFullPath, __inout PVOID Buffer, __inout ULONG* BufferSize );
-    DWORD                               GetFileSolutionMetaDataSelf( __in const wchar_t* wszFileFullPath, __inout PVOID Buffer, __inout ULONG* BufferSize );
+    static DWORD                        GetFileTypeSelf( __in const wchar_t* wszFileFullPath, __out ULONG* FileType );
+    static DWORD                        SetFileSolutionMetaDataSelf( __in const wchar_t* wszFileFullPath, __inout PVOID Buffer, __in ULONG BufferSize );
+    static DWORD                        GetFileSolutionMetaDataSelf( __in const wchar_t* wszFileFullPath, __inout PVOID Buffer, __inout ULONG* BufferSize );
 
     DWORD                               EncryptFileByDriver( __in const wchar_t* wszSrcFileFullPath, __in const wchar_t* wszDstFileFullPath,
                                                              __in_opt PVOID SolutionMetaData = NULL, __in_opt ULONG* SolutionMetaDataSize = NULL,
-                                                             __in_opt ENCRYPT_CONFIG* EncryptConfig = NULL );
+                                                             __in_opt ENCRYPT_CONFIG* EncryptConfig = NULL, 
+                                                             __in_opt bool IsUseStubCode = false, __in_opt const wchar_t* ContainorSuffix = L".exe" );
+    static DWORD                        EncryptFileSelf( __in const wchar_t* wszSrcFileFullPath, __in const wchar_t* wszDstFileFullPath,
+                                                         __in_opt ENCRYPT_CONFIG* EncryptConfig = NULL,
+                                                         __in_opt PVOID SolutionMetaData = NULL, __in_opt ULONG SolutionMetaDataSize = 0,
+                                                         __in_opt PVOID ContainorData = NULL, __in_opt ULONG ContainorDataSize = 0, __in_opt const wchar_t* ContainorSuffix = L".exe" );
     DWORD                               DecryptFileByDriver( __in const wchar_t* wszSrcFileFullPath, __in const wchar_t* wszDstFileFullPath,
                                                              __in_opt ENCRYPT_CONFIG* EncryptConfig = NULL,
                                                              __out_opt PVOID SolutionMetaData = NULL, __out_opt ULONG* SolutionMetaDataSize = NULL );
+    static DWORD                        DecryptFileSelf( __in const wchar_t* wszSrcFileFullPath, __in const wchar_t* wszDstFileFullPath, 
+                                                         __in_opt ENCRYPT_CONFIG* EncryptConfig = NULL, 
+                                                         __out_opt PVOID* SolutionMetaData = NULL, __out_opt ULONG* SolutionMetaDataSize = NULL );
 
 private:
 
-    HANDLE                              retrieveDevice();
-    void                                closeDevice( __in HANDLE hDevice );
+    static HANDLE                       retrieveDevice();
+    static void                         closeDevice( __in HANDLE hDevice );
     static unsigned int WINAPI          messageWorker( PVOID Param );
 
     static const int                    MAX_CLIENT_CONNECTION = 16;

@@ -10,7 +10,7 @@
 
 LONG            CreateEvtID();
 
-PIRP_CONTEXT    CreateIrpContext( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_OBJECTS FltObjects );
+IRP_CONTEXT*    CreateIrpContext( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_OBJECTS FltObjects );
 VOID            CloseIrpContext( __in PIRP_CONTEXT IrpContext );
 VOID            PrintIrpContext( __in PIRP_CONTEXT IrpContext, __in bool isForceResult = false );
 VOID            PrintIrpContextEx( __in PIRP_CONTEXT IrpContext, __in bool isForceResult = false );
@@ -82,8 +82,11 @@ VOID ReleaseCmnResource( __in PIRP_CONTEXT IrpContext, __in LONG RsrcFlags );
 // this include CHECK_EVENT_PROCESS_ONLY
 #define CHECK_EVENT_PROCESS_DIR_FILTER  0x4
 
+// 다른 조건과 결합하여 최종 계산
 #define CHECK_EVENT_IS_ENCRYPTED        0x10
 #define CHECK_EVENT_IS_RENAME           0x20
+// 해당 파일이 암호화된 파일이라면 무조건 대상으로 선정
+#define CHECK_EVENT_IS_ENCRYPTED_ALWAYS 0x40
 
 /*!
     각 IRP 함수에 따라, 클라이언트에 이벤트를 전송해야하는지 확인
@@ -96,5 +99,9 @@ NTSTATUS CheckEventToWithCREATE( __in IRP_CONTEXT* IrpContext, __in ULONG CheckF
 NTSTATUS CheckEventToWithDIRECTORY_CONTROL( __in IRP_CONTEXT* IrpContext, __in ULONG CheckFlags );
 NTSTATUS CheckEventToWithQUERY_INFORMATION( __in IRP_CONTEXT* IrpContext, __in ULONG CheckFlags );
 NTSTATUS CheckEventToWithSET_INFORMATION( __in IRP_CONTEXT* IrpContext, __in ULONG CheckFlags );
+NTSTATUS CheckEventToWithCLEAN( __in IRP_CONTEXT* IrpContext, __in ULONG CheckFlags );
+
+FLT_PREOP_CALLBACK_STATUS CommonPostProcess( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_OBJECTS FltObjects, __inout_opt PVOID* CompletionContext,
+                                             __in IRP_CONTEXT* IrpContext, __in FLT_PREOP_CALLBACK_STATUS FltStatus );
 
 #endif // HDR_ISOLATION_IRPCONTEXT

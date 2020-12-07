@@ -130,7 +130,7 @@ METADATA_TYPE GetFileMetaDataInfo( __in IRP_CONTEXT* IrpContext, __in PFILE_OBJE
         if( FileObject == NULLPTR )
             break;
 
-        BYTE CONTAINOR_MAGIC_NUMBER[ 2 ] = { 0, };
+        BYTE CONTAINOR_MAGIC_NUMBER[ 512 ] = { 0, };
         LARGE_INTEGER READ_OFFSET = { 0, 0 };
         ULONG BytesRead = 0;
 
@@ -142,7 +142,7 @@ METADATA_TYPE GetFileMetaDataInfo( __in IRP_CONTEXT* IrpContext, __in PFILE_OBJE
                               FLTFL_IO_OPERATION_DO_NOT_UPDATE_BYTE_OFFSET | FLTFL_IO_OPERATION_NON_CACHED,
                               &BytesRead, NULL, NULL );
 
-        if( !NT_SUCCESS( Status ) )
+        if( !NT_SUCCESS( Status ) && Status != STATUS_END_OF_FILE )
         {
             KdPrint( ( "[WinIOSol] %s EvtID=%09d %s %s Status=0x%08x,%s Src=%ws\n",
                        ">>", IrpContext->EvtID, __FUNCTION__, "FltReadFile FAILED"
@@ -184,7 +184,7 @@ METADATA_TYPE GetFileMetaDataInfo( __in IRP_CONTEXT* IrpContext, __in PFILE_OBJE
                                   FLTFL_IO_OPERATION_DO_NOT_UPDATE_BYTE_OFFSET | FLTFL_IO_OPERATION_NON_CACHED,
                                   &BytesRead, NULL, NULL );
 
-            if( !NT_SUCCESS( Status ) )
+            if( !NT_SUCCESS( Status ) && Status != STATUS_END_OF_FILE )
             {
                 KdPrint( ( "[WinIOSol] %s EvtID=%09d %s %s Line=%d Status=0x%08x,%s Src=%ws\n",
                            ">>", IrpContext->EvtID, __FUNCTION__, "FltReadFile FAILED", __LINE__
@@ -203,7 +203,7 @@ METADATA_TYPE GetFileMetaDataInfo( __in IRP_CONTEXT* IrpContext, __in PFILE_OBJE
                                   FLTFL_IO_OPERATION_DO_NOT_UPDATE_BYTE_OFFSET | FLTFL_IO_OPERATION_NON_CACHED,
                                   &BytesRead, NULL, NULL );
 
-            if( !NT_SUCCESS( Status ) )
+            if( !NT_SUCCESS( Status ) && Status != STATUS_END_OF_FILE )
             {
                 KdPrint( ( "[WinIOSol] %s EvtID=%09d %s %s Line=%d Status=0x%08x,%s Src=%ws\n",
                            ">>", IrpContext->EvtID, __FUNCTION__, "FltReadFile FAILED", __LINE__
@@ -228,17 +228,16 @@ METADATA_TYPE GetFileMetaDataInfo( __in IRP_CONTEXT* IrpContext, __in PFILE_OBJE
             READ_OFFSET.QuadPart += METADATA_DRIVER_SIZE;
 
             *SolutionMetaDataSize = MetaDataBuffer.MetaData.SolutionMetaDataSize;
-            *SolutionMetaData = ExAllocatePool( NonPagedPool, *SolutionMetaDataSize );
 
             if( *SolutionMetaData == NULLPTR )
-                break;
+                *SolutionMetaData = ExAllocatePool( NonPagedPool, *SolutionMetaDataSize );
 
             Status = FltReadFile( IrpContext->InstanceContext->Instance, FileObject,
                                   &READ_OFFSET, *SolutionMetaDataSize, *SolutionMetaData,
                                   FLTFL_IO_OPERATION_DO_NOT_UPDATE_BYTE_OFFSET | FLTFL_IO_OPERATION_NON_CACHED,
                                   &BytesRead, NULL, NULL );
 
-            if( !NT_SUCCESS( Status ) )
+            if( !NT_SUCCESS( Status ) && Status != STATUS_END_OF_FILE )
             {
                 KdPrint( ( "[WinIOSol] %s EvtID=%09d %s %s Line=%d Status=0x%08x,%s Src=%ws\n",
                            ">>", IrpContext->EvtID, __FUNCTION__, "FltReadFile FAILED", __LINE__
@@ -256,6 +255,7 @@ METADATA_TYPE GetFileMetaDataInfo( __in IRP_CONTEXT* IrpContext, __in PFILE_OBJE
 
 METADATA_TYPE GetFileMetaDataInfo( const wchar_t* SrcFileFullPath, METADATA_DRIVER* MetaDataInfo, PVOID* SolutionMetaData, ULONG* SolutionMetaDataSize )
 {
+    TyGenericBuffer<WCHAR>  DeviceNamePath;
     IRP_CONTEXT*            IrpContext = NULLPTR;
     METADATA_TYPE           MetaDataType = METADATA_UNK_TYPE;
 
@@ -292,6 +292,21 @@ METADATA_TYPE GetFileMetaDataInfo( const wchar_t* SrcFileFullPath, METADATA_DRIV
                 break;
 
             MetaDataType = IrpContext->Fcb->MetaDataInfo->MetaData.Type;
+
+            if( ARGUMENT_PRESENT( MetaDataInfo ) )
+                RtlCopyMemory( MetaDataInfo, IrpContext->Fcb->MetaDataInfo, METADATA_DRIVER_SIZE );
+
+            if( ARGUMENT_PRESENT( SolutionMetaData ) && ARGUMENT_PRESENT( SolutionMetaDataSize ) )
+            {
+                if( IrpContext->Fcb->SolutionMetaDataSize > 0 && IrpContext->Fcb->SolutionMetaData != NULLPTR )
+                {
+                    *SolutionMetaDataSize = IrpContext->Fcb->SolutionMetaDataSize;
+                    if( *SolutionMetaData == NULLPTR )
+                        *SolutionMetaData = ExAllocatePool( NonPagedPool, *SolutionMetaDataSize );
+                    RtlZeroMemory( *SolutionMetaData, *SolutionMetaDataSize );
+                    RtlCopyMemory( *SolutionMetaData, IrpContext->Fcb->SolutionMetaData, IrpContext->Fcb->SolutionMetaDataSize );
+                }
+            }
             break;
         }
 
@@ -315,11 +330,11 @@ METADATA_TYPE GetFileMetaDataInfo( const wchar_t* SrcFileFullPath, METADATA_DRIV
 
     } while( false );
 
+    if( FileHandle != NULLPTR )
+        FltClose( FileHandle );
+
     if( FileObject != NULLPTR )
         ObDereferenceObject( FileObject );
-
-    if( FileHandle != NULL )
-        FltClose( FileHandle );
 
     CloseIrpContext( IrpContext );
     return MetaDataType;
@@ -710,5 +725,107 @@ NTSTATUS WriteSolutionMetaData( LONG EvtID, CTX_INSTANCE_CONTEXT* InstanceContex
 
     } while( false );
 
+    return Status;
+}
+
+NTSTATUS WriteAIOMetaData( LONG EvtID, PFLT_INSTANCE Instance, PFILE_OBJECT FileObject,
+                           ULONG EncryptMethod, LONGLONG FileSize,
+                           PVOID StubCode, ULONG StubCodeSize, WCHAR* Suffix,
+                           PVOID SolutionMetaData, ULONG SolutionMetaDataSize,
+                           WCHAR* FileName /* = NULLPTR */ )
+{
+    NTSTATUS Status = STATUS_SUCCESS;
+    METADATA_DRIVER* MetaDataInfo = NULLPTR;
+
+    do
+    {
+        ASSERT( Instance != NULLPTR );
+        ASSERT( FileObject != NULLPTR );
+
+        if( MetaDataInfo == NULLPTR )
+        {
+            Status = STATUS_INSUFFICIENT_RESOURCES;
+            break;
+        }
+
+        MetaDataInfo = AllocateMetaDataInfo();
+        if( MetaDataInfo == NULLPTR )
+        {
+            Status = STATUS_INSUFFICIENT_RESOURCES;
+            break;
+        }
+
+        InitializeMetaDataInfo( MetaDataInfo );
+
+        MetaDataInfo->MetaData.Type = StubCode != NULLPTR ? METADATA_STB_TYPE : METADATA_NOR_TYPE;
+        MetaDataInfo->MetaData.EncryptMethod = ( METADATA_ENCRYPT_METHOD )EncryptMethod;
+
+        MetaDataInfo->MetaData.ContainorSize = StubCodeSize;
+        if( StubCode != NULLPTR )
+            RtlCopyMemory( MetaDataInfo->MetaData.ContainorSuffix, Suffix, CONTAINOR_SUFFIX_MAX * sizeof( WCHAR ) );
+
+        MetaDataInfo->MetaData.SolutionMetaDataSize = SolutionMetaDataSize;
+        MetaDataInfo->MetaData.ContentSize = FileSize;
+
+        ULONG BytesWritten = 0;
+        LARGE_INTEGER WriteOffset = { 0, 0 };
+
+        if( MetaDataInfo->MetaData.Type == METADATA_STB_TYPE && 
+            StubCode != NULLPTR && StubCodeSize > 0 )
+        {
+            Status = FltWriteFile( Instance, FileObject,
+                                   &WriteOffset, StubCodeSize, StubCode,
+                                   FLTFL_IO_OPERATION_NON_CACHED | FLTFL_IO_OPERATION_DO_NOT_UPDATE_BYTE_OFFSET,
+                                   &BytesWritten, NULLPTR, NULLPTR );
+
+            if( !NT_SUCCESS( Status ) )
+            {
+                KdPrint( ( "[WinIOSol] >> EvtID=%09d %s %s Line=%d Status=0x%08x,%s Name=%ws\n"
+                           , EvtID, __FUNCTION__, "FltWriteFile Failed", __LINE__
+                           , Status, ntkernel_error_category::find_ntstatus( Status )->message
+                           , FileName == NULLPTR ? (NULL) : FileName
+                           ) );
+                break;
+            }
+
+            WriteOffset.QuadPart += StubCodeSize;
+        }
+
+        Status = FltWriteFile( Instance, FileObject,
+                               &WriteOffset, METADATA_DRIVER_SIZE, MetaDataInfo,
+                               FLTFL_IO_OPERATION_NON_CACHED | FLTFL_IO_OPERATION_DO_NOT_UPDATE_BYTE_OFFSET,
+                               &BytesWritten, NULLPTR, NULLPTR );
+        if( !NT_SUCCESS( Status ) )
+        {
+            KdPrint( ( "[WinIOSol] >> EvtID=%09d %s %s Line=%d Status=0x%08x,%s Name=%ws\n"
+                       , EvtID, __FUNCTION__, "FltWriteFile Failed", __LINE__
+                       , Status, ntkernel_error_category::find_ntstatus( Status )->message
+                       , FileName == NULLPTR ? ( NULL ) : FileName
+                       ) );
+            break;
+        }
+
+        WriteOffset.QuadPart += METADATA_DRIVER_SIZE;
+
+        if( SolutionMetaData != NULLPTR && SolutionMetaDataSize > 0 )
+        {
+            Status = FltWriteFile( Instance, FileObject,
+                                   &WriteOffset, SolutionMetaDataSize, SolutionMetaData,
+                                   FLTFL_IO_OPERATION_NON_CACHED | FLTFL_IO_OPERATION_DO_NOT_UPDATE_BYTE_OFFSET,
+                                   &BytesWritten, NULLPTR, NULLPTR );
+            if( !NT_SUCCESS( Status ) )
+            {
+                KdPrint( ( "[WinIOSol] >> EvtID=%09d %s %s Line=%d Status=0x%08x,%s Name=%ws\n"
+                           , EvtID, __FUNCTION__, "FltWriteFile Failed", __LINE__
+                           , Status, ntkernel_error_category::find_ntstatus( Status )->message
+                           , FileName == NULLPTR ? ( NULL ) : FileName
+                           ) );
+                break;
+            }
+        }
+
+    } while( false );
+
+    UninitializeMetaDataInfo( MetaDataInfo );
     return Status;
 }

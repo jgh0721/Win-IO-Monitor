@@ -45,6 +45,7 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCleanup( PFLT_CALLBACK_DATA Data, PCFL
             if( IrpContext->StreamContext != NULLPTR )
             {
                 *CompletionContext = IrpContext;
+                SetFlag( IrpContext->CompleteStatus, COMPLETE_FORWARD_POST_PROCESS );
                 AssignCmnFltResult( IrpContext, FLT_PREOP_SYNCHRONIZE );
                 __leave;
             }
@@ -161,10 +162,10 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCleanup( PFLT_CALLBACK_DATA Data, PCFL
         if( !BooleanFlagOn( FileObject->Flags, FO_CLEANUP_COMPLETE ) )
             MmForceSectionClosed( &Fcb->SectionObjects, TRUE );
 
-        if( IrpContext->Ccb->LowerFileHandle != INVALID_HANDLE_VALUE )
+        if( IrpContext->Ccb->LowerFileHandle != NULLPTR )
         {
             FltClose( IrpContext->Ccb->LowerFileHandle );
-            IrpContext->Ccb->LowerFileHandle = INVALID_HANDLE_VALUE;
+            IrpContext->Ccb->LowerFileHandle = NULLPTR;
         }
 
         if( IrpContext->Ccb->LowerFileObject != NULLPTR )
@@ -174,19 +175,6 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCleanup( PFLT_CALLBACK_DATA Data, PCFL
         }
 
         SetFlag( FileObject->Flags, FO_CLEANUP_COMPLETE );
-
-        // NOTE: 파일이 삭제예약이 걸려있고, 모든 핸들이 닫혔다면 SFO 도 닫아서 파일이 삭제될 수 있도록 한다
-        if( BooleanFlagOn( Fcb->Flags, FCB_STATE_DELETE_ON_CLOSE ) &&
-            UncleanCount == 0 )
-        {
-            if( Fcb->LowerFileHandle != INVALID_HANDLE_VALUE )
-                FltClose( Fcb->LowerFileHandle );
-            Fcb->LowerFileHandle = INVALID_HANDLE_VALUE;
-
-            if( Fcb->LowerFileObject != NULLPTR )
-                ObDereferenceObject( Fcb->LowerFileObject );
-            Fcb->LowerFileObject = NULLPTR;
-        }
 
         Data->IoStatus.Status = STATUS_SUCCESS;
         Data->IoStatus.Information = 0;
@@ -205,9 +193,7 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreCleanup( PFLT_CALLBACK_DATA Data, PCFL
                 PrintIrpContext( IrpContext, true );
             }
 
-            if( ( IrpContext->IsOwnObject == true ) || 
-                ( IrpContext->IsOwnObject == false && IrpContext->StreamContext == NULLPTR ) )
-                CloseIrpContext( IrpContext );
+            CloseIrpContext( IrpContext );
         }
     }
 
@@ -232,11 +218,13 @@ FLT_POSTOP_CALLBACK_STATUS FLTAPI FilterPostCleanup( PFLT_CALLBACK_DATA Data, PC
 
     do
     {
-        if( IrpContext != NULLPTR )
-        {
-            IrpContext->Data = Data;
-            IrpContext->FltObjects = FltObjects;
-        }
+        ASSERT( IrpContext != NULLPTR );
+        if( IrpContext == NULLPTR )
+            break;
+
+        IrpContext->Data = Data;
+        IrpContext->FltObjects = FltObjects;
+        ClearFlag( IrpContext->CompleteStatus, COMPLETE_FORWARD_POST_PROCESS );
 
         if( !NT_SUCCESS( Data->IoStatus.Status ) )
             break;
@@ -286,7 +274,6 @@ FLT_POSTOP_CALLBACK_STATUS FLTAPI FilterPostCleanup( PFLT_CALLBACK_DATA Data, PC
 
             if( Status == STATUS_FILE_DELETED )
             {
-
                 Status = SolProcessDelete( IrpContext );
             }
         }

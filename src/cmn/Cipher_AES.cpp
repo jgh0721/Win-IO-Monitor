@@ -774,7 +774,12 @@ namespace nsDetail
 
 void EncryptBufferByAES( LONGLONG Offset, PVOID Buffer, ULONG BufferSize, PVOID Key, ULONG KeyLength, PVOID IV, ULONG IVLength )
 {
+#if defined(USE_ON_KERNEL)
 	ASSERT( KeyLength == 16 || KeyLength == 24 || KeyLength == 32 );
+#else
+	assert( KeyLength == 16 || KeyLength == 24 || KeyLength == 32 );
+#endif
+
 
 	int count = BufferSize / 16;
 	nsDetail::aes_context context;
@@ -788,7 +793,11 @@ void EncryptBufferByAES( LONGLONG Offset, PVOID Buffer, ULONG BufferSize, PVOID 
 
 void DecryptBufferByAES( LONGLONG Offset, PVOID Buffer, ULONG BufferSize, PVOID Key, ULONG KeyLength, PVOID IV, ULONG IVLength )
 {
-	ASSERT( KeyLength == 16 || KeyLength == 24 || KeyLength == 32 );
+#if defined(USE_ON_KERNEL)
+    ASSERT( KeyLength == 16 || KeyLength == 24 || KeyLength == 32 );
+#else
+    assert( KeyLength == 16 || KeyLength == 24 || KeyLength == 32 );
+#endif
 
 	int count = BufferSize / 16;
 	nsDetail::aes_context context;

@@ -8,6 +8,7 @@
 #include "utilities/fltUtilities.hpp"
 
 #include "fltCmnLibs.hpp"
+#include "communication/Communication.hpp"
 
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
@@ -47,9 +48,9 @@ void DeallocateCcb( CCB*& Ccb )
     if( Ccb == NULLPTR )
         return;
 
-    if( Ccb->LowerFileHandle != INVALID_HANDLE_VALUE )
+    if( Ccb->LowerFileHandle != NULLPTR )
         FltClose( Ccb->LowerFileHandle );
-    Ccb->LowerFileHandle = INVALID_HANDLE_VALUE;
+    Ccb->LowerFileHandle = NULLPTR;
 
     if( Ccb->LowerFileObject != NULLPTR )
         ObDereferenceObject( Ccb->LowerFileObject );
@@ -242,7 +243,7 @@ NTSTATUS InitializeFcbAndCcb( IRP_CONTEXT* IrpContext )
                         *Suffix++ = L'\0';
 
                     Fcb->PretendFileFullPathWOVolume = ExtractFileFullPathWOVolume( IrpContext->InstanceContext, &Fcb->PretendFileFullPath );
-                    Fcb->FileName = nsUtils::ReverseFindW( Fcb->PretendFileFullPath.Buffer, L'\\' );
+                    Fcb->PretendFileName = nsUtils::ReverseFindW( Fcb->PretendFileFullPath.Buffer, L'\\' );
                 }
             } // if FILE_ALREADY_EXISTS
 
@@ -285,16 +286,27 @@ NTSTATUS UninitializeFCB( IRP_CONTEXT* IrpContext )
         if( Fcb == NULLPTR )
             break;
 
-        if( Fcb->MetaDataInfo != NULLPTR )
+        if( BooleanFlagOn( Fcb->Flags, FCB_STATE_DELETE_ON_CLOSE ) || FlagOn( Fcb->Flags, FCB_STATE_CHECK_DELETE_PENDING ) )
         {
-            UninitializeMetaDataInfo( Fcb->MetaDataInfo );
-        }
+            BOOLEAN IsSetDisposition = FALSE;
 
-        if( Fcb->SolutionMetaData != NULLPTR && Fcb->SolutionMetaDataSize > 0 )
-            ExFreePool( Fcb->SolutionMetaData );
+            if( FlagOn( Fcb->Flags, FCB_STATE_CHECK_DELETE_PENDING ) )
+            {
+                FILE_STANDARD_INFORMATION fsi;
+                ULONG Returned = 0;
+                Status = FltQueryInformationFile( Fcb->InstanceContext->Instance,
+                                                  Fcb->LowerFileObject,
+                                                  &fsi, sizeof( fsi ), FileStandardInformation, &Returned );
 
-        if( BooleanFlagOn( Fcb->Flags, FCB_STATE_DELETE_ON_CLOSE ) )
-        {
+                if( NT_SUCCESS( Status ) )
+                {
+                    IsSetDisposition = fsi.DeletePending;
+                }
+            }
+
+            if( FlagOn( Fcb->Flags, FCB_STATE_DELETE_ON_CLOSE ) )
+                IsSetDisposition = TRUE;
+
             FILE_DISPOSITION_INFORMATION fdi;
             fdi.DeleteFile = TRUE;
 
@@ -302,6 +314,10 @@ NTSTATUS UninitializeFCB( IRP_CONTEXT* IrpContext )
                                             Fcb->LowerFileObject,
                                             &fdi, sizeof( fdi ),
                                             ( FILE_INFORMATION_CLASS )nsW32API::FileDispositionInformation );
+
+            if( NT_SUCCESS( Status ) && FeatureContext.IsRunning > 0 )
+                NotifyEventFileDeleteTo( IrpContext );
+
             if( !NT_SUCCESS( Status ) )
             {
                 KdPrint( ( "[WinIOSol] EvtID=%09d %s %s Status=0x%08x,%s Src=%ws\n"
@@ -311,11 +327,19 @@ NTSTATUS UninitializeFCB( IRP_CONTEXT* IrpContext )
             }
         }
 
+        if( Fcb->MetaDataInfo != NULLPTR )
+            UninitializeMetaDataInfo( Fcb->MetaDataInfo );
+
+        if( Fcb->SolutionMetaData != NULLPTR && Fcb->SolutionMetaDataSize > 0 )
+            ExFreePool( Fcb->SolutionMetaData );
+
         FltReleaseContext( Fcb->InstanceContext );
 
-        FltClose( Fcb->LowerFileHandle );
+        if( Fcb->LowerFileHandle != NULL)
+            FltClose( Fcb->LowerFileHandle );
         Fcb->LowerFileHandle = NULLPTR;
-        ObDereferenceObject( Fcb->LowerFileObject );
+        if( Fcb->LowerFileObject != NULLPTR )
+            ObDereferenceObject( Fcb->LowerFileObject );
         Fcb->LowerFileObject = NULLPTR;
 
         ///////////////////////////////////////////////////////////////////////
@@ -415,7 +439,22 @@ bool IsOwnFile( IRP_CONTEXT* IrpContext, const WCHAR* FileFullPathWOVolume, META
     HANDLE FileHandle = NULL;
     FILE_OBJECT* FileObject = NULLPTR;
 
-    AcquireCmnResource( IrpContext, INST_SHARED );
+    if( FileFullPathWOVolume != NULLPTR && ( FileFullPathWOVolume[0] == L'\0' || nsUtils::stricmp( FileFullPathWOVolume, L"\\" ) == 0 ) )
+        return false;
+
+    auto fullSuffix = nsUtils::ForwardFindW( const_cast< WCHAR* >( FileFullPathWOVolume ), L'.' );
+    auto lastSuffix = nsUtils::ReverseFindW( const_cast< WCHAR* >( FileFullPathWOVolume ), L'.' );
+
+    // NOTE: 두 포인터 변수가 같다면 여러 단계의 확장자는 아님
+    if( fullSuffix != NULLPTR && lastSuffix != NULLPTR && fullSuffix == lastSuffix )
+    {
+        if( nsUtils::stricmp( fullSuffix, L".exe" ) == 0 ||
+            nsUtils::stricmp( fullSuffix, L".dll" ) == 0 ||
+            nsUtils::stricmp( fullSuffix, L".sys") == 0 )
+        {
+            return false;
+        }
+    }
 
     do
     {
@@ -428,7 +467,9 @@ bool IsOwnFile( IRP_CONTEXT* IrpContext, const WCHAR* FileFullPathWOVolume, META
         if( ARGUMENT_PRESENT( MetaDataInfo ) )
             RtlZeroMemory( MetaDataInfo, METADATA_DRIVER_SIZE );
 
+        AcquireCmnResource( IrpContext, INST_SHARED );
         auto Fcb = Vcb_SearchFCB( IrpContext, FileFullPathWOVolume );
+        ReleaseCmnResource( IrpContext, INST_SHARED );
 
         if( Fcb != NULLPTR )
         {
@@ -439,20 +480,18 @@ bool IsOwnFile( IRP_CONTEXT* IrpContext, const WCHAR* FileFullPathWOVolume, META
             break;
         }
 
-        ReleaseCmnResource( IrpContext, INST_SHARED );
-
         IO_STATUS_BLOCK IoStatus;
 
         Status = FltCreateFileOwn( IrpContext, FileFullPathWOVolume, &FileHandle, &FileObject, &IoStatus );
 
         if( !NT_SUCCESS( Status ) || IoStatus.Information != FILE_OPENED )
         {
-            if( Status != STATUS_FILE_IS_A_DIRECTORY )
+            if( Status != STATUS_FILE_IS_A_DIRECTORY && Status != STATUS_DELETE_PENDING )
             {
                 KdPrint( ( "[WinIOSol] %s EvtID=%09d %s Status=0x%08x,%s Src=%ws\n"
                            , ">>", IrpContext->EvtID, __FUNCTION__
                            , Status, ntkernel_error_category::find_ntstatus( Status )->message
-                           , FileFullPathWOVolume
+                           , FileFullPathWOVolume == NULLPTR ? L"(NULL)" : FileFullPathWOVolume
                            ) );
             }
             break;
@@ -472,6 +511,5 @@ bool IsOwnFile( IRP_CONTEXT* IrpContext, const WCHAR* FileFullPathWOVolume, META
     if( FileObject != NULLPTR )
         ObDereferenceObject( FileObject );
 
-    ReleaseCmnResource( IrpContext, INST_SHARED );
     return IsOwnFileByFilter;
 }

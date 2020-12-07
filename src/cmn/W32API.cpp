@@ -100,7 +100,7 @@ NTSTATUS nsW32API::FltCreateFileEx( PFLT_FILTER Filter, PFLT_INSTANCE Instance, 
         if( !NT_SUCCESS( Status ) )
             break;
 
-        ASSERT( *FileHandle != INVALID_HANDLE_VALUE && *FileHandle != NULL );
+        ASSERT( *FileHandle != NULLPTR );
 
         if( ARGUMENT_PRESENT( FileObject ) )
         {
@@ -141,7 +141,7 @@ NTSTATUS nsW32API::FltCreateFileEx2( PFLT_FILTER Filter, PFLT_INSTANCE Instance,
 
     //  Zero out output parameters.
 
-    *FileHandle = INVALID_HANDLE_VALUE;
+    *FileHandle = NULLPTR;
 
     if( ARGUMENT_PRESENT( FileObject ) )
     {
@@ -195,7 +195,7 @@ NTSTATUS nsW32API::FltCreateFileEx2( PFLT_FILTER Filter, PFLT_INSTANCE Instance,
             if( !NT_SUCCESS( Status ) )
                 break;
 
-            ASSERT( *FileHandle != INVALID_HANDLE_VALUE && *FileHandle != NULL );
+            ASSERT( *FileHandle != NULLPTR );
 
             if( ARGUMENT_PRESENT( FileObject ) )
             {
@@ -212,27 +212,26 @@ NTSTATUS nsW32API::FltCreateFileEx2( PFLT_FILTER Filter, PFLT_INSTANCE Instance,
                                                     NULL );
 
                 if( !NT_SUCCESS( Status ) )
+                {
+                    if( *FileHandle != NULLPTR )
+                    {
+                        FltClose( *FileHandle );
+                    }
+
+                    if( ARGUMENT_PRESENT( FileObject ) )
+                    {
+                        if( *FileObject != NULLPTR )
+                        {
+                            ObDereferenceObject( *FileObject );
+                        }
+                    }
                     break;
+
+                }
             }
         }
 
     } while( false );
-
-    if( !NT_SUCCESS( Status ) )
-    {
-        if( *FileHandle != INVALID_HANDLE_VALUE )
-        {
-            FltClose( *FileHandle );
-        }
-
-        if( ARGUMENT_PRESENT( FileObject ) )
-        {
-            if( *FileObject != NULLPTR )
-            {
-                ObDereferenceObject( *FileObject );
-            }
-        }
-    }
 
     return Status;
 }

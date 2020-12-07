@@ -76,6 +76,10 @@ typedef struct _USER_FILE_ENCRYPT
     ULONG                                   SizeOfStruct;
 
     ENCRYPT_CONFIG                          EncryptConfig;
+    BOOLEAN                                 IsUseStubCodeX86;
+    BOOLEAN                                 IsUseStubCodeX64;
+    // 반드시 . 으로 시작
+    WCHAR                                   ContainorSuffix[ CONTAINOR_SUFFIX_MAX ];
 
     ULONG                                   LengthOfSrcFileFullPath;
     ULONG                                   OffsetOfSrcFileFullPath;
@@ -178,7 +182,7 @@ typedef struct _USER_PROCESS_FILTER_ENTRY
 
 typedef union TyMsgParameters
 {
-    struct
+    struct _Create
     {
         ACCESS_MASK                         DesiredAccess;
         ULONG                               FileAttributes;
@@ -192,7 +196,7 @@ typedef union TyMsgParameters
         BYTE                                SolutionMetaData[ MAX_SOLUTION_METADATA_SIZE ];
     } Create;
 
-    struct
+    struct _CreateResult
     {
         // managed by this driver
         BOOLEAN                             IsUseIsolation;         
@@ -214,22 +218,22 @@ typedef union TyMsgParameters
         BYTE                                SolutionMetaData[ MAX_SOLUTION_METADATA_SIZE ];
     } CreateResult;
 
-    struct
+    struct _SetFileInformation
     {
         ULONG                               FileInformationClass;
     } SetFileInformation;
 
-    struct
+    struct _Clean
     {
         BOOLEAN                             IsModified;
     } Clean;
 
-    struct
+    struct _Close
     {
         BOOLEAN                             IsModified;
     } Close;
 
-    struct
+    struct _Process
     {
         BOOLEAN                             IsCreate;
         ULONG                               ParentProcessId;

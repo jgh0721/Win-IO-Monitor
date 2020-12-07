@@ -280,6 +280,13 @@ NTSTATUS TuneFileDirectoryInformation( IRP_CONTEXT* IrpContext )
         {
             Offset = InfoBuffer->NextEntryOffset;
 
+            if( nsUtils::stricmp( InfoBuffer->FileName, InfoBuffer->FileNameLength / 2, L"." ) == 0 ||
+                nsUtils::stricmp( InfoBuffer->FileName, InfoBuffer->FileNameLength / 2, L".." ) == 0 )
+            {
+                InfoBuffer = ( decltype(InfoBuffer) )Add2Ptr( InfoBuffer, Offset );
+                continue;
+            }
+
             Status = MakeDstFileFullPath( IrpContext, InfoBuffer->FileName, InfoBuffer->FileNameLength );
             if( !NT_SUCCESS( Status ) )
             {
@@ -333,6 +340,13 @@ NTSTATUS TuneFileFullDirectoryInformation( IRP_CONTEXT* IrpContext )
         do
         {
             Offset = InfoBuffer->NextEntryOffset;
+
+            if( nsUtils::stricmp( InfoBuffer->FileName, InfoBuffer->FileNameLength / 2, L"." ) == 0 ||
+                nsUtils::stricmp( InfoBuffer->FileName, InfoBuffer->FileNameLength / 2, L".." ) == 0 )
+            {
+                InfoBuffer = ( decltype( InfoBuffer ) )Add2Ptr( InfoBuffer, Offset );
+                continue;
+            }
 
             Status = MakeDstFileFullPath( IrpContext, InfoBuffer->FileName, InfoBuffer->FileNameLength );
             if( !NT_SUCCESS( Status ) )
@@ -388,6 +402,13 @@ NTSTATUS TuneFileBothDirectoryInformation( IRP_CONTEXT* IrpContext )
         {
             Offset = InfoBuffer->NextEntryOffset;
 
+            if( nsUtils::stricmp( InfoBuffer->FileName, InfoBuffer->FileNameLength / 2, L"." ) == 0 ||
+                nsUtils::stricmp( InfoBuffer->FileName, InfoBuffer->FileNameLength / 2, L".." ) == 0 )
+            {
+                InfoBuffer = ( decltype( InfoBuffer ) )Add2Ptr( InfoBuffer, Offset );
+                continue;
+            }
+
             Status = MakeDstFileFullPath( IrpContext, InfoBuffer->FileName, InfoBuffer->FileNameLength );
             if( !NT_SUCCESS( Status ) )
             {
@@ -442,6 +463,13 @@ NTSTATUS TuneFileIdBothDirectoryInformation( IRP_CONTEXT* IrpContext )
         {
             Offset = InfoBuffer->NextEntryOffset;
 
+            if( nsUtils::stricmp( InfoBuffer->FileName, InfoBuffer->FileNameLength / 2, L"." ) == 0 ||
+                nsUtils::stricmp( InfoBuffer->FileName, InfoBuffer->FileNameLength / 2, L".." ) == 0 )
+            {
+                InfoBuffer = ( decltype( InfoBuffer ) )Add2Ptr( InfoBuffer, Offset );
+                continue;
+            }
+
             Status = MakeDstFileFullPath( IrpContext, InfoBuffer->FileName, InfoBuffer->FileNameLength );
             if( !NT_SUCCESS( Status ) )
             {
@@ -495,6 +523,13 @@ NTSTATUS TuneFileIdFullDirectoryInformation( IRP_CONTEXT* IrpContext )
         do
         {
             Offset = InfoBuffer->NextEntryOffset;
+
+            if( nsUtils::stricmp( InfoBuffer->FileName, InfoBuffer->FileNameLength / 2, L"." ) == 0 ||
+                nsUtils::stricmp( InfoBuffer->FileName, InfoBuffer->FileNameLength / 2, L".." ) == 0 )
+            {
+                InfoBuffer = ( decltype( InfoBuffer ) )Add2Ptr( InfoBuffer, Offset );
+                continue;
+            }
 
             Status = MakeDstFileFullPath( IrpContext, InfoBuffer->FileName, InfoBuffer->FileNameLength );
             if( !NT_SUCCESS( Status ) )

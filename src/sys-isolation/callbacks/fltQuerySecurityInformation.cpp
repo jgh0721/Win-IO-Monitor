@@ -23,20 +23,50 @@ FLT_PREOP_CALLBACK_STATUS FLTAPI FilterPreQuerySecurityInformation( PFLT_CALLBAC
         if( IsOwnFileObject( FileObject ) == false )
             __leave;
 
+        if( FLT_IS_FASTIO_OPERATION( Data ) )
+            return FLT_PREOP_DISALLOW_FASTIO;
+
         IrpContext = CreateIrpContext( Data, FltObjects );
         PrintIrpContext( IrpContext );
 
         AcquireCmnResource( IrpContext, FCB_MAIN_SHARED );
+
+        PVOID KernelBuffer = NULLPTR;
         FileObject = ( ( CCB* )FileObject->FsContext2 )->LowerFileObject;
-        PVOID Buffer = FltMapUserBuffer( Data );
+
+        const auto& Parameters = Data->Iopb->Parameters.QuerySecurity;
+        if( Parameters.Length == 0 )
+            KernelBuffer = Parameters.SecurityBuffer;
+        else
+        {
+            KernelBuffer = ExAllocatePool( PagedPool, Parameters.Length );
+            if( KernelBuffer == NULLPTR )
+            {
+                AssignCmnResult( IrpContext, STATUS_INSUFFICIENT_RESOURCES );
+                __leave;
+            }
+
+            RtlCopyMemory( KernelBuffer, Parameters.SecurityBuffer, Parameters.Length );
+        }
 
         ULONG LengthNeeded = 0;
         NTSTATUS Status = FltQuerySecurityObject( FltObjects->Instance,
                                                   FileObject,
                                                   Data->Iopb->Parameters.QuerySecurity.SecurityInformation,
-                                                  Buffer,
+                                                  KernelBuffer,
                                                   Data->Iopb->Parameters.QuerySecurity.Length,
                                                   &LengthNeeded );
+
+        // NOTE: https://docs.microsoft.com/en-us/windows-hardware/drivers/ifs/irp-mj-query-security-and-irp-mj-set-security
+        // CACLS 유틸리티
+        if( Status == STATUS_BUFFER_TOO_SMALL )
+            Status = STATUS_BUFFER_OVERFLOW;
+
+        if( KernelBuffer != NULLPTR )
+        {
+            RtlCopyMemory( Parameters.SecurityBuffer, KernelBuffer, Parameters.Length );
+            ExFreePool( KernelBuffer );
+        }
 
         AssignCmnResult( IrpContext, Status );
         AssignCmnResultInfo( IrpContext, LengthNeeded );

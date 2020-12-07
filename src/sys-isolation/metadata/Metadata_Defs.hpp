@@ -1,7 +1,9 @@
 ﻿#ifndef HDR_ISOLATION_METADATA_DEFS
 #define HDR_ISOLATION_METADATA_DEFS
 
+#if defined(USE_ON_KERNEL)
 #include "fltBase.hpp"
+#endif
 
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
@@ -88,6 +90,8 @@ static const char* METADATA_MAGIC_TEXT = "LOSOIW";
 static const int METADATA_MAGIC_TEXT_SIZE = 6;
 static const int METADATA_DRIVER_SIZE = 1024;
 static const unsigned int METADATA_MAXIMUM_CONTAINOR_SIZE = 1048576;
+
+static const wchar_t* METADATA_DEFAULT_CONTAINOR_SUFFIX = L".exe";
 
 typedef enum _METADATA_TYPE
 {

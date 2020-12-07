@@ -12,6 +12,8 @@ namespace nsW32API
 {
     DYNLOAD_BEGIN_CLASS( CNtOsKrnlAPI, L"NtOsKrnl.exe" )
 
+        DYNLOAD_FUNC_WITH_01( 1, ULONG, NTAPI, KeQueryActiveProcessorCount, __out_opt PKAFFINITY, ActiveProcessors );
+
         // The PsSetLoadImageNotifyRoutine routine registers a driver-supplied callback that is subsequently notified whenever an image is loaded (or mapped into memory).
         DYNLOAD_FUNC_WITH_01( STATUS_INSUFFICIENT_RESOURCES, NTSTATUS, NTAPI, PsSetLoadImageNotifyRoutine, IN PLOAD_IMAGE_NOTIFY_ROUTINE, NotifyRoutine );
 

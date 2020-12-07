@@ -145,7 +145,7 @@ BOOLEAN DevIOCntlSetDriverConfig( PVOID InputBuffer, ULONG InputBufferLength, PV
 
         SetTimeOutMs( DriverConfig->TimeOutMs );
 
-        for( int idx = 0; DriverConfig->SolutionMetaDataSize; ++idx )
+        for( int idx = 0; DriverConfig->EncryptConfigCount; ++idx )
         {
             RtlCopyMemory( &FeatureContext.EncryptContext[ idx ], &DriverConfig->EncryptConfig[idx],
                            sizeof( ENCRYPT_CONTEXT ) );

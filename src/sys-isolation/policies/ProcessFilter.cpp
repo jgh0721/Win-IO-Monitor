@@ -484,8 +484,10 @@ NTSTATUS ProcessFilter_Match( ULONG ProcessId, TyGenericBuffer<WCHAR>* ProcessFi
                 (  nsUtils::WildcardMatch_straight( ProcessFilePath->Buffer, Item->ProcessFilterMask ) == true )
                 )
             {
-                *ProcessFilter = ProcessFilter_Ref();
-                *MatchItem = Item;
+                if( ARGUMENT_PRESENT( ProcessFilter ) )
+                    *ProcessFilter = ProcessFilter_Ref();
+                if( ARGUMENT_PRESENT( MatchItem ) )
+                    *MatchItem = Item;
 
                 Status = STATUS_SUCCESS;
                 break;
@@ -532,6 +534,9 @@ NTSTATUS ProcessFilter_SubMatch( __in PFLT_CALLBACK_DATA Data, PROCESS_FILTER_EN
             if( nsUtils::WildcardMatch_straight( FilePath->Buffer, Item->FilterMask ) == false )
                 continue;
 
+            if( nsUtils::stricmp( Item->FilterMask, L"*" ) == 0 && nsUtils::ReverseFindW( FilePath->Buffer, L'.' ) != NULLPTR )
+                continue;
+
             if( ARGUMENT_PRESENT( IsIncludeMatch ) )
                 *IsIncludeMatch = false;
 
@@ -554,6 +559,9 @@ NTSTATUS ProcessFilter_SubMatch( __in PFLT_CALLBACK_DATA Data, PROCESS_FILTER_EN
                 continue;
 
             if( nsUtils::WildcardMatch_straight( FilePath->Buffer, Item->FilterMask ) == false )
+                continue;
+
+            if( nsUtils::stricmp( Item->FilterMask, L"*" ) == 0 && nsUtils::ReverseFindW( FilePath->Buffer, L'.' ) != NULLPTR )
                 continue;
 
             if( ARGUMENT_PRESENT( IsIncludeMatch ) )

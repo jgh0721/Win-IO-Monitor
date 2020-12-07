@@ -44,7 +44,7 @@ CONST FLT_OPERATION_REGISTRATION FilterCallbacks[] = {
 
     { IRP_MJ_QUERY_VOLUME_INFORMATION,      0,      FilterPreQueryVolumeInformation,    FilterPostQueryVolumeInformation    },
 
-    { IRP_MJ_SET_VOLUME_INFORMATION,        0,      FilterPreOperationPassThrough,      FilterPostOperationPassThrough    },
+    { IRP_MJ_SET_VOLUME_INFORMATION,        0,      FilterPreSetVolumeInformation,      FilterPostSetVolumeInformation    },
 
     { IRP_MJ_DIRECTORY_CONTROL,             0,      FilterPreDirectoryControl,          FilterPostDirectoryControl    },
 
@@ -300,7 +300,7 @@ NTSTATUS InitializeMiniFilterPort( CTX_GLOBAL_DATA* GlobalContext )
                                              ClientConnectNotify,
                                              ClientDisconnectNotify,
                                              ClientMessageNotify,
-                                             8 );
+                                             MAX_CLIENT_CONNECTION );
 
         if( !NT_SUCCESS( Status ) )
         {
@@ -361,7 +361,16 @@ NTSTATUS FLTAPI ClientConnectNotify( PFLT_PORT ClientPort, PVOID ServerPortCooki
 
     if( ServerPortCookie == (PVOID)2 )
     {
-        *ConnectionPortCookie = ( PVOID )-1;
+        int idx = 0;
+
+        while( idx < MAX_CLIENT_CONNECTION && GlobalContext.ClientProcPort[ idx ] != NULLPTR )
+            ++idx;
+
+        if( idx >= MAX_CLIENT_CONNECTION )
+            return STATUS_INSUFFICIENT_RESOURCES;
+
+        GlobalContext.ClientProcPort[ idx ] = ClientPort;
+        *ConnectionPortCookie = ( PVOID )( int )( idx - 100 );
     }
 
     return STATUS_SUCCESS;
@@ -395,8 +404,17 @@ void FLTAPI ClientDisconnectNotify( PVOID ConnectionCookie )
     }
     else
     {
-        FltCloseClientPort( GlobalContext.Filter, &GlobalContext.ClientProcPort );
-        GlobalContext.ClientProcPort = NULLPTR;
+        /*!
+            src             dst         abs     -100        abs
+            0               -100        100     0           0
+            1               -99         99      -1          1
+            2               -98         98      -2          2
+        */
+
+        idx = abs( abs( idx ) - 100 );
+
+        FltCloseClientPort( GlobalContext.Filter, &GlobalContext.ClientProcPort[ idx ] );
+        GlobalContext.ClientProcPort[ idx ] = NULLPTR;
     }
 }
 

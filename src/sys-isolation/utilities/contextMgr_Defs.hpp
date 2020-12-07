@@ -24,7 +24,7 @@ typedef struct _CTX_GLOBAL_DATA
     PFLT_PORT                       ServerPort;
     PFLT_PORT                       ServerProcPort;
     PFLT_PORT                       ClientPort[ MAX_CLIENT_CONNECTION ];
-    PFLT_PORT                       ClientProcPort;
+    PFLT_PORT                       ClientProcPort[ MAX_CLIENT_CONNECTION ];
 
     ULONG                           DebugLevel;
     NPAGED_LOOKASIDE_LIST           DebugLookasideList;
@@ -198,5 +198,20 @@ typedef struct _DF_DELETE_NOTIFY
     BOOLEAN FileDelete;
 
 } DF_DELETE_NOTIFY, * PDF_DELETE_NOTIFY;
+
+/*!
+    이름변경 또는 링크의 각 클래스간의 정보 일치를 위한 구조체
+*/
+typedef struct _CTX_RENLINK_CONTEXT
+{
+    ULONG           Length;
+    ULONG           FileInformationClass;
+
+    ULONG           Flags;
+    HANDLE          RootDirectory;
+    ULONG           FileNameLength;
+    WCHAR*          FileName;
+
+} CTX_RENLINK_CONTEXT, *PCTX_RENLINK_CONTEXT;
 
 #endif // HDR_UTIL_CONTEXTMGR_DEFS

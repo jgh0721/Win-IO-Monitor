@@ -20,6 +20,8 @@
 #include "metadata/Metadata.hpp"
 #include "WinIOIsolation_Event.hpp"
 
+#include "fltCmnLibs.hpp"
+
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
 #endif
@@ -73,7 +75,7 @@ NTSTATUS FLTAPI DriverEntry( PDRIVER_OBJECT DriverObject, PUNICODE_STRING Regist
 
         {
             NTSTATUS Status = STATUS_SUCCESS;
-            HANDLE StubCodeX86 = NULL;
+            HANDLE StubCodeX86 = NULLPTR;
             IO_STATUS_BLOCK IoStatus;
             OBJECT_ATTRIBUTES OA;
             UNICODE_STRING UNI;
@@ -96,7 +98,7 @@ NTSTATUS FLTAPI DriverEntry( PDRIVER_OBJECT DriverObject, PUNICODE_STRING Regist
                     Status = ZwQueryInformationFile( StubCodeX86, &IoStatus, &fsi, sizeof( fsi ), FileStandardInformation );
                     if( !NT_SUCCESS( Status ) )
                         break;
-                    
+
                     BufferSize = fsi.EndOfFile.QuadPart;
                     Buffer = ExAllocatePool( PagedPool, BufferSize );
                     if( Buffer == NULLPTR )
@@ -115,38 +117,66 @@ NTSTATUS FLTAPI DriverEntry( PDRIVER_OBJECT DriverObject, PUNICODE_STRING Regist
             if( Buffer != NULLPTR )
                 ExFreePool( Buffer );
 
-            if( StubCodeX86 != NULL )
+            if( StubCodeX86 != NULLPTR )
                 ZwClose( StubCodeX86 );
         }
 
         {
-            GlobalFilter_Add( L"*.txt", true );
-            GlobalFilter_Add( L"*.exe", true );
+            GlobalFilter_Add( L"*\\testsuite\\*.*", true );
+            GlobalFilter_Add( L"*\\testsuite\\*", true );
+            GlobalFilter_Add( L"*\\testsuite*.*", true );
+            GlobalFilter_Add( L"*\\testsuite*", true );
         }
-
+        
         {
-            auto PFilterEntry = (PROCESS_FILTER_ENTRY*)ExAllocatePool( NonPagedPool, sizeof( PROCESS_FILTER_ENTRY ) );
+            auto PFilterEntry = ( PROCESS_FILTER_ENTRY* )ExAllocatePool( NonPagedPool, sizeof( PROCESS_FILTER_ENTRY ) );
 
             RtlZeroMemory( PFilterEntry, sizeof( PROCESS_FILTER_ENTRY ) );
 
             ExUuidCreate( &PFilterEntry->Id );
-            RtlStringCchCatW( PFilterEntry->ProcessFilterMask, MAX_PATH, L"*syn.exe" );
-            PFilterEntry->ProcessFilter = PROCESS_NOTIFY_CREATION_TERMINATION;
+            RtlStringCchCatW( PFilterEntry->ProcessFilterMask, MAX_PATH, L"*winfstest.exe" );
+            PFilterEntry->ProcessFilter = 0;
 
             InitializeListHead( &PFilterEntry->IncludeListHead );
             InitializeListHead( &PFilterEntry->ExcludeListHead );
 
             ProcessFilter_Add( PFilterEntry );
 
-            auto PFilterMaskEntry = ( PROCESS_FILTER_MASK_ENTRY* )ExAllocatePool( NonPagedPool, sizeof( PROCESS_FILTER_MASK_ENTRY ) );
-            RtlZeroMemory( PFilterMaskEntry, sizeof( PROCESS_FILTER_MASK_ENTRY ) );
+            {
+                auto PFilterMaskEntry = ( PROCESS_FILTER_MASK_ENTRY* )ExAllocatePool( NonPagedPool, sizeof( PROCESS_FILTER_MASK_ENTRY ) );
+                RtlZeroMemory( PFilterMaskEntry, sizeof( PROCESS_FILTER_MASK_ENTRY ) );
 
-            ExUuidCreate( &PFilterMaskEntry->Id );
-            PFilterMaskEntry->FilterCategory = MSG_CATE_FILESYSTEM;
-            PFilterMaskEntry->FilterType = FS_PRE_CREATE;
-            RtlStringCchCatW( PFilterMaskEntry->FilterMask, MAX_PATH, L"*.txt" );
+                ExUuidCreate( &PFilterMaskEntry->Id );
+                PFilterMaskEntry->FilterCategory = MSG_CATE_FILESYSTEM;
+                PFilterMaskEntry->FilterType = FS_PRE_CREATE | FS_PRE_SET_INFORMATION | FS_PRE_DIRECTORY_CONTROL | FS_PRE_CLEANUP | FS_PRE_CLOSE | FS_PRE_QUERY_INFORMATION;
+                RtlStringCchCatW( PFilterMaskEntry->FilterMask, MAX_PATH, L"*.txt" );
 
-            ProcessFilter_AddEntry( &PFilterEntry->Id, PFilterMaskEntry, TRUE );
+                ProcessFilter_AddEntry( &PFilterEntry->Id, PFilterMaskEntry, TRUE );
+            }
+            
+            {
+                auto PFilterMaskEntry = ( PROCESS_FILTER_MASK_ENTRY* )ExAllocatePool( NonPagedPool, sizeof( PROCESS_FILTER_MASK_ENTRY ) );
+                RtlZeroMemory( PFilterMaskEntry, sizeof( PROCESS_FILTER_MASK_ENTRY ) );
+
+                ExUuidCreate( &PFilterMaskEntry->Id );
+                PFilterMaskEntry->FilterCategory = MSG_CATE_FILESYSTEM;
+                PFilterMaskEntry->FilterType = FS_PRE_CREATE | FS_PRE_SET_INFORMATION | FS_PRE_DIRECTORY_CONTROL | FS_PRE_CLEANUP | FS_PRE_CLOSE | FS_PRE_QUERY_INFORMATION;
+                RtlStringCchCatW( PFilterMaskEntry->FilterMask, MAX_PATH, L"*.*" );
+
+                ProcessFilter_AddEntry( &PFilterEntry->Id, PFilterMaskEntry, TRUE );
+            }
+
+            {
+                auto PFilterMaskEntry = ( PROCESS_FILTER_MASK_ENTRY* )ExAllocatePool( NonPagedPool, sizeof( PROCESS_FILTER_MASK_ENTRY ) );
+                RtlZeroMemory( PFilterMaskEntry, sizeof( PROCESS_FILTER_MASK_ENTRY ) );
+
+                ExUuidCreate( &PFilterMaskEntry->Id );
+                PFilterMaskEntry->FilterCategory = MSG_CATE_FILESYSTEM;
+                PFilterMaskEntry->FilterType = FS_PRE_CREATE | FS_PRE_SET_INFORMATION | FS_PRE_DIRECTORY_CONTROL | FS_PRE_CLEANUP | FS_PRE_CLOSE | FS_PRE_QUERY_INFORMATION;
+                RtlStringCchCatW( PFilterMaskEntry->FilterMask, MAX_PATH, L"*" );
+
+                ProcessFilter_AddEntry( &PFilterEntry->Id, PFilterMaskEntry, TRUE );
+            }
         }
 
         Status = STATUS_SUCCESS;
@@ -267,8 +297,6 @@ NTSTATUS InitializeGlobalContext( PDRIVER_OBJECT DriverObject )
                                         BUFFER_SWAP_WRITE_16384_SIZE, POOL_WRITE_TAG, 0 );
         ExInitializePagedLookasideList( &GlobalContext.SwapWriteLookasideList_65536, NULL, NULL, 0,
                                         BUFFER_SWAP_WRITE_65536_SIZE, POOL_WRITE_TAG, 0 );
-
-        SetTimeOutMs( 5000 );
 
         Status = STATUS_SUCCESS;
 

@@ -5,6 +5,7 @@
 #include "irpContext.hpp"
 #include "utilities/bufferMgr.hpp"
 #include "driverMgmt.hpp"
+#include "utilities/osInfoMgr.hpp"
 
 #include "fltCmnLibs.hpp"
 
@@ -37,11 +38,14 @@ NTSTATUS InitializeNotifyEventWorker()
     KeInitializeEvent( &EVENT_NOTIFY_CONTEXT.ExitEvent, NotificationEvent, FALSE );
     InitializeListHead( &EVENT_NOTIFY_CONTEXT.ListHead );
 
-    // 현재 프로세스의 수를 구할 때 DISPATCH_LEVEL 이상이 아니면 수행도중 컨텍스트 스위칭이 아니라 부정확한 값이 반환될 수 있다
-    ULONG uCount = 0; KIRQL oldIrql = 0;
-    KeRaiseIrql( DISPATCH_LEVEL, &oldIrql );
-    uCount = KeGetCurrentProcessorNumber();
-    KeLowerIrql( oldIrql );
+    ULONG uCount = 1;
+
+    if( nsUtils::VerifyVersionInfoEx( 6, "<" ) == true )
+        uCount = KeNumberProcessors;
+    else
+    {
+        uCount = GlobalNtOsKrnlMgr.KeQueryActiveProcessorCount( NULL );
+    }
 
     if( uCount <= 4 )
         uCount = uCount * 2;
@@ -82,51 +86,59 @@ void NotifyEventWorker( PVOID Context )
 {
     UNREFERENCED_PARAMETER( Context );
 
-    do
+    KeSetPriorityThread( KeGetCurrentThread(), HIGH_PRIORITY );
+
+    NTSTATUS Status = STATUS_WAIT_0;
+    PVOID WaitObjects[] = { &EVENT_NOTIFY_CONTEXT.NotifyEvent, &EVENT_NOTIFY_CONTEXT.ExitEvent };
+    
+    while( EVENT_NOTIFY_CONTEXT.IsExit == FALSE )
     {
-        KeSetPriorityThread( KeGetCurrentThread(), HIGH_PRIORITY );
-
-        NTSTATUS Status = STATUS_WAIT_0;
-        PVOID WaitObjects[] = { &EVENT_NOTIFY_CONTEXT.NotifyEvent, &EVENT_NOTIFY_CONTEXT.ExitEvent };
-
-        while( EVENT_NOTIFY_CONTEXT.IsExit != FALSE )
+        // Count 가 THREAD_WAIT_OBJECTS 이하라면 WaitBlockArray 는 NULL 이 가능함
+        Status = KeWaitForMultipleObjects( _countof( WaitObjects ), WaitObjects,
+                                           WaitAny, Executive, KernelMode,
+                                           FALSE, NULL, NULL );
+        if( !NT_SUCCESS( Status ) )
         {
-            // Count 가 THREAD_WAIT_OBJECTS 이하라면 WaitBlockArray 는 NULL 이 가능함
-            Status = KeWaitForMultipleObjects( _countof( WaitObjects ), WaitObjects,
-                                               WaitAny, Executive, KernelMode,
-                                               FALSE, NULL, NULL );
+            KdPrint( ( "[WinIOSol] >> %s KeWaitForMultipleObjects FAILED Status=0x%08x,%s \n", __FUNCTION__,
+                       Status, ntkernel_error_category::find_ntstatus( Status )->message ) );
 
-            if( EVENT_NOTIFY_CONTEXT.IsExit != FALSE )
-                break;
-
-            if( Status != STATUS_WAIT_0 )
-                break;
-
-            PLIST_ENTRY item = NULL;
-            FS_NOTIFY_ITEM* notify = NULL;
-
-            while( TRUE )
-            {
-                item = ExInterlockedRemoveHeadList( &EVENT_NOTIFY_CONTEXT.ListHead, &EVENT_NOTIFY_CONTEXT.Lock );
-                if( item == NULL )
-                    break;
-
-                notify = CONTAINING_RECORD( item, FS_NOTIFY_ITEM, ListEntry );
-                NotifyFSEventToClient( notify );
-            }
-
-            if( EVENT_NOTIFY_CONTEXT.IsExit != FALSE )
-                break;
+			ASSERT( false );                       
+            break;
         }
+
+        if( EVENT_NOTIFY_CONTEXT.IsExit != FALSE )
+            break;
+
+        if( Status == STATUS_WAIT_1 )
+            break;
+
+        if( Status != STATUS_WAIT_0 )
+            continue;
+
+        PLIST_ENTRY item = NULL;
+        FS_NOTIFY_ITEM* notify = NULL;
         
-    } while( false );
+        while( TRUE )
+        {
+            item = ExInterlockedRemoveHeadList( &EVENT_NOTIFY_CONTEXT.ListHead, &EVENT_NOTIFY_CONTEXT.Lock );
+            if( item == NULL )
+                break;
+
+            notify = CONTAINING_RECORD( item, FS_NOTIFY_ITEM, ListEntry );
+            NotifyFSEventToClient( notify );
+        }
+
+        if( EVENT_NOTIFY_CONTEXT.IsExit != FALSE )
+            break;
+    }
+
+    PsTerminateSystemThread( STATUS_SUCCESS );
 }
 
 NTSTATUS NotifyFSEventToClient( FS_NOTIFY_ITEM* NotifyEventItem )
 {
     NTSTATUS Status = STATUS_SUCCESS;
-    TyGenericBuffer<MSG_REPLY_PACKET> Reply;
-    
+
     do
     {
         if( NotifyEventItem == NULLPTR )
@@ -136,18 +148,24 @@ NTSTATUS NotifyFSEventToClient( FS_NOTIFY_ITEM* NotifyEventItem )
             break;
 
         LONG EvtID = CreateEvtID();
-        PFLT_PORT ClientPort = GetClientPort( EvtID );
+        PFLT_PORT ClientPort = NULLPTR;
+
+        if( NotifyEventItem->SendPacket.Buffer->MessageType == PROC_WAS_CREATED || 
+            NotifyEventItem->SendPacket.Buffer->MessageType == PROC_WAS_TERMINATED )
+            ClientPort = GetClientPort( EvtID, true );
+        else
+            ClientPort = GetClientPort( EvtID, false );
 
         if( GlobalContext.Filter == NULLPTR || ClientPort == NULLPTR )
             break;
 
-        Reply = AllocateBuffer<MSG_REPLY_PACKET>( BUFFER_MSG_REPLY );
-        ULONG uReplySize = Reply.BufferSize;
+        LARGE_INTEGER TimeOutMs;
+        TimeOutMs.QuadPart = RELATIVE( MILLISECONDS( 1000 ) );
 
         Status = FltSendMessage( GlobalContext.Filter, &ClientPort,
                                  NotifyEventItem->SendPacket.Buffer, 
                                  NotifyEventItem->SendPacket.Buffer->MessageSize,
-                                 Reply.Buffer, ( PULONG )&uReplySize, NULL );
+                                 NULL, 0, &TimeOutMs );
 
         if( NT_SUCCESS( Status ) && Status == STATUS_TIMEOUT )
         {
@@ -157,7 +175,7 @@ NTSTATUS NotifyFSEventToClient( FS_NOTIFY_ITEM* NotifyEventItem )
 
         if( !NT_SUCCESS( Status ) )
         {
-            KdPrint( ( "[WinIOSol] EVENT FltSendMessage Failed|0x%08x", Status ) );
+            KdPrint( ( "[WinIOSol] EVENT FltSendMessage Failed|0x%08x\n", Status ) );
         }
 
     } while( false );
@@ -167,9 +185,6 @@ NTSTATUS NotifyFSEventToClient( FS_NOTIFY_ITEM* NotifyEventItem )
         DeallocateBuffer( &NotifyEventItem->SendPacket );
         ExFreePool( NotifyEventItem );
     }
-
-    if( Reply.Buffer != NULLPTR )
-        DeallocateBuffer( &Reply );
 
     return Status;
 }
@@ -245,7 +260,7 @@ NTSTATUS CheckEventFileCreateTo( IRP_CONTEXT* IrpContext )
         KeQuerySystemTime( &Packet.Buffer->EventTime );
 
         Packet.Buffer->ProcessId = IrpContext->ProcessId;
-        Packet.Buffer->ThreadId = (ULONG)PsGetCurrentThreadId();
+        Packet.Buffer->ThreadId = HandleToUlong(PsGetCurrentThreadId());
 
         const auto Args = ( CREATE_ARGS* )IrpContext->Params;
         Packet.Buffer->FileType = Args->MetaDataInfo.MetaData.Type;
@@ -269,29 +284,48 @@ NTSTATUS CheckEventFileCreateTo( IRP_CONTEXT* IrpContext )
                             L"%s", IrpContext->ProcessFullPath.Buffer );
 
         Packet.Buffer->LengthOfSrcFileFullPath = CchSrcFileFullpath * sizeof( WCHAR );
-        Packet.Buffer->OffsetOfSrcFileFullPath = Packet.Buffer->OffsetOfProcessFullPath = Packet.Buffer->LengthOfProcessFullPath;
+        Packet.Buffer->OffsetOfSrcFileFullPath = Packet.Buffer->OffsetOfProcessFullPath + Packet.Buffer->LengthOfProcessFullPath;
         RtlStringCbPrintfW( ( PWCH )( Add2Ptr( Packet.Buffer, Packet.Buffer->OffsetOfSrcFileFullPath ) ),
                             Packet.Buffer->LengthOfSrcFileFullPath,
                             L"%s", IrpContext->SrcFileFullPath.Buffer );
 
-        ULONG ReplyLength = IrpContext->Result.BufferSize;
-
-        Status = FltSendMessage( GlobalContext.Filter, &ClientPort,
-                                 Packet.Buffer, Packet.Buffer->MessageSize,
-                                 IrpContext->Result.Buffer, &ReplyLength,
-                                 &FeatureContext.TimeOutMs );
-
-        if( (NT_SUCCESS( Status ) && Status == STATUS_TIMEOUT) || (!NT_SUCCESS( Status )) )
+        if( nsUtils::EndsWithW( IrpContext->ProcessFileName, L"winfstest.exe" ) != NULLPTR )
         {
-            KdPrint( ( "[WinIOSol] %s EvtID=%09d %s %s %s Status=0x%08x,%s Proc=%06d,%ws\n"
-                       , JudgeInOut( IrpContext ), IrpContext->EvtID, __FUNCTION__, "FltSendMessage", Status == STATUS_TIMEOUT ? "Timeout" : "FAILED"
-                       , Status, ntkernel_error_category::find_ntstatus( Status )->message
-                       , IrpContext->ProcessId, IrpContext->ProcessFileName ) );
+            IrpContext->Result.Buffer->Result = MSG_JUDGE_ALLOW;
+            IrpContext->Result.Buffer->Parameters.CreateResult.IsUseIsolation = TRUE;
 
-            if( Status == STATUS_TIMEOUT )
-                Status = STATUS_AUDIT_FAILED;
+            IrpContext->Result.Buffer->Parameters.CreateResult.IsUseContainor = TRUE;
+            wcscpy( IrpContext->Result.Buffer->Parameters.CreateResult.NameChangeSuffix, METADATA_DEFAULT_CONTAINOR_SUFFIX );
 
-            __leave;
+            IrpContext->Result.Buffer->Parameters.CreateResult.IsUseEncryption = FALSE;
+
+            IrpContext->Result.Buffer->Parameters.CreateResult.IsUseSolutionMetaData = TRUE;
+            IrpContext->Result.Buffer->Parameters.CreateResult.SolutionMetaDataSize = 7168;
+            IrpContext->Result.Buffer->Parameters.CreateResult.SolutionMetaData;
+
+            Status = STATUS_SUCCESS;
+        }
+        else
+        {
+            ULONG ReplyLength = sizeof( MSG_REPLY_PACKET );
+
+            Status = FltSendMessage( GlobalContext.Filter, &ClientPort,
+                                     Packet.Buffer, Packet.Buffer->MessageSize,
+                                     IrpContext->Result.Buffer, &ReplyLength,
+                                     &FeatureContext.TimeOutMs );
+
+            if( ( NT_SUCCESS( Status ) && Status == STATUS_TIMEOUT ) || ( !NT_SUCCESS( Status ) ) )
+            {
+                KdPrint( ( "[WinIOSol] %s EvtID=%09d %s %s %s Status=0x%08x,%s Proc=%06d,%ws\n"
+                           , JudgeInOut( IrpContext ), IrpContext->EvtID, __FUNCTION__, "FltSendMessage", Status == STATUS_TIMEOUT ? "Timeout" : "FAILED"
+                           , Status, ntkernel_error_category::find_ntstatus( Status )->message
+                           , IrpContext->ProcessId, IrpContext->ProcessFileName ) );
+
+                if( Status == STATUS_TIMEOUT )
+                    Status = STATUS_AUDIT_FAILED;
+
+                __leave;
+            }
         }
     }
     __finally
@@ -349,7 +383,7 @@ NTSTATUS CheckEventFileCleanup( IRP_CONTEXT* IrpContext )
         KeQuerySystemTime( &Packet.Buffer->EventTime );
 
         Packet.Buffer->ProcessId = IrpContext->ProcessId;
-        Packet.Buffer->ThreadId = ( ULONG )PsGetCurrentThreadId();
+        Packet.Buffer->ThreadId = HandleToULong( PsGetCurrentThreadId() );
         Packet.Buffer->Parameters.Clean.IsModified = FlagOn( IrpContext->Fcb->Flags, FCB_STATE_FILE_MODIFIED ) != FALSE;
 
         Packet.Buffer->LengthOfProcessFullPath = CchProcessFullPath * sizeof( WCHAR );
@@ -359,12 +393,12 @@ NTSTATUS CheckEventFileCleanup( IRP_CONTEXT* IrpContext )
                             L"%s", IrpContext->ProcessFullPath.Buffer );
 
         Packet.Buffer->LengthOfSrcFileFullPath = CchSrcFileFullpath * sizeof( WCHAR );
-        Packet.Buffer->OffsetOfSrcFileFullPath = Packet.Buffer->OffsetOfProcessFullPath = Packet.Buffer->LengthOfProcessFullPath;
+        Packet.Buffer->OffsetOfSrcFileFullPath = Packet.Buffer->OffsetOfProcessFullPath + Packet.Buffer->LengthOfProcessFullPath;
         RtlStringCbPrintfW( ( PWCH )( Add2Ptr( Packet.Buffer, Packet.Buffer->OffsetOfSrcFileFullPath ) ),
                             Packet.Buffer->LengthOfSrcFileFullPath,
                             L"%s", IrpContext->SrcFileFullPath.Buffer );
 
-        ULONG ReplyLength = IrpContext->Result.BufferSize;
+        ULONG ReplyLength = sizeof( MSG_REPLY_PACKET );
 
         Status = FltSendMessage( GlobalContext.Filter, &ClientPort,
                                  Packet.Buffer, Packet.Buffer->MessageSize,
@@ -439,7 +473,7 @@ NTSTATUS CheckEventFileClose( IRP_CONTEXT* IrpContext )
         KeQuerySystemTime( &Packet.Buffer->EventTime );
 
         Packet.Buffer->ProcessId = IrpContext->ProcessId;
-        Packet.Buffer->ThreadId = ( ULONG )PsGetCurrentThreadId();
+        Packet.Buffer->ThreadId = HandleToUlong( PsGetCurrentThreadId() );
         Packet.Buffer->Parameters.Close.IsModified = FlagOn( IrpContext->Fcb->Flags, FCB_STATE_FILE_MODIFIED ) != FALSE;
 
         Packet.Buffer->LengthOfProcessFullPath = CchProcessFullPath * sizeof( WCHAR );
@@ -449,12 +483,12 @@ NTSTATUS CheckEventFileClose( IRP_CONTEXT* IrpContext )
                             L"%s", IrpContext->ProcessFullPath.Buffer );
 
         Packet.Buffer->LengthOfSrcFileFullPath = CchSrcFileFullpath * sizeof( WCHAR );
-        Packet.Buffer->OffsetOfSrcFileFullPath = Packet.Buffer->OffsetOfProcessFullPath = Packet.Buffer->LengthOfProcessFullPath;
+        Packet.Buffer->OffsetOfSrcFileFullPath = Packet.Buffer->OffsetOfProcessFullPath + Packet.Buffer->LengthOfProcessFullPath;
         RtlStringCbPrintfW( ( PWCH )( Add2Ptr( Packet.Buffer, Packet.Buffer->OffsetOfSrcFileFullPath ) ),
                             Packet.Buffer->LengthOfSrcFileFullPath,
                             L"%s", IrpContext->SrcFileFullPath.Buffer );
 
-        ULONG ReplyLength = IrpContext->Result.BufferSize;
+        ULONG ReplyLength = sizeof( MSG_REPLY_PACKET );
 
         Status = FltSendMessage( GlobalContext.Filter, &ClientPort,
                                  Packet.Buffer, Packet.Buffer->MessageSize,
@@ -516,7 +550,7 @@ NTSTATUS NotifyEventFileRenameTo( IRP_CONTEXT* IrpContext )
         KeQuerySystemTime( &Packet.Buffer->EventTime );
 
         Packet.Buffer->ProcessId = IrpContext->ProcessId;
-        Packet.Buffer->ThreadId = ( ULONG )PsGetCurrentThreadId();
+        Packet.Buffer->ThreadId = HandleToULong( PsGetCurrentThreadId() );
 
         Packet.Buffer->Parameters.SetFileInformation.FileInformationClass = IrpContext->Data->Iopb->Parameters.SetFileInformation.FileInformationClass;
 
@@ -527,13 +561,13 @@ NTSTATUS NotifyEventFileRenameTo( IRP_CONTEXT* IrpContext )
                             L"%s", IrpContext->ProcessFullPath.Buffer );
 
         Packet.Buffer->LengthOfSrcFileFullPath = CchSrcFileFullpath * sizeof( WCHAR );
-        Packet.Buffer->OffsetOfSrcFileFullPath = Packet.Buffer->OffsetOfProcessFullPath = Packet.Buffer->LengthOfProcessFullPath;
+        Packet.Buffer->OffsetOfSrcFileFullPath = Packet.Buffer->OffsetOfProcessFullPath + Packet.Buffer->LengthOfProcessFullPath;
         RtlStringCbPrintfW( ( PWCH )( Add2Ptr( Packet.Buffer, Packet.Buffer->OffsetOfSrcFileFullPath ) ),
                             Packet.Buffer->LengthOfSrcFileFullPath,
                             L"%s", IrpContext->SrcFileFullPath.Buffer );
 
         Packet.Buffer->LengthOfDstFileFullPath = CchDstFileFullpath * sizeof( WCHAR );
-        Packet.Buffer->OffsetOfDstFileFullPath = Packet.Buffer->OffsetOfSrcFileFullPath = Packet.Buffer->LengthOfSrcFileFullPath;
+        Packet.Buffer->OffsetOfDstFileFullPath = Packet.Buffer->OffsetOfSrcFileFullPath + Packet.Buffer->LengthOfSrcFileFullPath;
         RtlStringCbPrintfW( ( PWCH )( Add2Ptr( Packet.Buffer, Packet.Buffer->OffsetOfDstFileFullPath ) ),
                             Packet.Buffer->LengthOfDstFileFullPath,
                             L"%s", IrpContext->DstFileFullPath.Buffer );
@@ -583,7 +617,7 @@ NTSTATUS NotifyEventFileDeleteTo( IRP_CONTEXT* IrpContext )
         KeQuerySystemTime( &Packet.Buffer->EventTime );
 
         Packet.Buffer->ProcessId = IrpContext->ProcessId;
-        Packet.Buffer->ThreadId = ( ULONG )PsGetCurrentThreadId();
+        Packet.Buffer->ThreadId = HandleToULong( PsGetCurrentThreadId() );
 
         Packet.Buffer->Parameters.SetFileInformation.FileInformationClass = IrpContext->Data->Iopb->Parameters.SetFileInformation.FileInformationClass;
 
@@ -594,7 +628,7 @@ NTSTATUS NotifyEventFileDeleteTo( IRP_CONTEXT* IrpContext )
                             L"%s", IrpContext->ProcessFullPath.Buffer );
 
         Packet.Buffer->LengthOfSrcFileFullPath = CchSrcFileFullpath * sizeof( WCHAR );
-        Packet.Buffer->OffsetOfSrcFileFullPath = Packet.Buffer->OffsetOfProcessFullPath = Packet.Buffer->LengthOfProcessFullPath;
+        Packet.Buffer->OffsetOfSrcFileFullPath = Packet.Buffer->OffsetOfProcessFullPath + Packet.Buffer->LengthOfProcessFullPath;
         RtlStringCbPrintfW( ( PWCH )( Add2Ptr( Packet.Buffer, Packet.Buffer->OffsetOfSrcFileFullPath ) ),
                             Packet.Buffer->LengthOfSrcFileFullPath,
                             L"%s", IrpContext->SrcFileFullPath.Buffer );
@@ -612,26 +646,21 @@ NTSTATUS NotifyEventFileDeleteTo( IRP_CONTEXT* IrpContext )
     return Status;
 }
 
-NTSTATUS CheckEventProcCreateTo( ULONG ProcessId, ULONG ParentProcessId, TyGenericBuffer<WCHAR>* ProcessFileFullPath, __in_z const wchar_t* ProcessFileName )
+NTSTATUS CheckEventProcCreateTo( ULONG ProcessId, ULONG ParentProcessId, TyGenericBuffer<WCHAR>* ProcessFileFullPath, __in_z const wchar_t* ProcessFileName, TyGenericBuffer<MSG_REPLY_PACKET>* Reply )
 {
     NTSTATUS Status = STATUS_INVALID_PARAMETER;
     TyGenericBuffer<MSG_SEND_PACKET> Packet;
-    TyGenericBuffer<MSG_REPLY_PACKET> Reply;
     LONG EvtID = CreateEvtID();
 
     __try
     {
-        PFLT_PORT ClientPort = GetClientPort( EvtID );
+        PFLT_PORT ClientPort = GetClientPort( EvtID, true );
 
-        if( GlobalContext.Filter == NULL || ClientPort == NULLPTR )
+        if( GlobalContext.Filter == NULL || ClientPort == NULLPTR || Reply == NULLPTR )
             __leave;
 
-        Reply = AllocateBuffer<MSG_REPLY_PACKET>( BUFFER_MSG_REPLY );
-        if( Reply.Buffer == NULLPTR )
-        {
-            Status = STATUS_INSUFFICIENT_RESOURCES;
-            __leave;
-        }
+        if( Reply->Buffer == NULLPTR )
+            *Reply = AllocateBuffer<MSG_REPLY_PACKET>( BUFFER_MSG_REPLY );
 
         unsigned int SendPacketSize = sizeof( MSG_SEND_PACKET );
         unsigned int CchProcessFullPath = nsUtils::strlength( ProcessFileFullPath->Buffer ) + 1;
@@ -639,7 +668,7 @@ NTSTATUS CheckEventProcCreateTo( ULONG ProcessId, ULONG ParentProcessId, TyGener
         SendPacketSize += CchProcessFullPath * sizeof( WCHAR );
 
         Packet = AllocateBuffer<MSG_SEND_PACKET>( BUFFER_MSG_SEND, SendPacketSize );
-        if( Packet.Buffer == NULLPTR || Reply.Buffer == NULLPTR )
+        if( Packet.Buffer == NULLPTR || Reply->Buffer == NULLPTR )
         {
             Status = STATUS_INSUFFICIENT_RESOURCES;
             __leave;
@@ -651,7 +680,7 @@ NTSTATUS CheckEventProcCreateTo( ULONG ProcessId, ULONG ParentProcessId, TyGener
         KeQuerySystemTime( &Packet.Buffer->EventTime );
 
         Packet.Buffer->ProcessId = ProcessId;
-        Packet.Buffer->ThreadId = ( ULONG )PsGetCurrentThreadId();
+        Packet.Buffer->ThreadId = HandleToULong( PsGetCurrentThreadId() );
 
         Packet.Buffer->Parameters.Process.IsCreate = TRUE;
         Packet.Buffer->Parameters.Process.ProcessId = ProcessId;
@@ -663,11 +692,11 @@ NTSTATUS CheckEventProcCreateTo( ULONG ProcessId, ULONG ParentProcessId, TyGener
                             Packet.Buffer->LengthOfProcessFullPath,
                             L"%s", ProcessFileFullPath->Buffer );
 
-        ULONG ReplyLength = Reply.BufferSize;
+        ULONG ReplyLength = sizeof( MSG_REPLY_PACKET );
 
         Status = FltSendMessage( GlobalContext.Filter, &ClientPort,
                                  Packet.Buffer, Packet.Buffer->MessageSize,
-                                 Reply.Buffer, &ReplyLength,
+                                 Reply->Buffer, &ReplyLength,
                                  &FeatureContext.TimeOutMs );
 
         if( ( NT_SUCCESS( Status ) && Status == STATUS_TIMEOUT ) || ( !NT_SUCCESS( Status ) ) )
@@ -685,7 +714,6 @@ NTSTATUS CheckEventProcCreateTo( ULONG ProcessId, ULONG ParentProcessId, TyGener
     }
     __finally
     {
-        DeallocateBuffer( &Reply );
         DeallocateBuffer( &Packet );
     }
 
@@ -696,22 +724,14 @@ NTSTATUS CheckEventProcTerminateTo( ULONG ProcessId, ULONG ParentProcessId, TyGe
 {
     NTSTATUS Status = STATUS_INVALID_PARAMETER;
     TyGenericBuffer<MSG_SEND_PACKET> Packet;
-    TyGenericBuffer<MSG_REPLY_PACKET> Reply;
     LONG EvtID = CreateEvtID();
 
     __try
     {
-        PFLT_PORT ClientPort = GetClientPort( EvtID );
+        PFLT_PORT ClientPort = GetClientPort( EvtID, true );
 
         if( GlobalContext.Filter == NULL || ClientPort == NULLPTR )
             __leave;
-
-        Reply = AllocateBuffer<MSG_REPLY_PACKET>( BUFFER_MSG_REPLY );
-        if( Reply.Buffer == NULLPTR )
-        {
-            Status = STATUS_INSUFFICIENT_RESOURCES;
-            __leave;
-        }
 
         unsigned int SendPacketSize = sizeof( MSG_SEND_PACKET );
         unsigned int CchProcessFullPath = nsUtils::strlength( ProcessFileFullPath->Buffer ) + 1;
@@ -719,7 +739,7 @@ NTSTATUS CheckEventProcTerminateTo( ULONG ProcessId, ULONG ParentProcessId, TyGe
         SendPacketSize += CchProcessFullPath * sizeof( WCHAR );
 
         Packet = AllocateBuffer<MSG_SEND_PACKET>( BUFFER_MSG_SEND, SendPacketSize );
-        if( Packet.Buffer == NULLPTR || Reply.Buffer == NULLPTR )
+        if( Packet.Buffer == NULLPTR )
         {
             Status = STATUS_INSUFFICIENT_RESOURCES;
             __leave;
@@ -731,7 +751,7 @@ NTSTATUS CheckEventProcTerminateTo( ULONG ProcessId, ULONG ParentProcessId, TyGe
         KeQuerySystemTime( &Packet.Buffer->EventTime );
 
         Packet.Buffer->ProcessId = ProcessId;
-        Packet.Buffer->ThreadId = ( ULONG )PsGetCurrentThreadId();
+        Packet.Buffer->ThreadId = HandleToULong( PsGetCurrentThreadId() );
 
         Packet.Buffer->Parameters.Process.IsCreate = FALSE;
         Packet.Buffer->Parameters.Process.ProcessId = ProcessId;
@@ -743,55 +763,38 @@ NTSTATUS CheckEventProcTerminateTo( ULONG ProcessId, ULONG ParentProcessId, TyGe
                             Packet.Buffer->LengthOfProcessFullPath,
                             L"%s", ProcessFileFullPath->Buffer );
 
-        ULONG ReplyLength = Reply.BufferSize;
+        auto NotifyItem = ( FS_NOTIFY_ITEM* )ExAllocatePool( NonPagedPool, sizeof( FS_NOTIFY_ITEM ) );
+        NotifyItem->SendPacket = Packet;
 
-        Status = FltSendMessage( GlobalContext.Filter, &ClientPort,
-                                 Packet.Buffer, Packet.Buffer->MessageSize,
-                                 Reply.Buffer, &ReplyLength,
-                                 &FeatureContext.TimeOutMs );
-
-        if( ( NT_SUCCESS( Status ) && Status == STATUS_TIMEOUT ) || ( !NT_SUCCESS( Status ) ) )
-        {
-            KdPrint( ( "[WinIOSol] %s EvtID=%09d %s %s %s Status=0x%08x,%s Proc=%06d,%ws\n"
-                       , ">>", EvtID, __FUNCTION__, "FltSendMessage", Status == STATUS_TIMEOUT ? "Timeout" : "FAILED"
-                       , Status, ntkernel_error_category::find_ntstatus( Status )->message
-                       , ProcessId, ProcessFileName ) );
-
-            if( Status == STATUS_TIMEOUT )
-                Status = STATUS_AUDIT_FAILED;
-
-            __leave;
-        }
+        QueueNotifyEvent( NotifyItem );
     }
     __finally
     {
-        DeallocateBuffer( &Reply );
-        DeallocateBuffer( &Packet );
     }
 
     return Status;
 }
 
-PFLT_PORT GetClientPort( IRP_CONTEXT* IrpContext )
+PFLT_PORT GetClientPort( IRP_CONTEXT* IrpContext, bool IsProcPort /* = false */ )
 {
-    return GetClientPort( IrpContext->EvtID );
+    return GetClientPort( IrpContext->EvtID, IsProcPort );
 }
 
-PFLT_PORT GetClientPort( LONG Seed )
+PFLT_PORT GetClientPort( LONG Seed, bool IsProcPort /* = false */ )
 {
     int salt = 0;
     PFLT_PORT ClientPort = NULLPTR;
 
-    while( ClientPort == NULLPTR )
+    while( ClientPort == NULLPTR && salt < MAX_CLIENT_CONNECTION )
     {
         auto idx = Seed % MAX_CLIENT_CONNECTION;
-        ClientPort = GlobalContext.ClientPort[ idx ];
-
+        ClientPort = IsProcPort == true ? GlobalContext.ClientProcPort[ idx ] : GlobalContext.ClientPort[ idx ];
+        
         if( ClientPort != NULLPTR )
             break;
 
         while( ClientPort == NULLPTR && salt < MAX_CLIENT_CONNECTION )
-            ClientPort = GlobalContext.ClientPort[ salt++ ];
+            ClientPort = IsProcPort == true ? GlobalContext.ClientProcPort[ salt++ ] : GlobalContext.ClientPort[ salt++ ];
     }
 
     return ClientPort;

@@ -117,6 +117,26 @@ NTSTATUS CreateInstanceContext( PCFLT_RELATED_OBJECTS FltObjects, FLT_INSTANCE_S
         nsUtils::FindDriveLetterByDeviceName( &InstanceContext->DeviceName, &InstanceContext->DriveLetter );
         InstanceContext->DeviceNameCch = nsUtils::strlength( InstanceContext->DeviceNameBuffer );
 
+        UNICODE_STRING RedirectorName;
+        if( nsUtils::VerifyVersionInfoEx( 5, "=" ) == true )
+        {
+            PDRIVER_OBJECT  DriverObject = NULL;
+
+            RtlInitUnicodeString( &RedirectorName, L"\\Device\\LanmanRedirector" );
+            if( RtlCompareUnicodeString( &RedirectorName, &InstanceContext->DeviceName, TRUE ) == 0 )
+                InstanceContext->DriveLetter = L'\\';
+        }
+        else
+        {
+            RtlInitUnicodeString( &RedirectorName, L"\\Device\\Mup" );
+            if( RtlCompareUnicodeString( &RedirectorName, &InstanceContext->DeviceName, TRUE ) == 0 )
+                InstanceContext->DriveLetter = L'\\';
+        }
+        
+        RtlInitUnicodeString( &RedirectorName, L"\\Device\\hgfs" );
+        if( RtlCompareUnicodeString( &RedirectorName, &InstanceContext->DeviceName, TRUE ) == 0 )
+            InstanceContext->DriveLetter = L'@';
+
         InstanceContext->VolumeFileSystemType = VolumeFilesystemType;
         RtlInitEmptyUnicodeString( &InstanceContext->VolumeGUIDName, InstanceContext->VolumeGUIDNameBuffer, sizeof( WCHAR ) * _countof( InstanceContext->VolumeGUIDNameBuffer ) );
 

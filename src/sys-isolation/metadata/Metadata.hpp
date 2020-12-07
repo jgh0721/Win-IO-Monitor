@@ -58,5 +58,12 @@ NTSTATUS WriteSolutionMetaData( __in wchar_t* SrcFileFullPath, __in PVOID Soluti
 NTSTATUS WriteSolutionMetaData( __in LONG EvtID, __in CTX_INSTANCE_CONTEXT* InstanceContext, __in wchar_t* SrcFileFullPath, __in PFILE_OBJECT FileObject, 
                                 __in METADATA_DRIVER* MetaDataInfo, __in PVOID SolutionMetaData, __in ULONG SolutionMetaDataSize );
 
+///////////////////////////////////////////////////////////////////////////////
+
+NTSTATUS WriteAIOMetaData( __in LONG EvtID, __in PFLT_INSTANCE Instance, __in PFILE_OBJECT FileObject, 
+                           __in ULONG EncryptMethod, __in LONGLONG FileSize,
+                           __in_opt PVOID StubCode, __in_opt ULONG StubCodeSize, __in_opt WCHAR* Suffix,
+                           __in_opt PVOID SolutionMetaData, __in_opt ULONG SolutionMetaDataSize,
+                           __in_opt WCHAR* FileName = NULLPTR );
 
 #endif // HDR_ISOLATION_METADATA

@@ -12,6 +12,7 @@
 #include "policies/ProcessFilter.hpp"
 
 #include "fltCmnLibs.hpp"
+#include "callbacks/fltCreateFile.hpp"
 
 #if defined(_MSC_VER)
 #   pragma execution_character_set( "utf-8" )
@@ -90,6 +91,9 @@ PIRP_CONTEXT CreateIrpContext( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_
         {
             if( MajorFunction != IRP_MJ_CREATE )
                 CtxGetContext( FltObjects, FltObjects->FileObject, FLT_STREAM_CONTEXT, (PFLT_CONTEXT*)&IrpContext->StreamContext );
+
+            if( IrpContext->StreamContext != NULLPTR && IrpContext->StreamContext->FileFullPath.Buffer != NULLPTR )
+                IrpContext->SrcFileFullPath = CloneBuffer( &IrpContext->StreamContext->FileFullPath );
         }
 
         if( InstanceContext == NULLPTR )
@@ -105,6 +109,25 @@ PIRP_CONTEXT CreateIrpContext( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_
         IrpContext->InstanceContext = InstanceContext;
         FltReferenceContext( IrpContext->InstanceContext );
 
+        /*!
+            MSDN 의 권고문에는 InstanceSetupCallback 에서 수행하는 것을 권장하지만,
+            몇몇 USB 장치의 볼륨에 대한 정보를 가져올 때 OS 가 응답없음에 빠지는 경우가 존재하여
+            이곳에서 값을 가져옴
+        */
+        if( InstanceContext->IsVolumePropertySet == FALSE && IrpContext->FltObjects->Volume != NULL )
+        {
+            ULONG                      nReturnedLength = 0;
+
+            FltGetVolumeProperties( IrpContext->FltObjects->Volume,
+                                    &InstanceContext->VolumeProperties,
+                                    sizeof( UCHAR ) * _countof( InstanceContext->Data ),
+                                    &nReturnedLength );
+
+            KeMemoryBarrier();
+
+            InstanceContext->IsVolumePropertySet = TRUE;
+        }
+
         if( IrpContext->ProcessFullPath.Buffer == NULLPTR )
         {
             IrpContext->ProcessId = FltGetRequestorProcessId( Data );
@@ -113,40 +136,19 @@ PIRP_CONTEXT CreateIrpContext( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_
 
         if( IrpContext->SrcFileFullPath.Buffer == NULLPTR )
         {
-            if( MajorFunction == IRP_MJ_CREATE && FlagOn( IrpContext->Data->Iopb->Parameters.Create.Options, FILE_OPEN_BY_FILE_ID ) )
+            bool IsCallFltGetFileName = true;
+
+            if( MajorFunction == IRP_MJ_CREATE )
             {
-                PFLT_FILE_NAME_INFORMATION fni = NULLPTR;
+                if( FlagOn( IrpContext->Data->Iopb->Parameters.Create.Options, FILE_OPEN_BY_FILE_ID ) )
+                    IsCallFltGetFileName = true;
+                else
+                    IsCallFltGetFileName = false;
+            }
 
-                do
-                {
-                    // FltGetFileNameInformation return volume path not driver letter
-                    auto Ret = FltGetFileNameInformation( Data, FLT_FILE_NAME_OPENED | FLT_FILE_NAME_QUERY_DEFAULT, &fni );
-
-                    if( !NT_SUCCESS( Ret ) )
-                    {
-                        KdPrint( ( "[WinIOSol] >> EvtID=%09d %s %s Status=0x%08x,%s\n"
-                                   , IrpContext->EvtID, __FUNCTION__, "FltGetFileNameInformation(FILE_OPEN_BY_FILE_ID) FAILED"
-                                   , Ret, ntkernel_error_category::find_ntstatus( Ret )->message
-                                   ) );
-                        break;
-                    }
-
-                    IrpContext->SrcFileFullPath = AllocateBuffer<WCHAR>( BUFFER_FILENAME, fni->Name.MaximumLength );
-                    if( InstanceContext->DriveLetter != L'\0' )
-                    {
-                        IrpContext->SrcFileFullPath.Buffer[ 0 ] = InstanceContext->DriveLetter;
-                        IrpContext->SrcFileFullPath.Buffer[ 1 ] = L':';
-
-                        auto DeviceNameLength = nsUtils::strlength( InstanceContext->DeviceNameBuffer ) * sizeof( WCHAR );
-                        RtlStringCbCatW( &IrpContext->SrcFileFullPath.Buffer[ 2 ],
-                                         fni->Name.Length - ( DeviceNameLength * sizeof( WCHAR ) ) + sizeof( WCHAR ),
-                                         &fni->Name.Buffer[ DeviceNameLength ] );
-                    }
-
-                } while( false );
-
-                if( fni != NULLPTR )
-                    FltReleaseFileNameInformation( fni );
+            if( IsCallFltGetFileName )
+            {
+                IrpContext->SrcFileFullPath = ExtractFileFullPath( Data, IrpContext->InstanceContext );
             }
             else
             {
@@ -157,94 +159,23 @@ PIRP_CONTEXT CreateIrpContext( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_
 
         IrpContext->UserBuffer = FltMapUserBuffer( Data );
 
-        switch( MajorFunction )
+        if( MajorFunction == IRP_MJ_SET_INFORMATION && 
+            IsPreIO == true )
         {
-            case IRP_MJ_SET_INFORMATION: {
-                if( IsPreIO == false )
-                    break;
+            const auto& FileInformationClass = ( nsW32API::FILE_INFORMATION_CLASS )Data->Iopb->Parameters.SetFileInformation.FileInformationClass;
 
-                const auto& FileInformationClass = ( nsW32API::FILE_INFORMATION_CLASS )Data->Iopb->Parameters.SetFileInformation.FileInformationClass;
-                switch( FileInformationClass )
-                {
-                    case nsW32API::FileRenameInformation:
-                    case nsW32API::FileRenameInformationEx: {
-
-                        if( FileInformationClass == nsW32API::FileRenameInformation )
-                        {
-                            auto InfoBuffer = ( nsW32API::FILE_RENAME_INFORMATION* )( Data->Iopb->Parameters.SetFileInformation.InfoBuffer );
-                            Status = FltGetDestinationFileNameInformation( FltObjects->Instance, FltObjects->FileObject, InfoBuffer->RootDirectory,
-                                                                           InfoBuffer->FileName, InfoBuffer->FileNameLength,
-                                                                           FLT_FILE_NAME_NORMALIZED | FLT_FILE_NAME_QUERY_DEFAULT,
-                                                                           &DestinationFileName
-                            );
-                        }
-                        else if( FileInformationClass == nsW32API::FileRenameInformationEx )
-                        {
-                            auto InfoBuffer = ( nsW32API::FILE_RENAME_INFORMATION_EX* )( Data->Iopb->Parameters.SetFileInformation.InfoBuffer );
-                            Status = FltGetDestinationFileNameInformation( FltObjects->Instance, FltObjects->FileObject, InfoBuffer->RootDirectory,
-                                                                           InfoBuffer->FileName, InfoBuffer->FileNameLength,
-                                                                           FLT_FILE_NAME_NORMALIZED | FLT_FILE_NAME_QUERY_DEFAULT,
-                                                                           &DestinationFileName
-                            );
-                        }
-
-                        if( !NT_SUCCESS( Status ) )
-                            break;
-
-                        IrpContext->DstFileFullPath = AllocateBuffer<WCHAR>( BUFFER_FILENAME, DestinationFileName->Name.Length + sizeof( WCHAR ) +
-                                                                             ( CONTAINOR_SUFFIX_MAX * sizeof( WCHAR ) ) );
-                        if( IrpContext->DstFileFullPath.Buffer == NULLPTR )
-                        {
-                            Status = STATUS_INSUFFICIENT_RESOURCES;
-                            break;
-                        }
-
-                        RtlStringCbCopyNW( IrpContext->DstFileFullPath.Buffer, IrpContext->DstFileFullPath.BufferSize, DestinationFileName->Name.Buffer, DestinationFileName->Name.Length );
-                        VolumeMgr_Replace( IrpContext->DstFileFullPath.Buffer, &IrpContext->DstFileFullPath.BufferSize );
-
-                    } break;
-
-                    case nsW32API::FileLinkInformation:
-                    case nsW32API::FileLinkInformationEx: {
-
-                        if( FileInformationClass == nsW32API::FileLinkInformation )
-                        {
-                            auto InfoBuffer = ( FILE_LINK_INFORMATION* )( Data->Iopb->Parameters.SetFileInformation.InfoBuffer );
-                            Status = FltGetDestinationFileNameInformation( FltObjects->Instance, FltObjects->FileObject, InfoBuffer->RootDirectory,
-                                                                           InfoBuffer->FileName, InfoBuffer->FileNameLength,
-                                                                           FLT_FILE_NAME_NORMALIZED | FLT_FILE_NAME_QUERY_DEFAULT,
-                                                                           &DestinationFileName
-                            );
-                        }
-                        else if( FileInformationClass == nsW32API::FileLinkInformationEx )
-                        {
-                            auto InfoBuffer = ( nsW32API::FILE_LINK_INFORMATION_EX* )( Data->Iopb->Parameters.SetFileInformation.InfoBuffer );
-                            Status = FltGetDestinationFileNameInformation( FltObjects->Instance, FltObjects->FileObject, InfoBuffer->RootDirectory,
-                                                                           InfoBuffer->FileName, InfoBuffer->FileNameLength,
-                                                                           FLT_FILE_NAME_NORMALIZED | FLT_FILE_NAME_QUERY_DEFAULT,
-                                                                           &DestinationFileName
-                            );
-                        }
-
-                        if( !NT_SUCCESS( Status ) )
-                            break;
-
-                        IrpContext->DstFileFullPath = AllocateBuffer<WCHAR>( BUFFER_FILENAME, DestinationFileName->Name.Length + sizeof( WCHAR ) +
-                                                                             ( CONTAINOR_SUFFIX_MAX * sizeof( WCHAR ) ) );
-                        if( IrpContext->DstFileFullPath.Buffer == NULLPTR )
-                        {
-                            Status = STATUS_INSUFFICIENT_RESOURCES;
-                            break;
-                        }
-
-                        RtlStringCbCopyNW( IrpContext->DstFileFullPath.Buffer, IrpContext->DstFileFullPath.BufferSize, DestinationFileName->Name.Buffer, DestinationFileName->Name.Length );
-                        VolumeMgr_Replace( IrpContext->DstFileFullPath.Buffer, &IrpContext->DstFileFullPath.BufferSize );
-
-                    } break;
-                } // switch FileInformationClass
-
-            } break;
-        } // switch MajorFunction
+            switch( FileInformationClass )
+            {
+                case nsW32API::FileRenameInformation:
+                case nsW32API::FileRenameInformationEx:
+                case nsW32API::FileLinkInformation:
+                case nsW32API::FileLinkInformationEx: {
+                    auto CtxRenLinkContext = RetrieveRenameLinkContext( Data, FltObjects );
+                    IrpContext->DstFileFullPath = ExtractDstFileFullPath( FltObjects->Instance, FltObjects->FileObject,
+                                                                          CtxRenLinkContext.RootDirectory, CtxRenLinkContext.FileName, CtxRenLinkContext.FileNameLength );
+                } break;
+            } // switch FileInformationClass
+        }
 
         if( IrpContext->SrcFileFullPath.Buffer != NULLPTR )
         {
@@ -271,6 +202,12 @@ PIRP_CONTEXT CreateIrpContext( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_
                     IrpContext->SrcFileFullPath.Buffer;
                 else
                     IrpContext->SrcFileName++;
+            }
+
+            if( IrpContext->SrcFileName != NULLPTR )
+            {
+                IrpContext->SrcFileFullExtension = nsUtils::ForwardFindW( IrpContext->SrcFileName, L'.' );
+                IrpContext->SrcFileExtension = nsUtils::ReverseFindW( IrpContext->SrcFileName, L'.' );
             }
         }
 
@@ -300,9 +237,28 @@ PIRP_CONTEXT CreateIrpContext( __in PFLT_CALLBACK_DATA Data, __in PCFLT_RELATED_
                 else
                     IrpContext->DstFileName++;
             }
+
+            if( IrpContext->DstFileName != NULLPTR )
+            {
+                IrpContext->DstFileFullExtension = nsUtils::ForwardFindW( IrpContext->DstFileName, L'.' );
+                IrpContext->DstFileExtension = nsUtils::ReverseFindW( IrpContext->DstFileName, L'.' );
+            }
         }
 
-        CheckEventTo( IrpContext );
+        if( IrpContext->SrcFileFullPathWOVolume != NULLPTR )
+        {
+            if( MajorFunction == IRP_MJ_DIRECTORY_CONTROL )
+            {
+                Status = ProcessFilter_Match( IrpContext->ProcessId, &IrpContext->ProcessFullPath, false,
+                                              &IrpContext->ProcessFilter, &IrpContext->ProcessFilterEntry );
+
+                IrpContext->IsConcerned = Status == STATUS_SUCCESS;
+            }
+            else
+            {
+                CheckEventTo( IrpContext );
+            }
+        }
     }
     __finally
     {
@@ -340,6 +296,10 @@ VOID CloseIrpContext( __in PIRP_CONTEXT IrpContext )
     if( BooleanFlagOn( IrpContext->CompleteStatus, COMPLETE_FREE_INST_RSRC ) )
         FltReleaseResource( &IrpContext->InstanceContext->VcbLock );
 
+    // 메모리 해제는 Post- 핸들러에서 처리할 수 있도록 한다
+    if( FlagOn( IrpContext->CompleteStatus, COMPLETE_FORWARD_POST_PROCESS ) )
+        return;
+
     if( IrpContext->DebugText != NULLPTR )
         ExFreeToNPagedLookasideList( &GlobalContext.DebugLookasideList, IrpContext->DebugText );
 
@@ -350,11 +310,18 @@ VOID CloseIrpContext( __in PIRP_CONTEXT IrpContext )
         IrpContext->ProcessFilterEntry = NULLPTR;
     }
 
+    if( FlagOn( IrpContext->CompleteStatus, COMPLETE_FREE_PARAM ) )
+        ExFreePool( IrpContext->Params );
+
+    IrpContext->Params = NULLPTR;
+
     DeallocateBuffer( &IrpContext->ProcessFullPath );
     DeallocateBuffer( &IrpContext->SrcFileFullPath );
     DeallocateBuffer( &IrpContext->DstFileFullPath );
 
-    CtxReleaseContext( IrpContext->StreamContext );
+    if( !FlagOn( IrpContext->CompleteStatus, COMPLETE_CRTE_STREAM_CONTEXT ) )
+        CtxReleaseContext( IrpContext->StreamContext );
+
     CtxReleaseContext( IrpContext->InstanceContext );
 
     ExFreeToNPagedLookasideList( &GlobalContext.IrpContextLookasideList, IrpContext );
@@ -469,23 +436,38 @@ void PrintIrpContextCREATE( PIRP_CONTEXT IrpContext, bool IsResultMode )
     }
     else
     {
-        KdPrint( ( "[WinIOSol] %s EvtID=%09d IRP=%s,%s Thread=%p Proc=%06d,%ws Src=%ws\n"
+        ULONG Type = 0;
+        if( IrpContext->Params != NULLPTR )
+            Type |= ( ( CREATE_ARGS* )IrpContext->Params )->MetaDataInfo.MetaData.Type;
+
+        if( IrpContext->Fcb != NULLPTR )
+        {
+            if( IrpContext->Fcb->MetaDataInfo == NULLPTR )
+                Type = 0;
+            else
+                Type = IrpContext->Fcb->MetaDataInfo->MetaData.Type;
+        }
+        
+        KdPrint( ( "[WinIOSol] %s EvtID=%09d IRP=%s,%s Thread=%p Proc=%06d,%ws Type=%d Src=%ws\n"
                    , IsResultMode == false ? ">>" : "<<"
                    , IrpContext->EvtID
                    , nsW32API::ConvertIrpMajorFuncTo( MajorFunction ), nsW32API::ConvertIrpMinorFuncTo( MajorFunction, MinorFunction )
                    , PsGetCurrentThread()
                    , IrpContext->ProcessId, IrpContext->ProcessFileName == NULLPTR ? L"(null)" : IrpContext->ProcessFileName
+                   , Type
                    , IrpContext->SrcFileFullPath.Buffer
                    ) );
 
-        KdPrint( ( "[WinIOSol] %s EvtID=%09d        Status=0x%08x,%s Information=%s Open=%d Clean=%d Ref=%d\n"
+        KdPrint( ( "[WinIOSol] %s EvtID=%09d        Status=0x%08x,%s Information=%s Open=%d Clean=%d Ref=%d Type=%d Src=%ws\n"
                    , IsResultMode == false ? ">>" : "<<"
                    , IrpContext->EvtID
                    , IoStatus.Status, ntkernel_error_category::find_ntstatus( IoStatus.Status )->message
                    , nsW32API::ConvertCreateResultInformationTo( IoStatus.Status, IoStatus.Information )
-                   , IrpContext->Fcb != NULLPTR ? IrpContext->Fcb->OpnCount : 0
-                   , IrpContext->Fcb != NULLPTR ? IrpContext->Fcb->ClnCount : 0
-                   , IrpContext->Fcb != NULLPTR ? IrpContext->Fcb->RefCount : 0
+                   , IrpContext->Fcb != NULLPTR ? IrpContext->Fcb->OpnCount : -1
+                   , IrpContext->Fcb != NULLPTR ? IrpContext->Fcb->ClnCount : -1
+                   , IrpContext->Fcb != NULLPTR ? IrpContext->Fcb->RefCount : -1
+                   , Type
+                   , IrpContext->SrcFileFullPath.Buffer
                    ) );
     }
 }
@@ -632,7 +614,7 @@ void PrintIrpContextQUERY_INFORMATION( PIRP_CONTEXT IrpContext, bool IsResultMod
     
     if( IsResultMode == false )
     {
-        KdPrint( ( "[WinIOSol] %s EvtID=%09d IRP=%s,%s Info=%s Thread=%p Proc=%06d,%ws Buffer=%p Length=%d Src=%ws\n"
+        KdPrint( ( "[WinIOSol] %s EvtID=%09d IRP=%s,%s Info=%s Thread=%p Proc=%06d,%ws Buffer=%p Length=%d IsOwnObject=%d Src=%ws Real=%ws\n"
                    , IsResultMode == false ? ">>" : "<<"
                    , IrpContext->EvtID
                    , nsW32API::ConvertIrpMajorFuncTo( MajorFunction ), nsW32API::ConvertIrpMinorFuncTo( MajorFunction, MinorFunction )
@@ -640,7 +622,9 @@ void PrintIrpContextQUERY_INFORMATION( PIRP_CONTEXT IrpContext, bool IsResultMod
                    , PsGetCurrentThread()
                    , IrpContext->ProcessId, IrpContext->ProcessFileName == NULLPTR ? L"(null)" : IrpContext->ProcessFileName
                    , Parameters.InfoBuffer, Parameters.Length
+                   , IrpContext->IsOwnObject
                    , IrpContext->SrcFileFullPath.Buffer
+                   , IrpContext->IsOwnObject == true ? IrpContext->Fcb->FileFullPath.Buffer : L"(none)"
                    ) );
     }
     else
@@ -751,7 +735,7 @@ void PrintIrpContextSET_INFORMATION( PIRP_CONTEXT IrpContext, bool IsResultMode 
 
     if( IsResultMode == false )
     {
-        KdPrint( ( "[WinIOSol] %s EvtID=%09d IRP=%s,%s Info=%s Thread=%p Proc=%06d,%ws Buffer=%p Length=%d Src=%ws\n"
+        KdPrint( ( "[WinIOSol] %s EvtID=%09d IRP=%s,%s Info=%s Thread=%p Proc=%06d,%ws Buffer=%p Length=%d IsOwnObject=%d Src=%ws Real=%ws\n"
                    , IsResultMode == false ? ">>" : "<<"
                    , IrpContext->EvtID
                    , nsW32API::ConvertIrpMajorFuncTo( MajorFunction ), nsW32API::ConvertIrpMinorFuncTo( MajorFunction, MinorFunction )
@@ -759,7 +743,9 @@ void PrintIrpContextSET_INFORMATION( PIRP_CONTEXT IrpContext, bool IsResultMode 
                    , PsGetCurrentThread()
                    , IrpContext->ProcessId, IrpContext->ProcessFileName == NULLPTR ? L"(null)" : IrpContext->ProcessFileName
                    , Parameters.InfoBuffer, Parameters.Length
+                   , IrpContext->IsOwnObject
                    , IrpContext->SrcFileFullPath.Buffer
+                   , IrpContext->IsOwnObject == true ? IrpContext->Fcb->FileFullPath.Buffer : L"(none)"
                    ) );
     }
     else
@@ -790,6 +776,13 @@ void PrintIrpContextSET_INFORMATION( PIRP_CONTEXT IrpContext, bool IsResultMode 
                 RtlStringCbCatA( DebugText, 1024, "" );
                 nsW32API::FormatFileRenameInformation( IrpContext->DebugText, 1024, IrpContext->DstFileFullPath.Buffer, ( nsW32API::FILE_RENAME_INFORMATION* )Parameters.InfoBuffer );
                 RtlStringCbCatA( DebugText, 1024, " " );
+                if( IrpContext->IsOwnObject == true && IrpContext->Fcb != NULLPTR )
+                {
+                    auto len = strlen( DebugText );
+                    RtlStringCbPrintfA( &DebugText[ len ], 1024 - len, " Real=%ws\n"
+                                        , IrpContext->Fcb->FileFullPath.Buffer
+                    );
+                }
             } break;
             case FileDispositionInformation: {
                 RtlStringCbCatA( DebugText, 1024, "" );
@@ -820,6 +813,13 @@ void PrintIrpContextSET_INFORMATION( PIRP_CONTEXT IrpContext, bool IsResultMode 
                 RtlStringCbCatA( DebugText, 1024, "" );
                 nsW32API::FormatFileRenameInformationEx( IrpContext->DebugText, 1024, IrpContext->DstFileFullPath.Buffer, ( nsW32API::FILE_RENAME_INFORMATION_EX* )Parameters.InfoBuffer );
                 RtlStringCbCatA( DebugText, 1024, " " );
+                if( IrpContext->IsOwnObject == true && IrpContext->Fcb != NULLPTR )
+                {
+                    auto len = strlen( DebugText );
+                    RtlStringCbPrintfA( &DebugText[ len ], 1024 - len, " Real=%ws\n"
+                                        , IrpContext->Fcb->FileFullPath.Buffer
+                    );
+                }
             } break;
             case nsW32API::FileDispositionInformationEx: {
                 RtlStringCbCatA( DebugText, 1024, "" );
@@ -863,6 +863,7 @@ void PrintIrpContextQUERY_SECURITY( PIRP_CONTEXT IrpContext, bool IsResultMode )
 
         KdPrint( ( "[WinIOSol] %s EvtID=%09d        SecurityInformation=%s Length=%d Buffer=%p MDL=%p\n"
                    , IsResultMode == false ? ">>" : "<<"
+                   , IrpContext->EvtID
                    , nsW32API::ConvertSecurityInformationTo( Parameters.SecurityInformation )
                    , Parameters.Length
                    , Parameters.SecurityBuffer
@@ -908,6 +909,7 @@ void PrintIrpContextSET_SECURITY( PIRP_CONTEXT IrpContext, bool IsResultMode )
 
         KdPrint( ( "[WinIOSol] %s EvtID=%09d        SecurityInformation=%s SecurityDescriptor=%p\n"
                    , IsResultMode == false ? ">>" : "<<"
+                   , IrpContext->EvtID
                    , nsW32API::ConvertSecurityInformationTo( Parameters.SecurityInformation )
                    , Parameters.SecurityDescriptor
                    ) );
@@ -1374,9 +1376,11 @@ NTSTATUS CheckEventTo( IRP_CONTEXT* IrpContext )
                 Status = CheckEventToWithQUERY_INFORMATION( IrpContext, CHECK_EVENT_PROCESS_ONLY );
             } break;
             case IRP_MJ_SET_INFORMATION: {
-                Status = CheckEventToWithQUERY_INFORMATION( IrpContext, CHECK_EVENT_PROCESS_DIR_FILTER | CHECK_EVENT_IS_ENCRYPTED );
+                Status = CheckEventToWithSET_INFORMATION( IrpContext, CHECK_EVENT_GLOBAL_DIR_FILTER | CHECK_EVENT_PROCESS_DIR_FILTER );
             } break;
-            case IRP_MJ_CLEANUP: {} break;
+            case IRP_MJ_CLEANUP: {
+                Status = CheckEventToWithCLEAN( IrpContext, CHECK_EVENT_IS_ENCRYPTED_ALWAYS );
+            } break;
             case IRP_MJ_CLOSE: {} break;
         }
         
@@ -1426,7 +1430,7 @@ NTSTATUS CheckEventToWithCREATE( IRP_CONTEXT* IrpContext, ULONG CheckFlags )
             if( FlagOn( CheckFlags, CHECK_EVENT_PROCESS_ONLY ) )
                 break;
 
-            if( FlagOn( CheckFlags, CHECK_EVENT_PROCESS_DIR_FILTER ) )
+            if( FlagOn( CheckFlags, CHECK_EVENT_PROCESS_DIR_FILTER ) && IrpContext->ProcessFilter != NULLPTR )
             {
                 bool isInclude = false;
                 Status = ProcessFilter_SubMatch( IrpContext->Data, IrpContext->ProcessFilterEntry, &IrpContext->SrcFileFullPath, &isInclude, &IrpContext->ProcessFilterMaskItem );
@@ -1434,7 +1438,18 @@ NTSTATUS CheckEventToWithCREATE( IRP_CONTEXT* IrpContext, ULONG CheckFlags )
                     break;
 
                 if( Status == STATUS_SUCCESS )
+                {
+                    if( isInclude == true )
+                    {
+                        if( nsUtils::EndsWithW( IrpContext->SrcFileFullPathWOVolume, L".dat" ) != NULLPTR
+                            || nsUtils::EndsWithW( IrpContext->SrcFileFullPathWOVolume, L".log" ) != NULLPTR
+                            || nsUtils::EndsWithW( IrpContext->SrcFileFullPathWOVolume, L".etl" ) != NULLPTR
+                            || nsUtils::EndsWithW( IrpContext->SrcFileFullPathWOVolume, L".dll" ) != NULLPTR
+                            )
+                            isInclude = false;
+                    }
                     IrpContext->IsConcerned = isInclude;
+                }
                 else
                     IrpContext->IsConcerned = false;
             }
@@ -1582,6 +1597,22 @@ NTSTATUS CheckEventToWithSET_INFORMATION( IRP_CONTEXT* IrpContext, ULONG CheckFl
 
         IrpContext->IsConcerned = false;
 
+        if( FlagOn( CheckFlags, CHECK_EVENT_IS_ENCRYPTED_ALWAYS ) )
+        {
+            if( IrpContext->IsOwnObject == true )
+            {
+                IrpContext->IsConcerned = true;
+            }
+            else
+            {
+                // TODO: 향후 캐시시스템에 의해 빠르게 처리되어야함
+                IrpContext->IsConcerned = IsOwnFile( IrpContext, IrpContext->SrcFileFullPathWOVolume, NULLPTR );
+            }
+
+            if( IrpContext->IsConcerned == true )
+                break;
+        }
+
         if( FlagOn( CheckFlags, CHECK_EVENT_GLOBAL_DIR_FILTER ) )
         {
             Status = GlobalFilter_Match( IrpContext->SrcFileFullPath.Buffer, false );
@@ -1651,4 +1682,92 @@ NTSTATUS CheckEventToWithSET_INFORMATION( IRP_CONTEXT* IrpContext, ULONG CheckFl
     } while( false );
 
     return Status;
+}
+
+NTSTATUS CheckEventToWithCLEAN( IRP_CONTEXT* IrpContext, ULONG CheckFlags )
+{
+    NTSTATUS Status = STATUS_UNSUCCESSFUL;
+
+    do
+    {
+        IrpContext->IsConcerned = false;
+
+        if( FlagOn( CheckFlags, CHECK_EVENT_IS_ENCRYPTED_ALWAYS ) )
+        {
+            if( IrpContext->IsOwnObject == true )
+            {
+                IrpContext->IsConcerned = true;
+            }
+            else
+            {
+                // TODO: 향후 캐시시스템에 의해 빠르게 처리되어야함
+                IrpContext->IsConcerned = IsOwnFile( IrpContext, IrpContext->SrcFileFullPathWOVolume, NULLPTR );
+            }
+
+            if( IrpContext->IsConcerned == true )
+                break;
+        }
+
+        if( FlagOn( CheckFlags, CHECK_EVENT_GLOBAL_DIR_FILTER ) )
+        {
+            Status = GlobalFilter_Match( IrpContext->SrcFileFullPath.Buffer, false );
+            if( Status == STATUS_SUCCESS )
+            {
+                IrpContext->IsConcerned = false;
+                break;
+            }
+
+            Status = GlobalFilter_Match( IrpContext->SrcFileFullPath.Buffer, true );
+            if( Status == STATUS_SUCCESS )
+            {
+                IrpContext->IsConcerned = true;
+            }
+
+            if( Status != STATUS_NO_DATA_DETECTED && IrpContext->IsConcerned == false )
+                break;
+        }
+
+        if( FlagOn( CheckFlags, CHECK_EVENT_IS_ENCRYPTED ) && !FlagOn( CheckFlags, CHECK_EVENT_IS_ENCRYPTED_ALWAYS ) )
+        {
+            if( IrpContext->IsOwnObject == true )
+                IrpContext->IsConcerned = true;
+            else
+            {
+                // TODO: 향후 캐시시스템에 의해 빠르게 처리되어야함
+                IrpContext->IsConcerned = IsOwnFile( IrpContext, IrpContext->SrcFileFullPathWOVolume, NULLPTR );
+            }
+        }
+
+    } while( false );
+
+    return Status;
+}
+
+FLT_PREOP_CALLBACK_STATUS CommonPostProcess( PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects,
+                                             PVOID* CompletionContext, IRP_CONTEXT* IrpContext, FLT_PREOP_CALLBACK_STATUS FltStatus )
+{
+    if( IrpContext == NULLPTR )
+        return FltStatus;
+
+    if( FlagOn( IrpContext->CompleteStatus, COMPLETE_RETURN_FLTSTATUS ) )
+        FltStatus = IrpContext->PreFltStatus;
+
+    if( FlagOn( IrpContext->CompleteStatus, COMPLETE_FORWARD_POST_PROCESS ) )
+        *CompletionContext = IrpContext;
+
+    if( BooleanFlagOn( Data->Flags, FLTFL_CALLBACK_DATA_POST_OPERATION ) == FALSE )
+    {
+        if( FlagOn( IrpContext->CompleteStatus, COMPLETE_CRTE_STREAM_CONTEXT ) )
+        {
+            CTX_STREAM_CONTEXT* StreamContext = NULLPTR;
+            CtxAllocateContext( GlobalContext.Filter, FLT_STREAM_CONTEXT, ( PFLT_CONTEXT* )&StreamContext );
+
+            if( StreamContext != NULLPTR )
+                IrpContext->StreamContext = StreamContext;
+        }
+    }
+
+    CloseIrpContext( IrpContext );
+
+    return FltStatus;
 }
