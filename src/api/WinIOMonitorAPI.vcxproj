@@ -18,15 +18,6 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="..\cmn\WinIOMonitor_API.hpp" />
-    <ClInclude Include="..\cmn\WinIOMonitor_Event.hpp" />
-    <ClInclude Include="..\cmn\WinIOMonitor_IOCTL.hpp" />
-    <ClInclude Include="..\cmn\WinIOMonitor_Names.hpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="WinIOMonitor_API.cpp" />
-  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{1CC76C26-E43F-4801-8488-635E801C2508}</ProjectGuid>
     <RootNamespace>WinIOMonitor</RootNamespace>
@@ -115,7 +106,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_WIN32_WINNT=0x0501;NTDDI_VERSION=NTDDI_WINXPSP2;WIN32;_DEBUG;_WINDOWS;_USRDLL;OFETAPI_SDK_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_WIN32_WINNT=0x0501;NTDDI_VERSION=NTDDI_WINXPSP2;WIN32;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -127,7 +118,7 @@
       <ProgramDataBaseFileName>$(TargetDir)$(TargetName).pdb</ProgramDataBaseFileName>
     </ClCompile>
     <Link>
-      <ModuleDefinitionFile>ofetapi.def</ModuleDefinitionFile>
+      <ModuleDefinitionFile></ModuleDefinitionFile>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ProgramDatabaseFile>$(TargetDir)\pdb\$(TargetName).pdb</ProgramDatabaseFile>
       <SubSystem>Windows</SubSystem>
@@ -150,7 +141,7 @@
     </Midl>
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_WIN32_WINNT=0x0501;NTDDI_VERSION=NTDDI_WINXPSP2;WIN32;_DEBUG;_WINDOWS;_USRDLL;OFETAPI_SDK_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_WIN32_WINNT=0x0501;NTDDI_VERSION=NTDDI_WINXPSP2;WIN32;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -163,7 +154,7 @@
     </ClCompile>
     <Link>
       <OutputFile>$(OutDir)$(ProjectName).dll</OutputFile>
-      <ModuleDefinitionFile>ofetapi.def</ModuleDefinitionFile>
+      <ModuleDefinitionFile></ModuleDefinitionFile>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ProgramDatabaseFile>$(TargetDir)\pdb\$(TargetName).pdb</ProgramDatabaseFile>
       <SubSystem>Windows</SubSystem>
@@ -198,7 +189,7 @@
     <Link>
       <ShowProgress>NotSet</ShowProgress>
       <OutputFile>$(OutDir)$(ProjectName).dll</OutputFile>
-      <ModuleDefinitionFile>ofetapi.def</ModuleDefinitionFile>
+      <ModuleDefinitionFile></ModuleDefinitionFile>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ProgramDatabaseFile>$(TargetDir)\pdb\$(TargetName).pdb</ProgramDatabaseFile>
       <SubSystem>Windows</SubSystem>
@@ -224,7 +215,7 @@
     <ClCompile>
       <Optimization>MaxSpeed</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>_WIN32_WINNT=0x0501;NTDDI_VERSION=NTDDI_WINXPSP2;WIN32;NDEBUG;_WINDOWS;_USRDLL;OFETAPI_SDK_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_WIN32_WINNT=0x0501;NTDDI_VERSION=NTDDI_WINXPSP2;WIN32;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
@@ -237,7 +228,7 @@
     </ClCompile>
     <Link>
       <OutputFile>..\..\bin\x64\release\$(ProjectName).dll</OutputFile>
-      <ModuleDefinitionFile>ofetapi.def</ModuleDefinitionFile>
+      <ModuleDefinitionFile></ModuleDefinitionFile>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ProgramDatabaseFile>$(TargetDir)\pdb\$(TargetName).pdb</ProgramDatabaseFile>
       <SubSystem>Windows</SubSystem>
