@@ -18,32 +18,64 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\cmn\cmnString.hpp" />
+    <ClInclude Include="..\cmn\W32API.hpp" />
+    <ClInclude Include="..\cmn\W32API_Base.hpp" />
+    <ClInclude Include="..\cmn\W32API_LibMgr.hpp" />
+    <ClInclude Include="..\cmn\W32API_NTSTATUS.hpp" />
+    <ClInclude Include="..\cmn\WinIOMon_API.hpp" />
+    <ClInclude Include="..\cmn\WinIOMon_Event.hpp" />
+    <ClInclude Include="..\cmn\WinIOMon_IOCTL.hpp" />
+    <ClInclude Include="..\cmn\WinIOMon_Names.hpp" />
+    <ClInclude Include="base.hpp" />
+    <ClInclude Include="crt\crt.h" />
+    <ClInclude Include="crt\string.h" />
+    <ClInclude Include="crt\stringapi.hpp" />
+    <ClInclude Include="utilities\osInfoMgr.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\cmn\cmnString.cpp" />
+    <ClCompile Include="crt\crt.cpp" />
+    <ClCompile Include="crt\crterr.c" />
+    <ClCompile Include="crt\crtfs.c" />
+    <ClCompile Include="crt\crtxx.cpp" />
+    <ClCompile Include="crt\string.c" />
+    <ClCompile Include="crt\stringapi.cpp" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="utilities\osInfoMgr.cpp" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{A57CDD26-A620-4B55-9A2D-0D50FA762BA8}</ProjectGuid>
     <RootNamespace>WinIOMonitor</RootNamespace>
     <Keyword>Win32Proj</Keyword>
     <ProjectName>WinIOMonitor</ProjectName>
+    <WindowsTargetPlatformVersion>7.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v140_xp</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
+    <SpectreMitigation>false</SpectreMitigation>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v140_xp</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
+    <SpectreMitigation>false</SpectreMitigation>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v140_xp</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
+    <SpectreMitigation>false</SpectreMitigation>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v140_xp</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
+    <SpectreMitigation>false</SpectreMitigation>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -116,18 +148,15 @@
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>C:\WinDDK\7600.16385.1\inc\api;C:\WinDDK\7600.16385.1\inc\ddk;C:\WinDDK\7600.16385.1\inc\crt;$(ProjectDir);$(SolutionDir)cmn</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>USE_ON_KERNEL;DBG;_X86_;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <MinimalRebuild>true</MinimalRebuild>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <WarningLevel>Level4</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <CallingConvention>StdCall</CallingConvention>
       <ExceptionHandling>false</ExceptionHandling>
-      <AdditionalOptions>/kernel %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>C:\WinDDK\7600.16385.1\lib\wxp\i386;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Native</SubSystem>
       <Driver>Driver</Driver>
@@ -152,13 +181,11 @@
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <CallingConvention>StdCall</CallingConvention>
       <ExceptionHandling>false</ExceptionHandling>
-      <AdditionalOptions>/kernel %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
     </ClCompile>
     <Link>
       <AdditionalDependencies>ntoskrnl.lib;hal.lib;ntstrsafe.lib;fltmgr.lib;bufferoverflowk.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>C:\WinDDK\7600.16385.1\lib\wnet\amd64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Native</SubSystem>
       <LargeAddressAware>true</LargeAddressAware>
@@ -176,20 +203,17 @@
       <Optimization>Full</Optimization>
       <AdditionalIncludeDirectories>C:\WinDDK\7600.16385.1\inc\api;C:\WinDDK\7600.16385.1\inc\ddk;C:\WinDDK\7600.16385.1\inc\crt;$(ProjectDir);$(SolutionDir)cmn</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>USE_ON_KERNEL;NDEBUG;_X86_;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <MinimalRebuild>true</MinimalRebuild>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <WarningLevel>Level4</WarningLevel>
       <TreatWarningAsError>false</TreatWarningAsError>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <CallingConvention>StdCall</CallingConvention>
       <ExceptionHandling>false</ExceptionHandling>
-      <AdditionalOptions>/kernel %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
     </ClCompile>
     <Link>
       <AdditionalDependencies>ntoskrnl.lib;hal.lib;ntstrsafe.lib;fltmgr.lib;bufferoverflowk.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>C:\WinDDK\7600.16385.1\lib\wxp\i386;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Native</SubSystem>
       <Driver>Driver</Driver>
@@ -213,13 +237,11 @@
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <CallingConvention>StdCall</CallingConvention>
       <ExceptionHandling>false</ExceptionHandling>
-      <AdditionalOptions>/kernel %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
     </ClCompile>
     <Link>
       <AdditionalDependencies>ntoskrnl.lib;hal.lib;ntstrsafe.lib;fltmgr.lib;bufferoverflowk.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>C:\WinDDK\7600.16385.1\lib\wnet\amd64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Native</SubSystem>
       <Driver>Driver</Driver>

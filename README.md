@@ -22,3 +22,4 @@
 1. https://github.com/sidyhe/dxx
 2. https://github.com/HoShiMin/Kernel-Bridge
 3. https://github.com/HoneProject/Windows-Sensor
+4. https://github.com/ned14/ntkernel-error-category

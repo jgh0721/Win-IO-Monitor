@@ -13,5 +13,99 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav</Extensions>
     </Filter>
+    <Filter Include="common">
+      <UniqueIdentifier>{9c92f948-1b92-4aea-b3a3-ebcf0011779c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="common\crt">
+      <UniqueIdentifier>{683e7920-3b5b-435f-905c-3944880ccf7f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="common\W32API">
+      <UniqueIdentifier>{b82d7925-e9e0-42c9-bb94-a00742acb104}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="common\WinIOMon">
+      <UniqueIdentifier>{27520e4c-ed5e-4871-a30f-018b95537461}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="callback">
+      <UniqueIdentifier>{9bc2054b-1d0e-4fcf-9157-fe35321eff15}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="utilities">
+      <UniqueIdentifier>{d760d7d9-ef81-4908-a625-23cc827c147e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="common\cxx">
+      <UniqueIdentifier>{08790902-ff2e-4e1d-866d-f43e871dd041}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="crt\crt.h">
+      <Filter>common\crt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cmn\W32API_NTSTATUS.hpp">
+      <Filter>common\W32API</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cmn\W32API.hpp">
+      <Filter>common\W32API</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cmn\W32API_Base.hpp">
+      <Filter>common\W32API</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cmn\W32API_LibMgr.hpp">
+      <Filter>common\W32API</Filter>
+    </ClInclude>
+    <ClInclude Include="base.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cmn\WinIOMon_API.hpp">
+      <Filter>common\WinIOMon</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cmn\WinIOMon_Event.hpp">
+      <Filter>common\WinIOMon</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cmn\WinIOMon_IOCTL.hpp">
+      <Filter>common\WinIOMon</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cmn\WinIOMon_Names.hpp">
+      <Filter>common\WinIOMon</Filter>
+    </ClInclude>
+    <ClInclude Include="crt\string.h">
+      <Filter>common\crt</Filter>
+    </ClInclude>
+    <ClInclude Include="utilities\osInfoMgr.hpp">
+      <Filter>utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="crt\stringapi.hpp">
+      <Filter>common\cxx</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cmn\cmnString.hpp">
+      <Filter>common</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="crt\crterr.c">
+      <Filter>common\crt</Filter>
+    </ClCompile>
+    <ClCompile Include="crt\crtxx.cpp">
+      <Filter>common\crt</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="crt\string.c">
+      <Filter>common\crt</Filter>
+    </ClCompile>
+    <ClCompile Include="crt\crtfs.c">
+      <Filter>common\crt</Filter>
+    </ClCompile>
+    <ClCompile Include="utilities\osInfoMgr.cpp">
+      <Filter>utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="crt\crt.cpp">
+      <Filter>common\crt</Filter>
+    </ClCompile>
+    <ClCompile Include="crt\stringapi.cpp">
+      <Filter>common\cxx</Filter>
+    </ClCompile>
+    <ClCompile Include="..\cmn\cmnString.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
